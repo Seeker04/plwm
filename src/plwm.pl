@@ -879,7 +879,7 @@ handle_event(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
 handle_event(keyrelease, _).
 
 handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
-	active_mon_ws(ActMon, _),
+	active_mon_ws(ActMon, ActWs),
 	(plx:x_get_window_attributes(Dp, Win, Geom, Status), Status =\= 0 ->
 	(config_exists(bar_class/2), plx:x_get_class_hint(Dp, Win, Name, Class),
 	 once(config(bar_class(Name, Class))) ->
@@ -915,16 +915,26 @@ handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
 			raise(Win),
 			win_newproperties(Win, [managed, false, Geom]),
 			update_wintype(Win),
-			apply_rules(Win),
 			update_ws_atoms,
 			WinSpawned = true
 		; true)
 	); true),
 	(WinSpawned = true ->
-		layout:relayout,
 		nb_getval(rootwin, Rootwin), netatom(clientlist, NetClientList),
 		PropModeAppend is 2, XA_WINDOW is 33,
-		plx:x_change_property(Dp, Rootwin, NetClientList, XA_WINDOW, 32, PropModeAppend, [Win], 1)
+		plx:x_change_property(Dp, Rootwin, NetClientList, XA_WINDOW, 32, PropModeAppend, [Win], 1),
+
+		% Floating windows would spawn to (0, 0) by default,
+		% adjust it to top-left of free win space, so top bars are not covered
+		(global_key_value(layout, ActMon-ActWs, floating) ->
+			global_key_value(free_win_space, ActMon, [BaseX, BaseY, _, _]),
+			win_properties(Win,    [State, Fullscr, [    _,     _, W, H]]),
+			win_newproperties(Win, [State, Fullscr, [BaseX, BaseY, W, H]]),
+			plx:x_move_resize_window(Dp, Win, BaseX, BaseY, W, H)
+		; true),
+
+		apply_rules(Win), % note: this considers free win space
+		layout:relayout
 	; true)
 .
 
