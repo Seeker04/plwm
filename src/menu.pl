@@ -32,6 +32,26 @@ read_from_prompt(Prompt, Input) :-  % use menucmd as a simple input prompt
 	)
 .
 
+mon_ws_format(Mon, Ws, Str) :-
+	monitors(Mons), nb_getval(workspaces, Wss), length(Mons, MonCnt), length(Wss, WsCnt),
+	(1 == MonCnt, 1 == WsCnt -> Str = ""
+	;1 == MonCnt, 1 <  WsCnt -> format(string(Str),      "~a", [     Ws])
+	;1 <  MonCnt, 1 == WsCnt -> format(string(Str), "~d"     , [Mon    ])
+	;1 <  MonCnt, 1 <  WsCnt -> format(string(Str), "~d / ~a", [Mon, Ws]))
+.
+
+mon_ws_wint_format(Mon, Ws, WinT, Str) :-
+	monitors(Mons), nb_getval(workspaces, Wss), length(Mons, MonCnt), length(Wss, WsCnt),
+	maplist(atom_length, Wss, WsWidths),
+	max_list(WsWidths, WsMaxWidth),
+	(1 == MonCnt, 1 == WsCnt -> format(string(Str),                    "~s", [WinT])
+	;1 <  MonCnt, 1 == WsCnt -> format(string(Str),              "~d    ~s", [Mon, WinT])
+	;1 == MonCnt, 1 <  WsCnt -> format(string(Fmt),       "~~a~~~d|    ~~s", [WsMaxWidth]),
+	                            format(string(Str), Fmt, [Ws, WinT])
+	;1 <  MonCnt, 1 <  WsCnt -> format(string(Fmt), "~~d / ~~a~~~d|    ~~s", [WsMaxWidth+4]),
+		                    format(string(Str), Fmt, [Mon, Ws, WinT]))
+.
+
 
 %*********************    Navigation/window placement    **********************
 
@@ -40,7 +60,7 @@ goto_workspace() :-
 	findall(Mon-Ws-MenuEntry, (   % map key (Mon-Ws) to lines for later lookup
 		member(Mon-Ws, Keys),
 		Mon-Ws \= ActMon-ActWs,
-		format(string(MenuEntry), "~d / ~a", [Mon, Ws])),
+		mon_ws_format(Mon, Ws, MenuEntry)),
 		MenuEntries),
 	findall(Line, member(_-_-Line, MenuEntries), Lines),
 	spawn_menu("goto workspace", Lines, menu:goto_workspace_(MenuEntries))
@@ -59,7 +79,7 @@ goto_window() :-
 		findall(Win-MenuEntry, (   % map XID to lines for later lookup
 			member(Win, Wins),
 			plx:x_get_text_property(Dp, Win, WinTitle, XA_WM_NAME, Status), Status =\= 0,
-			format(string(MenuEntry), "~d / ~a    ~s", [Mon, Ws, WinTitle])),
+			mon_ws_wint_format(Mon, Ws, WinTitle, MenuEntry)),
 			MenuEntries)),
 		MenuEntriesAll
 	),
@@ -84,7 +104,7 @@ pull_from() :-
 			member(Win, Wins),
 			XA_WM_NAME is 39,
 			plx:x_get_text_property(Dp, Win, WinTitle, XA_WM_NAME, Status), Status =\= 0,
-			format(string(MenuEntry), "~d / ~a    ~s", [Mon, Ws, WinTitle])),
+			mon_ws_wint_format(Mon, Ws, WinTitle, MenuEntry)),
 			MenuEntries)),
 		MenuEntriesAll
 	),
@@ -107,7 +127,7 @@ push_to() :-
 		findall(Mon-Ws-MenuEntry, (   % map key (Mon-Ws) to lines for later lookup
 			member(Mon-Ws, Keys),
 			Mon-Ws \= ActMon-ActWs,
-			format(string(MenuEntry), "~d / ~a", [Mon, Ws])),
+			mon_ws_format(Mon, Ws, MenuEntry)),
 			MenuEntries),
 		findall(Line, member(_-_-Line, MenuEntries), Lines),
 		spawn_menu("push to", Lines, menu:push_to_(MenuEntries))
