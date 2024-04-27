@@ -897,7 +897,11 @@ handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
 	;
 		global_value(windows, Wins),
 		(\+ memberchk(Win, Wins) ->
-			global_newvalue(windows, [Win|Wins]),
+			optcnf_then_else(attach_bottom(true),
+				append(Wins, [Win], NewWins),
+				NewWins = [Win|Wins]
+			),
+			global_newvalue(windows, NewWins),
 			plx:x_map_window(Dp, Win),
 
 			CWBorderWidth is 1 << 4,
@@ -1308,16 +1312,17 @@ check_config() :-  % when config is invalid, quit right away with a nice error m
 	)) - "invalid keymap detected",
 
 	% optional settings
-	optcnf_then(snap_threshold(SnapT), (integer(SnapT), 0 =< SnapT))         - "snap_threshold must be a 0<= integer",
-	optcnf_then(outer_gaps(GapPixelO), (integer(GapPixelO), 0 =< GapPixelO)) - "outer_gaps must be a 0<= integer",
-	optcnf_then(inner_gaps(GapPixelI), (integer(GapPixelI), 0 =< GapPixelI)) - "inner_gaps must be a 0<= integer",
-	optcnf_then(hide_empty_workspaces(HEWs), (HEWs = true ; HEWs = false))   - "hide_empty_workspaces must be true or false",
+	optcnf_then(attach_bottom(AttachB), (AttachB = true ; AttachB = false))   - "attach_bottom must be true or false",
+	optcnf_then(snap_threshold(SnapT),  (integer(SnapT), 0 =< SnapT))         - "snap_threshold must be a 0<= integer",
+	optcnf_then(outer_gaps(GapPixelO),  (integer(GapPixelO), 0 =< GapPixelO)) - "outer_gaps must be a 0<= integer",
+	optcnf_then(inner_gaps(GapPixelI),  (integer(GapPixelI), 0 =< GapPixelI)) - "inner_gaps must be a 0<= integer",
+	optcnf_then(hide_empty_workspaces(HEWs), (HEWs = true ; HEWs = false))    - "hide_empty_workspaces must be true or false",
 	optcnf_then(ws_format(Fmt),           catch(format_ws_name(Fmt,  [0, a], _), _, fail)) - "ws_format must have ~w or ~d followed by ~w",
 	optcnf_then(ws_format_occupied(FmtO), catch(format_ws_name(FmtO, [0, a], _), _, fail)) - "ws_format_occupied must have ~w or ~d followed by ~w",
 	optcnf_then(bar_placement(BPlace), member(BPlace, [follow_focus, static])) - "bar_placement must be follow_focus or static",
 	optcnf_then(menucmd([A|As]), forall(member(Arg, [A|As]), string(Arg))) - "menucmd must be a non-empty list of strings",
 
-	optcnf_then(rules(Rules), 
+	optcnf_then(rules(Rules),
 		forall(member((RName, RClass, RTitle -> RMon, RWs, RMode), Rules), (
 			(var(RName)  ; string(RName)  ; (RName  = exact(Str), string(Str))),
 			(var(RClass) ; string(RClass) ; (RClass = exact(Str), string(Str))),

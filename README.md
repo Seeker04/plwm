@@ -199,6 +199,7 @@ When cooking your config, you can use the `-C` flag to quickly and easily check 
 | `default_nmaster`          | 0<= integer<br>**Default:** 1                                   | Initial number of master windows                |
 | `default_mfact`            | 0.05 .. 0.95<br>**Default:** 2/3                                | Initial space percentage given to master area   |
 | `default_layout`           | floating, monocle, stack, hstack, nrows(N), ncols(N), grid, lmaster, rmaster, tmaster, bmaster, cmaster<br>**Default:** lmaster | Layout to use by default |
+| `attach_bottom`            | true or false<br>**Default:** false                             | Put new windows to bottom of the stack instead  |
 | `border_width`             | 0<= integer<br>**Default:** 1                                   | Border width in pixels                          |
 | `border_color`             | hexa code or color name<br>**Default:** "white"                 | Border color                                    |
 | `border_color_focused`     | hexa code or color name<br>**Default:** "blue"                  | Border color for focused window                 |

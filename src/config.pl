@@ -12,6 +12,7 @@ default_mfact(2/3).      % initial space percentage given to master area
                          % (you can use both fractional and decimal notations)
 default_layout(lmaster). % available layouts: floating, monocle, stack, hstack,
                          % nrows(N), ncols(N), grid, [lrtbc]master (see layout.pl)
+attach_bottom(false).    % if true, new windows will go to the bottom of the stack
 
 
 %*********************************  Borders  **********************************
