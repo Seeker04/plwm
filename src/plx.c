@@ -811,8 +811,13 @@ x_get_text_property(term_t display, term_t w, term_t text, term_t property, term
 	PL_TRY("x_get_text_property/5", PL_get_uint64_ex(property, &prop));
 
 	sts = XGetTextProperty(dp, win, &tprop, prop);
-	strncpy(stext, (char*)tprop.value, sizeof(stext)-1);
 
+	if (sts != 0) {
+		strncpy(stext, (char*)tprop.value, sizeof(stext)-1);
+	}
+	else {
+		stext[0] = '\0';
+	}
 	PL_TRY("x_get_text_property/5", PL_unify_integer(status, sts));
 	PL_TRY("x_get_text_property/5", PL_unify_string_chars(text, stext));
 	PL_succeed;
