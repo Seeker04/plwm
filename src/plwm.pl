@@ -1034,7 +1034,7 @@ win_mon_ws(Win, Mon, Ws) :-
 	once((member(Mon-Ws, Keys), global_key_value(windows, Mon-Ws, Wins), member(Win, Wins)))
 .
 
-win_properties(Win, Properties)    :- term_to_atom(Win, WinAtom), nb_getval(WinAtom, Properties).
+win_properties(Win, Properties)    :- term_to_atom(Win, WinAtom), nb_current(WinAtom, Properties).
 win_newproperties(Win, Properties) :- term_to_atom(Win, WinAtom), nb_setval(WinAtom, Properties).
 
 eventloop() :-
