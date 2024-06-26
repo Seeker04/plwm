@@ -847,18 +847,32 @@ handle_event(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
 		(SButton is 3 -> NewW is max(1, AW + Xdiff) ; NewW is max(1, AW)),
 		(SButton is 3 -> NewH is max(1, AH + Ydiff) ; NewH is max(1, AH)),
 
-		optcnf_then_else(snap_threshold(SnapPixel),
-			(global_key_value(free_win_space, Mon, [MX, MY, MW, MH]),
+		% Check and apply snapping to screen edge if enabled
+		optcnf_then_else(snap_threshold(SnapPixel), (
+			global_key_value(free_win_space, Mon, [MX, MY, MW, MH]),
 			BdiffL is abs(MX - NewX), BdiffR is abs((MX + MW) - (NewX + NewW)),
 			BdiffT is abs(MY - NewY), BdiffB is abs((MY + MH) - (NewY + NewH)),
-			(BdiffL =< SnapPixel -> NewXSnap is MX
-			;BdiffR =< SnapPixel -> NewXSnap is MX + MW - NewW - 2 * BorderW
-			;NewXSnap is NewX),
-			(BdiffT =< SnapPixel -> NewYSnap is MY
-			;BdiffB =< SnapPixel -> NewYSnap is MY + MH - NewH - 2 * BorderW
-			;NewYSnap is NewY),
-			plx:x_move_resize_window(Dp, Win, NewXSnap, NewYSnap, NewW, NewH),
-			ActualX is NewXSnap, ActualY is NewYSnap)
+			(SButton is 1 -> % window moved
+				(BdiffL =< SnapPixel -> NewXSnap is MX
+				;BdiffR =< SnapPixel -> NewXSnap is MX + MW - NewW - 2 * BorderW
+				;NewXSnap is NewX),
+				(BdiffT =< SnapPixel -> NewYSnap is MY
+				;BdiffB =< SnapPixel -> NewYSnap is MY + MH - NewH - 2 * BorderW
+				;NewYSnap is NewY),
+				NewWSnap is NewW,
+				NewHSnap is NewH
+			;SButton is 3 -> % window resized
+				% Note: resizing is always directed to the right and/or bottom
+				(BdiffR =< SnapPixel -> NewWSnap is NewW + BdiffR - 2 * BorderW
+				;NewWSnap is NewW),
+				(BdiffB =< SnapPixel -> NewHSnap is NewH + BdiffB - 2 * BorderW
+				;NewHSnap is NewH),
+				NewXSnap is NewX,
+				NewYSnap is NewY
+			; true),
+			plx:x_move_resize_window(Dp, Win, NewXSnap, NewYSnap, NewWSnap, NewHSnap),
+			ActualX is NewXSnap, ActualY is NewYSnap
+		)
 		,
 			(plx:x_move_resize_window(Dp, Win, NewX, NewY, NewW, NewH),
 			ActualX is NewX, ActualY is NewY)
