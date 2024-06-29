@@ -871,17 +871,17 @@ handle_event(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
 				NewYSnap is NewY
 			; true),
 			plx:x_move_resize_window(Dp, Win, NewXSnap, NewYSnap, NewWSnap, NewHSnap),
-			ActualX is NewXSnap, ActualY is NewYSnap
+			FinalX is NewXSnap, FinalY is NewYSnap, FinalW is NewWSnap, FinalH is NewHSnap
 		)
-		,
-			(plx:x_move_resize_window(Dp, Win, NewX, NewY, NewW, NewH),
-			ActualX is NewX, ActualY is NewY)
-		),
+		, (
+			plx:x_move_resize_window(Dp, Win, NewX, NewY, NewW, NewH),
+			FinalX is NewX, FinalY is NewY, FinalW is NewW, FinalH is NewH
+		)),
 
 		global_value(layout, Layout),  % become unmanaged when moved/resized in non-floating layout
 		win_properties(Win, [PrevState, Fullscr|_]),
 		(Layout = floating, PrevState = managed -> NewState = managed ; NewState = floating),
-		win_newproperties(Win, [NewState, Fullscr, [ActualX, ActualY, NewW, NewH]]),
+		win_newproperties(Win, [NewState, Fullscr, [FinalX, FinalY, FinalW, FinalH]]),
 
 		(Layout \= floating, PrevState = managed -> layout:relayout ; true)
 	;
