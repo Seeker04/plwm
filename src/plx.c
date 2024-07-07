@@ -44,6 +44,7 @@ static foreign_t x_ungrab_pointer(term_t display, term_t time);
 static foreign_t x_keysym_to_keycode(term_t display, term_t keysym, term_t keycode);
 static foreign_t x_string_to_keysym(term_t string, term_t keysym);
 static foreign_t x_next_event(term_t display, term_t event_return);
+static foreign_t x_send_event(term_t display, term_t w, term_t propagate, term_t event_mask, term_t event_send);
 static foreign_t x_raise_window(term_t display, term_t w);
 static foreign_t x_get_window_attributes(term_t display, term_t w, term_t window_attributes_return, term_t status);
 static foreign_t x_move_resize_window(term_t display, term_t w, term_t x, term_t y, term_t width, term_t height);
@@ -82,6 +83,8 @@ static foreign_t default_colormap(term_t display, term_t screen_number, term_t c
 static foreign_t xinerama_query_screens(term_t display, term_t screen_info);
 static foreign_t xft_color_alloc_name(term_t display, term_t visual, term_t cmap, term_t name, term_t result);
 
+static foreign_t create_x_configure_event(term_t display, term_t w, term_t configure_event);
+
 static foreign_t c_free(term_t ptr);
 
 /* Helpers */
@@ -102,6 +105,7 @@ static PL_extension predicates[] = {
 	{ "x_keysym_to_keycode"       ,  3, x_keysym_to_keycode        , 0 },
 	{ "x_string_to_keysym"        ,  2, x_string_to_keysym         , 0 },
 	{ "x_next_event"              ,  2, x_next_event               , 0 },
+	{ "x_send_event"              ,  5, x_send_event               , 0 },
 	{ "x_raise_window"            ,  2, x_raise_window             , 0 },
 	{ "x_get_window_attributes"   ,  4, x_get_window_attributes    , 0 },
 	{ "x_move_resize_window"      ,  6, x_move_resize_window       , 0 },
@@ -112,7 +116,7 @@ static PL_extension predicates[] = {
 	{ "x_set_window_border"       ,  3, x_set_window_border        , 0 },
 	{ "x_set_input_focus"         ,  4, x_set_input_focus          , 0 },
 	{ "x_kill_client"             ,  2, x_kill_client              , 0 },
-	{ "x_sync"                    ,  2, x_sync                     , 0 }, /* Unused */
+	{ "x_sync"                    ,  2, x_sync                     , 0 },
 	{ "x_intern_atom"             ,  4, x_intern_atom              , 0 },
 	{ "x_get_class_hint"          ,  4, x_get_class_hint           , 0 },
 	{ "x_change_property"         ,  8, x_change_property          , 0 },
@@ -133,6 +137,8 @@ static PL_extension predicates[] = {
 
 	{ "xinerama_query_screens"    ,  2, xinerama_query_screens     , 0 },
 	{ "xft_color_alloc_name"      ,  5, xft_color_alloc_name       , 0 },
+
+	{ "create_x_configure_event"  ,  3, create_x_configure_event   , 0 }, /* only display and w are passed */
 
 	{ "c_free"                    ,  1, c_free                     , 0 },
 	{ NULL                        ,  0, NULL                       , 0 }
@@ -476,6 +482,25 @@ x_next_event(term_t display, term_t event_return)
 	list = PL_new_term_ref();
 	build_list(list, subts, (size_t)stcnt);
 	PL_TRY(PL_unify(list, event_return));
+	PL_succeed;
+}
+
+static foreign_t
+x_send_event(term_t display, term_t w, term_t propagate, term_t event_mask, term_t event_send)
+{
+	Display *dp;
+	Window win;
+	Bool propag;
+	long emask;
+	XEvent *esend;
+
+	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
+	PL_TRY(PL_get_uint64_ex(w, &win));
+	PL_TRY(PL_get_bool_ex(propagate, &propag));
+	PL_TRY(PL_get_long_ex(event_mask, &emask));
+	PL_TRY(PL_get_pointer_ex(event_send, (void**)&esend));
+
+	XSendEvent(dp, win, propag, emask, esend);
 	PL_succeed;
 }
 
@@ -1098,6 +1123,28 @@ xft_color_alloc_name(term_t display, term_t visual, term_t cmap, term_t name, te
 
 	PL_TRY(PL_unify_uint64(result, res.pixel));
 	PL_succeed;
+}
+
+static foreign_t
+create_x_configure_event(term_t display, term_t w, term_t configure_event)
+{
+	Display *dp;
+	Window win;
+
+	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
+	PL_TRY(PL_get_uint64_ex(w, &win));
+
+	XConfigureEvent *event = malloc(sizeof(XConfigureEvent));
+	if (event != NULL) {
+		memset(event, 0, sizeof(XConfigureEvent));
+		event->type = ConfigureNotify;
+		event->display = dp;
+		event->event = win;
+		event->window = win;
+		PL_TRY(PL_unify_pointer(configure_event, event));
+		PL_succeed;
+	}
+	PL_fail;
 }
 
 static foreign_t

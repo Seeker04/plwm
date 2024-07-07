@@ -8,21 +8,23 @@
 
 :- use_module(config).
 :- use_module(xf86names).
+:- use_module(fifo).
 :- use_module(layout).
 :- use_module(menu).
 :- use_module(utils).
 
+:- dynamic display/1.
+:- dynamic screen/1.
+:- dynamic rootwin/1.
 :- dynamic config_flag/1.
 :- dynamic keymap_internal/3.
 :- dynamic netatom/2.
+:- dynamic jobs/1 as shared.
 
 version(0.1).
 
 %*********************************  Globals  **********************************
 %
-% display                Opened X11 display
-% screen                 Screen number of opened display
-% rootwin                XID of root window
 % border_pixel           Allocated color for border of windows
 % border_pixel_focused   Allocated color for border of focused windows
 %
@@ -61,7 +63,7 @@ quit(ExitCode) :-
 .
 
 alloc_colors() :-
-	nb_getval(display, Dp), nb_getval(screen, Screen),
+	display(Dp), screen(Screen),
 
 	config(border_color(BorderColor)),
 	config(border_color_focused(BorderColorFocused)),
@@ -76,7 +78,7 @@ alloc_colors() :-
 .
 
 setup_netatoms() :-  % for EWMH compilance, see: https://specifications.freedesktop.org/wm-spec/latest/
-	nb_getval(display, Dp), nb_getval(rootwin, Rootwin),
+	display(Dp), rootwin(Rootwin),
 	plx:x_intern_atom(Dp, "UTF8_STRING"             , false, Utf8string),
 	plx:x_intern_atom(Dp, "_NET_SUPPORTED"          , false, NetSupported),
 	plx:x_intern_atom(Dp, "_NET_CLIENT_LIST"        , false, NetClientList),
@@ -155,7 +157,7 @@ translate_keymap(Key, Mods, Action) :-
 	; xf86names:name_ksym(Key, Ksym)    % try lookup from xf86names table
 	; number_string(Ksym, Key)),        % try interpreting Key as the Ksym itself
 
-	nb_getval(display, Dp),
+	display(Dp),
 	plx:x_keysym_to_keycode(Dp, Ksym, Kcode),
 	(Kcode =\= 0 ->
 		modkeys_mask(Mods, ModMask),
@@ -170,7 +172,7 @@ keybind_to_keylist(L + R, List) :-
 .
 
 grab_keys() :-
-	nb_getval(display, Dp), nb_getval(rootwin, Rootwin), GrabModeAsync is 1,
+	display(Dp), rootwin(Rootwin), GrabModeAsync is 1,
 	config(keymaps(Keymaps)),
 	forall(member(Keybind -> Action, Keymaps), (
 		keybind_to_keylist(Keybind, KeyList), length(KeyList, N), Nm1 is N - 1,
@@ -187,7 +189,7 @@ grab_keys() :-
 .
 
 grab_buttons() :-
-	nb_getval(display, Dp), nb_getval(rootwin, Rootwin),
+	display(Dp), rootwin(Rootwin),
 	config(modkey(ModKey)),
 	modkey_mask_newmask(ModKey, 0, ModKeyVal),
 	GrabModeAsync is 1, Button1 is 1, Button3 is 3,
@@ -214,7 +216,7 @@ setup_event_mask() :-
 	EventMask is ButtonPressMask \/ EnterWindowMask \/ LeaveWindowMask \/ PointerMotionMask \/
 	             StructureNotifyMask \/ SubstructureNotifyMask \/ SubstructureRedirectMask \/ PropertyChangeMask,
 
-	nb_getval(display, Dp), nb_getval(rootwin, Rootwin),
+	display(Dp), rootwin(Rootwin),
 
 	plx:x_change_window_attributes(Dp, Rootwin, CWEventMask, EventMask),
 	plx:x_select_input(Dp, Rootwin, EventMask)
@@ -222,7 +224,7 @@ setup_event_mask() :-
 
 focus(Win) :-
 	(Win =\= 0 ->
-		nb_getval(display, Dp), nb_getval(rootwin, Rootwin), nb_getval(border_pixel_focused, BorderPixelF),
+		display(Dp), rootwin(Rootwin), nb_getval(border_pixel_focused, BorderPixelF),
 		netatom(activewindow, NetActiveWindow),
 		RevertToPointerRoot is 1, CurrentTime is 0, XA_WINDOW is 33, PropModeReplace is 0,
 		win_mon_ws(Win, Mon, Ws),
@@ -245,7 +247,7 @@ unfocus_onlyvisual(OnlyVisual) :- active_mon_ws(ActMon, ActWs), unfocus_at_onlyv
 unfocus_at_onlyvisual(Mon-Ws, OnlyVisual) :-
 	global_key_value(focused, Mon-Ws, FocusedWin),
 	(FocusedWin =\= 0 ->
-		nb_getval(display, Dp), nb_getval(rootwin, Rootwin),
+		display(Dp), rootwin(Rootwin),
 		netatom(activewindow, NetActiveWindow),
 		plx:x_delete_property(Dp, Rootwin, NetActiveWindow),
 
@@ -272,37 +274,40 @@ shift_focus(Direction) :-
 .
 
 raise(Win) :-
-	nb_getval(display, Dp),
+	display(Dp),
 	CWStackMode is 1 << 6, Above is 0,
 	x_configure_window(Dp, Win, CWStackMode, 0, 0, 0, 0, 0, 0, Above)
 .
 
 hide(Win) :-
-	nb_getval(display, Dp),
+	display(Dp),
 	win_properties(Win, [_, _, [_, Y, W, H]]),
 	OuterX is -2 * W - 1,
 	plx:x_move_resize_window(Dp, Win, OuterX, Y, W, H) % move out of visible area
 .
 
 show(Win) :-
-	nb_getval(display, Dp),
+	display(Dp),
 	win_properties(Win, [_, _, [X, Y, W, H]]),
 	plx:x_move_resize_window(Dp, Win, X, Y, W, H) % move back to visible area
 .
 
+close_window(Win) :-
+	(Win =\= 0 ->
+		display(Dp),
+		plx:x_kill_client(Dp, Win)
+	; true)
+.
+
 close_focused() :-
 	global_value(focused, FocusedWin),
-	(FocusedWin =\= 0 ->
-		nb_getval(display, Dp),
-		plx:x_kill_client(Dp, FocusedWin),
-		layout:relayout
-	; true)
+	close_window(FocusedWin)
 .
 
 win_fullscreen(Win, Fullscr) :-
 	(win_properties(Win, [State, _, Geom]) ->
 		win_newproperties(Win, [State, Fullscr, Geom]),
-		nb_getval(display, Dp), CWBorderWidth is 1 << 4,
+		display(Dp), CWBorderWidth is 1 << 4,
 		(Fullscr = true ->
 			plx:x_configure_window(Dp, Win, CWBorderWidth, 0, 0, 0, 0, 0, 0, 0)
 		;
@@ -401,7 +406,7 @@ switch_workspace(Mon, Selector) :-
 	global_key_value(active_ws, Mon, OldWs),
 	(selector_workspace(Selector, NewWs) ->
 		(OldWs \= NewWs ->
-			nb_getval(display, Dp), nb_getval(rootwin, Rootwin),
+			display(Dp), rootwin(Rootwin),
 			global_key_newvalue(active_ws, Mon, NewWs), global_key_newvalue(prev_ws, Mon, OldWs),
 			global_key_value(windows, Mon-NewWs, NewWins),
 			global_key_value(windows, Mon-OldWs, OldWins),
@@ -426,7 +431,7 @@ switch_workspace(Mon, Selector) :-
 shiftcoord_win_from_to(Win, FromMon, ToMon) :-
 	(FromMon \= ToMon ->
 		(nb_getval(bars, Bars), \+ member(Win, Bars) -> show(Win) ; true),
-		nb_getval(display, Dp),
+		display(Dp),
 		global_key_value(monitor_geom, FromMon, [FromMonX, FromMonY|_]),
 		global_key_value(monitor_geom, ToMon,   [ToMonX,   ToMonY  |_]),
 		(plx:x_get_window_attributes(Dp, Win, [X, Y, W, H], Status), Status =\= 0 ->
@@ -670,7 +675,7 @@ format_ws_name(Fmt, [Idx, Ws], Formatted) :-  % Fmt must have a ~w or a ~d follo
 .
 
 update_ws_atoms() :-
-	nb_getval(display, Dp), nb_getval(rootwin, Rootwin), active_mon_ws(_, ActWs), nb_getval(workspaces, Wss),
+	display(Dp), rootwin(Rootwin), active_mon_ws(_, ActWs), nb_getval(workspaces, Wss),
 	netatom(numberofdesktops, NetNumberOfDesktops),
 	netatom(desktopnames,     NetDesktopNames),
 	netatom(currentdesktop,   NetCurrentDesktop),
@@ -702,7 +707,7 @@ update_ws_atoms() :-
 .
 
 update_wintype(Win) :-
-	nb_getval(display, Dp),
+	display(Dp),
 	XA_ATOM is 4,
 	netatom(wmwindowtype, NetWMWindowType), netatom(wmwindowtype_dialog, NetWMWindowTypeDialog),
 	netatom(wmstate, NetWMState),           netatom(wmstatefullscreen, NetWMStateFullscreen),
@@ -723,7 +728,7 @@ update_wintype(Win) :-
 .
 
 %update_sizehints(Win) :-
-%	nb_getval(display, Dp),
+%	display(Dp),
 %	plx:x_get_wm_normal_hints(Dp, Win, [Flags, _, _, _, _, MinW, MinH, MaxW, MaxH, WInc, HInc,
 %	                                    MinAX, MinAY, MaxAX, MaxAY, BW, BH, WGrav], Status),
 %	(Status =\= 0 ->
@@ -746,7 +751,7 @@ ruletest_on(exact(Str), Str).
 
 apply_rules(Win) :-
 	optcnf_then(rules(Rules), (
-		(nb_getval(display, Dp), XA_WM_NAME is 39,
+		(display(Dp), XA_WM_NAME is 39,
 		plx:x_get_class_hint(Dp, Win, WName, WClass),
 		plx:x_get_text_property(Dp, Win, WTitle, XA_WM_NAME, Status), Status =\= 0 ->
 			once((member((Name, Class, Title -> Mon, Ws, Mode), Rules),
@@ -826,7 +831,7 @@ handle_event(buttonrelease, _) :-
 .
 
 handle_event(enternotify, [_, _, _, _, Win, _, _, _, _, _, _, _, _, _, _, _, _]) :-
-	nb_getval(rootwin, Rootwin),
+	rootwin(Rootwin),
 	(Win =\= Rootwin -> focus(Win) ; true)
 .
 
@@ -938,7 +943,7 @@ handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
 		; true)
 	); true),
 	(WinSpawned = true ->
-		nb_getval(rootwin, Rootwin), netatom(clientlist, NetClientList),
+		rootwin(Rootwin), netatom(clientlist, NetClientList),
 		PropModeAppend is 2, XA_WINDOW is 33,
 		plx:x_change_property(Dp, Rootwin, NetClientList, XA_WINDOW, 32, PropModeAppend, [Win], 1),
 
@@ -1019,7 +1024,7 @@ handle_event(clientmessage, [_, _, _, _, Win, MessageType, _, DataL0, DataL1, Da
 .
 
 handle_event(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
-	nb_getval(display, Dp), nb_getval(rootwin, Rootwin),
+	display(Dp), rootwin(Rootwin),
 	(Win == Rootwin ->
 		plx:xinerama_query_screens(Dp, ScreenInfo),
 		monitors(Mons),
@@ -1039,7 +1044,28 @@ handle_event(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
 			SplitAt is NewMonCnt,
 			utils:split_at(SplitAt, Mons, _, MonsToDelete),
 			forall(member(Mon, MonsToDelete), delete_monitor(Mon))
+		; true),
+
+		% Notice of pending jobs is also implemented with a ConfigureNotify
+		(utils:jobs(Jobs) ->
+			forall(member(Job, Jobs),
+				ignore(catch(call(Job), Ex, (writeln(Ex), true)))
+			),
+			retract(utils:jobs(_))
 		; true)
+	; true)
+.
+
+jobs_notify(Jobs) :-
+	display(Dp), rootwin(Rootwin),
+	(plx:create_x_configure_event(Dp, Rootwin, ConfigureEvent) ->
+		% We can pass jobs from other threads using a dynamic predicate
+		assertz(jobs(Jobs)),
+
+		StructureNotifyMask is 1 << 17,
+		plx:x_send_event(Dp, Rootwin, false, StructureNotifyMask, ConfigureEvent),
+		plx:x_sync(Dp, false), % flush the even queue
+		plx:c_free(ConfigureEvent)
 	; true)
 .
 
@@ -1052,7 +1078,7 @@ win_properties(Win, Properties)    :- term_to_atom(Win, WinAtom), nb_current(Win
 win_newproperties(Win, Properties) :- term_to_atom(Win, WinAtom), nb_setval(WinAtom, Properties).
 
 eventloop() :-
-	nb_getval(display, Dp),
+	display(Dp),
 
 	plx:x_next_event(Dp, Event),
 	(Event = [EventType|EventArgs] ->
@@ -1151,7 +1177,7 @@ trim_bar_space(Mon, [BarX, BarY, BarW, BarH]) :-
 .
 
 update_free_win_space() :-
-	nb_getval(display, Dp), monitors(Mons),
+	display(Dp), monitors(Mons),
 	forall(member(Mon, Mons), (
 		global_key_value(monitor_geom, Mon, MonGeom),
 		global_key_newvalue(free_win_space, Mon, MonGeom),
@@ -1175,7 +1201,7 @@ update_free_win_space() :-
 		)),
 		nb_getval(active_mon, ActMon),
 		(Mon == ActMon ->
-			nb_getval(rootwin, Rootwin),
+			rootwin(Rootwin),
 			global_key_value(free_win_space, Mon, Geom),
 			nb_getval(workspaces, Wss), length(Wss, WsCnt),
 			utils:n_item_clones(WsCnt, Geom, Geoms), flatten(Geoms, Geoms1D),
@@ -1190,7 +1216,7 @@ update_free_win_space() :-
 .
 
 update_clientlist() :-
-	nb_getval(display, Dp), nb_getval(rootwin, Rootwin),
+	display(Dp), rootwin(Rootwin),
 	netatom(clientlist, NetClientList),
 	PropModeAppend is 2, XA_WINDOW is 33,
 
@@ -1207,7 +1233,7 @@ run_startupcmds() :-
 .
 
 init_state() :-  % initialize global and per-monitor, per-workspace state with defaults
-	nb_getval(display, Dp),
+	display(Dp),
 	config(workspaces(Wss)),
 
 	empty_assoc(EmptyAMonGeom),      nb_setval(monitor_geom,   EmptyAMonGeom),
@@ -1334,7 +1360,9 @@ check_config() :-  % when config is invalid, quit right away with a nice error m
 	optcnf_then(ws_format(Fmt),           catch(format_ws_name(Fmt,  [0, a], _), _, fail)) - "ws_format must have ~w or ~d followed by ~w",
 	optcnf_then(ws_format_occupied(FmtO), catch(format_ws_name(FmtO, [0, a], _), _, fail)) - "ws_format_occupied must have ~w or ~d followed by ~w",
 	optcnf_then(bar_placement(BPlace), member(BPlace, [follow_focus, static])) - "bar_placement must be follow_focus or static",
-	optcnf_then(menucmd([A|As]), forall(member(Arg, [A|As]), string(Arg))) - "menucmd must be a non-empty list of strings",
+	optcnf_then(fifo_enabled(CFifoE), (CFifoE = true ; CFifoE = false))       - "fifo_enabled must be true or false",
+	optcnf_then(fifo_path(CFifoPath), string(CFifoPath))                      - "fifo_path must be a string",
+-	optcnf_then(menucmd([A|As]), forall(member(Arg, [A|As]), string(Arg))) - "menucmd must be a non-empty list of strings",
 
 	optcnf_then(rules(Rules),
 		forall(member((RName, RClass, RTitle -> RMon, RWs, RMode), Rules), (
@@ -1370,9 +1398,9 @@ check_config() :-  % when config is invalid, quit right away with a nice error m
 .
 
 init_x() :-
-	plx:x_open_display("", Dp),           nb_setval(display, Dp),
-	plx:default_root_window(Dp, Rootwin), nb_setval(rootwin, Rootwin),
-	plx:default_screen(Dp, Screen),       nb_setval(screen, Screen),
+	plx:x_open_display("", Dp),           assertz(display(Dp)),
+	plx:default_root_window(Dp, Rootwin), assertz(rootwin(Rootwin)),
+	plx:default_screen(Dp, Screen),       assertz(screen(Screen)),
 	plx:x_set_error_handler
 .
 
@@ -1442,6 +1470,8 @@ main() :-
 	setup_event_mask,
 	update_free_win_space,
 	update_ws_atoms,
+
+	fifo:setup_fifo,
 
 	run_startupcmds,
 

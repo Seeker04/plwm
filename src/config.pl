@@ -98,6 +98,15 @@ bar_placement(follow_focus).
 %startupcmd("picom").
 
 
+%*******************************  Command FIFO  *******************************
+
+% Predicates written to this named pipe will be executed
+% Easiest way to script plwm, e.g.:
+% echo "switch_workspace(next)" > /tmp/plwm_fifo
+fifo_enabled(false).
+fifo_path("/tmp/plwm_fifo").
+
+
 %**********************************  Menus  ***********************************
 
 % Command and its arguments to use for menu operations (e.g., menu:goto_window)

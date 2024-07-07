@@ -21,6 +21,7 @@
   - [Layout overrides](#layout-overrides)
   - [Rules](#rules)
   - [Menus](#menus)
+  - [Scriptability](#scriptability)
 - [Screenshots](#screenshots)
 - [Project status](#project-status)
 - [Contribution](#contribution)
@@ -215,6 +216,8 @@ When cooking your config, you can use the `-C` flag to quickly and easily check 
 | `bar_class`                | the two strings from bar's WM_CLASS,<br/>query with [xprop(1)](https://linux.die.net/man/1/xprop)<br>**Default:** "polybar", "Polybar" | Space will be reserved for matching windows and they cannot be focused, resized, etc. |
 | `bar_placement`            | follow_focus, static<br>**Default:** follow_focus               | Determines placement of external bars (explained [here](#layout-overrides)) |
 | `startupcmd`               | string<br>**Default:** -                                        | Command to spawn at startup (e.g., for auto launching bars or compositors) |
+| `fifo_enabled`             | true or false<br>**Default:** false                             | Whether to spawn a command FIFO                 |
+| `fifo_path`                | string<br>**Default:** "/tmp/plwm_fifo"                         | Path of command FIFO                            |
 | `menucmd`                  | list of strings<br>**Default:** ["dmenu", "-i", "-l", "20", "-p"] | Command and its arguments to use for menu operations |
 | `modkey`                   | shift, lock, ctrl, alt, mod2, mod3, super, mod5<br>**Default:** super | Key you must hold for mouse operations |
 | `keymaps`                  | list of (Modifiers + Key -> Action)<br>**Default:** [see here](#default-keybindings) | Modifiers: see values at `modkey`<br/>Key: keycode, [usual X11 names](http://xahlee.info/linux/linux_show_keycode_keysym.html), or [special key](src/xf86names.pl)<br/>Action: arbitrary predicate |
@@ -387,6 +390,71 @@ menucmd(["rofi", "-dmenu"]).
 ```
 
 **Note:** A prompt name will be written as last argument for `menucmd/1`, so if you are using dmenu, you should add `-p` as final argument.
+
+## Scriptability
+
+If `fifo_enabled/1` and `fifo_path/1` are both set (disabled by default), then a named pipe will be created (with [mkfifo(1)](https://www.man7.org/linux/man-pages/man1/mkfifo.1.html)).
+
+The user can execute any term or list of terms by writing their code to this pipe.
+
+For most usecases, predicates listed by `menu:list_cmds/0` are the ones users would be interested in calling, but note that this mechanizm can execute _arbitrary_ terms. Even internal ones, or custom ones the user hacks together. There is no limit.
+
+In case of an issue (e.g. syntax error, predicate does not exist,...), the error will be written to the plwm log.
+
+Examples:
+
+Switch to the next workspace.
+```bash
+echo "switch_workspace(next)." > /tmp/plwm_fifo
+```
+
+Create a new workspace 'temp', switch to it and set its layout.
+```bash
+echo "create_workspace(temp),
+      switch_workspace(temp),
+      layout:set_layout(grid)." > /tmp/plwm_fifo
+```
+
+Use conjunction (comma) if you need to share variables between terms.
+```bash
+echo "Ws = temp. create_workspace(Ws). switch_workspace(Ws)." > /tmp/plwm_fifo # doesn't work
+echo "Ws = temp, create_workspace(Ws), switch_workspace(Ws)." > /tmp/plwm_fifo # works
+```
+
+You can write reusable script files like:
+```Prolog
+% switch to first monitor
+switch_monitor(0),
+
+% create some workspaces
+Workspaces = [a, b, c],
+forall(member(Ws, Workspaces), (
+    create_workspace(Ws)
+)).
+```
+and simply execute them with:
+```bash
+cat myscript.pl > /tmp/plwm_fifo
+```
+
+Create workspaces '1'..'9'.
+```bash
+# this may yield inconsistent results (terms missing or in wrong order)
+for i in {1..9}; do
+    echo "create_workspace($i)." > /tmp/plwm_fifo
+done
+
+# instead send the whole input at once like before
+for i in {1..9}; do
+    echo "create_workspace($i)."
+done > /tmp/plwm_fifo
+
+# another solution is to add a little delay
+for i in {1..9}; do
+    echo "create_workspace($i)." > /tmp/plwm_fifo
+    sleep .001
+done
+```
 
 # Screenshots
 

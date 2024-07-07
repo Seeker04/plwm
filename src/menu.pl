@@ -73,7 +73,7 @@ goto_workspace_(MenuEntries, Selection) :-
 .
 
 goto_window() :-
-	nb_getval(display, Dp), monws_keys(Keys), XA_WM_NAME is 39,
+	display(Dp), monws_keys(Keys), XA_WM_NAME is 39,
 	findall(MenuEntries, (
 		member(Mon-Ws, Keys), global_key_value(windows, Mon-Ws, Wins),
 		findall(Win-MenuEntry, (   % map XID to lines for later lookup
@@ -97,7 +97,7 @@ goto_window_(MenuInput, Selection) :-
 .
 
 pull_from() :-
-	nb_getval(display, Dp), active_mon_ws(ActMon, ActWs), monws_keys(Keys),
+	display(Dp), active_mon_ws(ActMon, ActWs), monws_keys(Keys),
 	findall(MenuEntries, (
 		member(Mon-Ws, Keys), Mon-Ws \= ActMon-ActWs, global_key_value(windows, Mon-Ws, Wins),
 		findall(Win-MenuEntry, (   % map XID to lines for later lookup

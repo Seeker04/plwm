@@ -22,7 +22,7 @@ set_layout(Layout) :- active_mon_ws(ActMon, ActWs), set_layout(ActMon-ActWs, Lay
 
 set_layout(Mon-Ws, Layout) :-
 	(is_layout(Layout) ->
-		nb_getval(display, Dp), global_key_value(windows, Mon-Ws, Wins),
+		display(Dp), global_key_value(windows, Mon-Ws, Wins),
 		(Layout \= floating ->
 			global_key_value(free_win_space, Mon, Bounds),
 			findall(Win,               % skip unmanaged and fullscreen windows
@@ -346,7 +346,7 @@ apply_inner_gaps_h(I, SizeSub, WinCnt, [[X, Y, W, H]|Gs], [[NewX, Y, NewW, H]|Ne
 .
 
 apply_geom(Win, [X, Y, W, H]) :-
-	nb_getval(display, Dp),
+	display(Dp),
 	plx:x_move_resize_window(Dp, Win, X, Y, W, H),
 	win_newproperties(Win, [managed, false, [X, Y, W, H]])
 .
