@@ -209,6 +209,7 @@ While cooking your config, you can use the `-C` flag to quickly and easily check
 | `default_layout`           | floating, monocle, stack, hstack, nrows(N), ncols(N), grid, lmaster, rmaster, tmaster, bmaster, cmaster<br>**Default:** lmaster | Layout to use by default |
 | `attach_bottom`            | true or false<br>**Default:** false                             | Put new windows to bottom of the stack instead  |
 | `border_width`             | 0<= integer<br>**Default:** 1                                   | Border width in pixels                          |
+| `border_width_focused`     | 0<= integer<br>**Default:** 1                                   | Border width for focused window in pixels       |
 | `border_color`             | hexa code or color name<br>**Default:** "white"                 | Border color                                    |
 | `border_color_focused`     | hexa code or color name<br>**Default:** "blue"                  | Border color for focused window                 |
 | `snap_threshold`           | 0<= integer<br>**Default:** 32                                  | Snap to screen border threshold in pixels while dragging windows |

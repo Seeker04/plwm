@@ -18,6 +18,7 @@ attach_bottom(false).    % if true, new windows will go to the bottom of the sta
 %*********************************  Borders  **********************************
 
 border_width(1).
+border_width_focused(1).
 border_color("gray").
 border_color_focused("blue").
 

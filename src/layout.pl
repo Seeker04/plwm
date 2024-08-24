@@ -61,14 +61,14 @@ calculate_layout(_, _, 0, _, []) :- !.
 calculate_layout(Layout, Mon, 1, Bounds, Geoms) :- Layout \= monocle, !, calculate_layout(monocle, Mon, 1, Bounds, Geoms).
 
 calculate_layout(monocle, _, WinCnt, [BX, BY, BW, BH], Geoms) :-
-	config(border_width(BorderW)),
+	max_border_width(BorderW),
 	WinW is BW - 2 * BorderW,
 	WinH is BH - 2 * BorderW,
 	utils:n_item_clones(WinCnt, [BX, BY, WinW, WinH], Geoms)
 .
 
 calculate_layout(stack, _, WinCnt, [BX, BY, BW, BH], Geoms) :-
-	config(border_width(BorderW)),
+	max_border_width(BorderW),
 	BHminusBorders is BH - 2 * BorderW * WinCnt,
 	WinW is BW - 2 * BorderW,
 	WinH is floor(BHminusBorders / WinCnt),
@@ -88,7 +88,7 @@ calculate_layout(stack, _, WinCnt, [BX, BY, BW, BH], Geoms) :-
 .
 
 calculate_layout(hstack, _, WinCnt, [BX, BY, BW, BH], Geoms) :-
-	config(border_width(BorderW)),
+	max_border_width(BorderW),
 	BWminusBorders is BW - 2 * BorderW * WinCnt,
 	WinW is floor(BWminusBorders / WinCnt),
 	WinH is BH - 2 * BorderW,
@@ -302,8 +302,14 @@ calculate_layout(MasterType, Mon, WinCnt, [BX, BY, BW, BH], Geoms) :-
 
 %*********************************  Helpers  **********************************
 
-stack_xs([X, Y, W, H], [NewX, Y, W, H]) :- config(border_width(BorderW)), NewX is X + W + 2 * BorderW.
-stack_ys([X, Y, W, H], [X, NewY, W, H]) :- config(border_width(BorderW)), NewY is Y + H + 2 * BorderW.
+max_border_width(MaxBorderW) :-
+	config(border_width(BorderW)),
+	config(border_width_focused(BorderWF)),
+	MaxBorderW is max(BorderW, BorderWF)
+.
+
+stack_xs([X, Y, W, H], [NewX, Y, W, H]) :- max_border_width(BorderW), NewX is X + W + 2 * BorderW.
+stack_ys([X, Y, W, H], [X, NewY, W, H]) :- max_border_width(BorderW), NewY is Y + H + 2 * BorderW.
 
 fill_spare_pixels_v(_, _, [], []).
 fill_spare_pixels_v(0, Added, [[X, Y, W, H]|Gs], [[X, NewY, W, H]|NewGs]) :-

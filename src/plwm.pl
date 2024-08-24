@@ -222,23 +222,41 @@ setup_event_mask() :-
 	plx:x_select_input(Dp, Rootwin, EventMask)
 .
 
+set_border(Win) :-
+	display(Dp), CWBorderWidth is 1 << 4,
+
+	(global_value(focused, Win) ->
+		nb_getval(border_pixel_focused, BorderPixel),
+		config(border_width_focused(BorderW)), CWBorderWidth is 1 << 4
+	;
+		nb_getval(border_pixel, BorderPixel),
+		config(border_width(BorderW)), CWBorderWidth is 1 << 4
+	),
+	% is in fullscreen?
+	(win_properties(Win, [_, true, _]) -> ActualBorderW is 0 ; ActualBorderW is BorderW),
+
+	plx:x_set_window_border(Dp, Win, BorderPixel),
+	plx:x_configure_window(Dp, Win, CWBorderWidth, 0, 0, 0, 0, ActualBorderW, 0, 0)
+.
+
 focus(Win) :-
 	(Win =\= 0 ->
-		display(Dp), rootwin(Rootwin), nb_getval(border_pixel_focused, BorderPixelF),
-		netatom(activewindow, NetActiveWindow),
-		RevertToPointerRoot is 1, CurrentTime is 0, XA_WINDOW is 33, PropModeReplace is 0,
+		display(Dp),
 		win_mon_ws(Win, Mon, Ws),
-
 		switch_monitor(Mon),
 		unfocus_at_onlyvisual(Mon-Ws, false),
-		plx:x_set_window_border(Dp, Win, BorderPixelF),
+
+		RevertToPointerRoot is 1, CurrentTime is 0,
 		plx:x_set_input_focus(Dp, Win, RevertToPointerRoot, CurrentTime),
 
 		active_mon_ws(_, ActWs),
 		(Ws == ActWs ->
+			rootwin(Rootwin), netatom(activewindow, NetActiveWindow),
+			XA_WINDOW is 33, PropModeReplace is 0,
 			plx:x_change_property(Dp, Rootwin, NetActiveWindow, XA_WINDOW, 32, PropModeReplace, [Win], 1)
 		; true),
-		global_key_newvalue(focused, Mon-Ws, Win)
+		global_key_newvalue(focused, Mon-Ws, Win),
+		set_border(Win)
 	; true)
 .
 
@@ -250,12 +268,10 @@ unfocus_at_onlyvisual(Mon-Ws, OnlyVisual) :-
 		display(Dp), rootwin(Rootwin),
 		netatom(activewindow, NetActiveWindow),
 		plx:x_delete_property(Dp, Rootwin, NetActiveWindow),
+		global_key_newvalue(focused, Mon-Ws, 0),
+		set_border(FocusedWin),
 
-		% unhighlight
-		nb_getval(border_pixel, BorderPixel),
-		plx:x_set_window_border(Dp, FocusedWin, BorderPixel),
-
-		(OnlyVisual = false -> global_key_newvalue(focused, Mon-Ws, 0) ; true)
+		(OnlyVisual = true -> global_key_newvalue(focused, Mon-Ws, FocusedWin) ; true)
 	; true)
 .
 
@@ -307,13 +323,7 @@ close_focused() :-
 win_fullscreen(Win, Fullscr) :-
 	(win_properties(Win, [State, _, Geom]) ->
 		win_newproperties(Win, [State, Fullscr, Geom]),
-		display(Dp), CWBorderWidth is 1 << 4,
-		(Fullscr = true ->
-			plx:x_configure_window(Dp, Win, CWBorderWidth, 0, 0, 0, 0, 0, 0, 0)
-		;
-			config(border_width(BorderW)),
-			plx:x_configure_window(Dp, Win, CWBorderWidth, 0, 0, 0, 0, BorderW, 0, 0)
-		),
+		set_border(Win),
 		layout:relayout
 	; true)
 .
@@ -1328,12 +1338,13 @@ check_errmsg(Check, ErrMsg) :- call(Check) -> true ; writeln(user_error, ErrMsg)
 check_config() :-  % when config is invalid, quit right away with a nice error message
 	% existence of mandatory settings
 	forall(member(Setting, [
-		default_nmaster/1, default_mfact/1, default_layout/1, border_width/1, border_color/1,
-		border_color_focused/1, workspaces/1, starting_workspace/1, modkey/1, keymaps/1
+		default_nmaster/1, default_mfact/1, default_layout/1, border_width/1, border_width_focused/1,
+		border_color/1, border_color_focused/1, workspaces/1, starting_workspace/1, modkey/1, keymaps/1
 	]), (config_exists(Setting) ; (write(user_error, "mandatory setting missing: "), writeln(user_error, Setting), quit(1)))),
 
 	config(default_nmaster(Nmaster)), config(default_mfact(Mfact)), config(default_layout(Layout)),
-	config(border_width(BorderW)), config(border_color(BorderColor)), config(border_color_focused(BorderColorFocused)),
+	config(border_width(BorderW)), config(border_width_focused(BorderWF)),
+	config(border_color(BorderColor)), config(border_color_focused(BorderColorFocused)),
 	config(workspaces(Wss)), config(starting_workspace(SWs)), config(modkey(Modkey)), config(keymaps(Keymaps)),
 
 	forall(member(Check-ErrMsg, [
@@ -1342,7 +1353,8 @@ check_config() :-  % when config is invalid, quit right away with a nice error m
 	(integer(Nmaster), 0 =< Nmaster)                      - "default_nmaster must be a 0<= integer",
 	(utils:is_float(Mfact), 0.05 =< Mfact, Mfact =< 0.95) - "default_mfact must be a float between 0.05 and 0.95",
 	(layout:is_layout(Layout))                            - "default_layout is invalid (see: layout:is_layout)",
-	(integer(BorderW), 0 =< BorderW)                      - "border_width must be a 0<= integer",
+	(integer(BorderW),  0 =< BorderW)                     - "border_width must be a 0<= integer",
+	(integer(BorderWF), 0 =< BorderWF)                    - "border_width_focused must be a 0<= integer",
 	(string(BorderColor))                                 - "border_color must be a string",
 	(string(BorderColorFocused))                          - "border_color_focused must be a string",
 	(lists:is_set(Wss), member(SWs, Wss), forall(member(Ws, Wss), atom(Ws))) - "workspaces must be a non-empty set of atoms containing starting_workspace",
