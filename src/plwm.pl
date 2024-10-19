@@ -995,12 +995,12 @@ handle_event(destroynotify, [_, _, _, _, _, Win]) :-
 			term_to_atom(Win, WinAtom), nb_delete(WinAtom),
 			update_clientlist,
 			update_ws_atoms,
-			global_key_value(active_ws, Mon, ActWs),
+			active_mon_ws(ActMon, ActWs),
 			(global_key_value(focused, Mon-Ws, Win) ->
 				NextIdx is max(0, Idx - 1),
 				(nth0(NextIdx, RemainingWins, PrevWin) ->
 					global_key_newvalue(focused, Mon-Ws, PrevWin),
-					(Ws == ActWs -> % predecessor win (if any) gets the focus
+					(Mon-Ws == ActMon-ActWs -> % predecessor win (if any) gets the focus
 						focus(PrevWin),
 						raise(PrevWin)
 					; global_key_newvalue(focused, Mon-Ws, PrevWin))
