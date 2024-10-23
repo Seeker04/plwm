@@ -491,10 +491,15 @@ win_tomon_toworkspace_top(Win, ToMon, ToWs, Top) :-
 		global_key_newvalue(windows, FromMon-FromWs, FromWinsNew),
 		global_key_newvalue(windows, ToMon-ToWs,     ToWinsNew),
 
+		% unfocus on prev ws, focus on new, but don't take input
 		unfocus_at_onlyvisual(FromMon-FromWs, false),
+		focus(Win),
+		display(Dp), RevertToPointerRoot is 1, CurrentTime is 0, PointerRoot is 1,
+		plx:x_set_input_focus(Dp, PointerRoot, RevertToPointerRoot, CurrentTime),
+
+		% focus next win on current ws, if any
 		NextIdx is max(0, Idx - 1),
 		(nth0(NextIdx, FromWinsNew, PrevWin) -> focus(PrevWin) ; true),
-		focus(Win),
 
 		(global_key_value(active_ws, FromMon, FromWs) ->
 			hide(Win),
