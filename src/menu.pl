@@ -10,10 +10,12 @@ spawn_menu(Prompt, Entries, Callback) :-
 		process:process_create(path(MenuCmd), MenuArgsWithPrompt, [stdin(pipe(MenuIn)), stdout(pipe(MenuOut))]),
 
 		forall(member(Entry, Entries), writeln(MenuIn, Entry)), close(MenuIn),
-		read_string(MenuOut, Len, SelectedStr),
+		read_string(MenuOut, Len, MenuOutStr),
 		(1 < Len ->
-			utils:str_withoutlastch(SelectedStr, Selection), % remove newline
-			(member(Selection, Entries) -> call(Callback, Selection) ; true)
+			split_string(MenuOutStr, "\n", "\n", SelectedLines),
+			(forall(member(Line, SelectedLines), member(Line, Entries)) ->
+				ignore(call(Callback, SelectedLines))
+			; true)
 			% don't accept arbitrary input from menu prompt, only proper selection
 		; true)
 	))
@@ -65,7 +67,7 @@ goto_workspace() :-
 	findall(Line, member(_-_-Line, MenuEntries), Lines),
 	spawn_menu("goto workspace", Lines, menu:goto_workspace_(MenuEntries))
 .
-goto_workspace_(MenuEntries, Selection) :-
+goto_workspace_(MenuEntries, [Selection]) :-
 	(member(Mon-Ws-Selection, MenuEntries) ->
 		switch_monitor(Mon),
 		switch_workspace(Ws)
@@ -87,7 +89,7 @@ goto_window() :-
 	findall(Line, member(Win-Line, MenuInput), Lines),
 	spawn_menu("goto window", Lines, menu:goto_window_(MenuInput))
 .
-goto_window_(MenuInput, Selection) :-
+goto_window_(MenuInput, [Selection]) :-
 	(member(Win-Selection, MenuInput) ->
 		win_mon_ws(Win, TargetMon, TargetWs),
 		switch_monitor(TargetMon),
@@ -112,12 +114,14 @@ pull_from() :-
 	findall(Line, member(Win-Line, MenuInput), Lines),
 	spawn_menu("pull from", Lines, menu:pull_from_(MenuInput))
 .
-pull_from_(MenuInput, Selection) :-
-	(member(Win-Selection, MenuInput) ->
-		active_mon_ws(ActMon, ActWs),
-		win_tomon_toworkspace_top(Win, ActMon, ActWs, true),
-		focus(Win), raise(Win)
-	; true)
+pull_from_(MenuInput, Selections) :-
+	forall(member(Sel, Selections), (
+		(member(Win-Sel, MenuInput) ->
+			active_mon_ws(ActMon, ActWs),
+			win_tomon_toworkspace_top(Win, ActMon, ActWs, true),
+			focus(Win), raise(Win)
+		; true)
+	))
 .
 
 push_to() :-
@@ -133,7 +137,7 @@ push_to() :-
 		spawn_menu("push to", Lines, menu:push_to_(MenuEntries))
 	; true)
 .
-push_to_(MenuEntries, Selection) :-
+push_to_(MenuEntries, [Selection]) :-
 	(member(Mon-Ws-Selection, MenuEntries) ->
 		global_value(focused, FocusedWin),
 		(FocusedWin =\= 0 ->
@@ -168,7 +172,7 @@ reindex_workspace() :- % will reindex the active one
 		spawn_menu("reindex workspace to", Lines, menu:reindex_workspace_(ActWs))
 	; true)
 .
-reindex_workspace_(Ws, Selection) :- number_string(Idx, Selection), reindex_workspace(Ws, Idx).
+reindex_workspace_(Ws, [Selection]) :- number_string(Idx, Selection), reindex_workspace(Ws, Idx).
 
 delete_workspace() :-
 	nb_getval(workspaces, Wss),
@@ -177,7 +181,11 @@ delete_workspace() :-
 		spawn_menu("delete workspace", Lines, menu:delete_workspace_)
 	; true)
 .
-delete_workspace_(Selection) :- atom_string(Ws, Selection), delete_workspace(Ws).
+delete_workspace_(Selections) :-
+	forall(member(Sel, Selections), (
+		atom_string(Ws, Sel), delete_workspace(Ws)
+	))
+.
 
 
 %*********************************  Extras  ***********************************
@@ -270,7 +278,7 @@ shellcmd_prompt() :-
 	; true)
 .
 
-run_cmd(MenuEntries, Selection) :-
+run_cmd(MenuEntries, [Selection]) :-
 	(member(Cmd-Selection, MenuEntries) ->
 		(Cmd = change_nmaster -> change_nmaster_prompt
 		;Cmd = change_mfact   -> change_mfact_prompt
