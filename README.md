@@ -368,6 +368,8 @@ The `menu` module is fully optional, but there are keybindings for it too by def
 | alt + shift + w | `menu:goto_workspace`    | List monitors/workspaces, except current, then go to selected |
 | alt + p         | `menu:pull_from`         | List windows from all monitors/workspaces, except current, then pull selected ones to the active monitor/workspace and focus it |
 | alt + shift + p | `menu:push_to`           | List monitors/workspaces, except current, then push the focused window to the selected |
+| alt + q         | `menu:close_windows`     | Close selected windows                                        |
+| alt + shift + q | `menu:keep_windows`      | Close all windows other than the selected                     |
 
 **Dynamic workspace operations**
 
@@ -399,7 +401,7 @@ menucmd(["rofi", "-dmenu"]).
 
 **Note:** A prompt name will be written as last argument for `menucmd/1`, so if you are using dmenu, you should add `-p` as final argument.
 
-**Note:** `pull_from` and `delete_workspace` can operate on multiple selections (Ctrl+Enter in dmenu by default).
+**Note:** `pull_from`, `delete_workspace`, `close_windows` and `keep_windows` can operate on multiple selections. Use Ctrl+Enter in dmenu, or Shift+Enter with `-dmenu -multi-select` in rofi.
 
 ## Scriptability
 

@@ -54,6 +54,21 @@ mon_ws_wint_format(Mon, Ws, WinT, Str) :-
 		                    format(string(Str), Fmt, [Mon, Ws, WinT]))
 .
 
+spawn_winlist_menu(Prompt, Callback) :-
+	display(Dp), monws_keys(Keys), XA_WM_NAME is 39,
+	findall(MenuEntries, (
+		member(Mon-Ws, Keys), global_key_value(windows, Mon-Ws, Wins),
+		findall(Win-MenuEntry, (   % map XID to lines for later lookup
+			member(Win, Wins),
+			plx:x_get_text_property(Dp, Win, WinTitle, XA_WM_NAME, Status), Status =\= 0,
+			mon_ws_wint_format(Mon, Ws, WinTitle, MenuEntry)),
+			MenuEntries)),
+		MenuEntriesAll
+	),
+	flatten(MenuEntriesAll, MenuInput),
+	findall(Line, member(Win-Line, MenuInput), Lines),
+	spawn_menu(Prompt, Lines, call(Callback, MenuInput))
+.
 
 %*********************    Navigation/window placement    **********************
 
@@ -75,19 +90,7 @@ goto_workspace_(MenuEntries, [Selection]) :-
 .
 
 goto_window() :-
-	display(Dp), monws_keys(Keys), XA_WM_NAME is 39,
-	findall(MenuEntries, (
-		member(Mon-Ws, Keys), global_key_value(windows, Mon-Ws, Wins),
-		findall(Win-MenuEntry, (   % map XID to lines for later lookup
-			member(Win, Wins),
-			plx:x_get_text_property(Dp, Win, WinTitle, XA_WM_NAME, Status), Status =\= 0,
-			mon_ws_wint_format(Mon, Ws, WinTitle, MenuEntry)),
-			MenuEntries)),
-		MenuEntriesAll
-	),
-	flatten(MenuEntriesAll, MenuInput),
-	findall(Line, member(Win-Line, MenuInput), Lines),
-	spawn_menu("goto window", Lines, menu:goto_window_(MenuInput))
+	spawn_winlist_menu("goto window", menu:goto_window_)
 .
 goto_window_(MenuInput, [Selection]) :-
 	(member(Win-Selection, MenuInput) ->
@@ -99,12 +102,11 @@ goto_window_(MenuInput, [Selection]) :-
 .
 
 pull_from() :-
-	display(Dp), active_mon_ws(ActMon, ActWs), monws_keys(Keys),
+	display(Dp), active_mon_ws(ActMon, ActWs), monws_keys(Keys), XA_WM_NAME is 39,
 	findall(MenuEntries, (
 		member(Mon-Ws, Keys), Mon-Ws \= ActMon-ActWs, global_key_value(windows, Mon-Ws, Wins),
 		findall(Win-MenuEntry, (   % map XID to lines for later lookup
 			member(Win, Wins),
-			XA_WM_NAME is 39,
 			plx:x_get_text_property(Dp, Win, WinTitle, XA_WM_NAME, Status), Status =\= 0,
 			mon_ws_wint_format(Mon, Ws, WinTitle, MenuEntry)),
 			MenuEntries)),
@@ -115,12 +117,10 @@ pull_from() :-
 	spawn_menu("pull from", Lines, menu:pull_from_(MenuInput))
 .
 pull_from_(MenuInput, Selections) :-
-	forall(member(Sel, Selections), (
-		(member(Win-Sel, MenuInput) ->
-			active_mon_ws(ActMon, ActWs),
-			win_tomon_toworkspace_top(Win, ActMon, ActWs, true),
-			focus(Win), raise(Win)
-		; true)
+	forall((member(Sel, Selections), member(Win-Sel, MenuInput)), (
+		active_mon_ws(ActMon, ActWs),
+		win_tomon_toworkspace_top(Win, ActMon, ActWs, true),
+		focus(Win), raise(Win)
 	))
 .
 
@@ -146,6 +146,19 @@ push_to_(MenuEntries, [Selection]) :-
 	; true)
 .
 
+close_windows() :-
+	spawn_winlist_menu("close windows", menu:close_windows_)
+.
+close_windows_(MenuInput, Selections) :-
+	forall((member(Sel, Selections), member(Win-Sel, MenuInput)), close_window(Win))
+.
+
+keep_windows() :-
+	spawn_winlist_menu("keep windows", menu:keep_windows_)
+.
+keep_windows_(MenuInput, Selections) :-
+	forall((member(Win-Line, MenuInput), \+ member(Line, Selections)), close_window(Win))
+.
 
 %*********************  "Dynamic workspaces" operations  **********************
 
@@ -182,9 +195,7 @@ delete_workspace() :-
 	; true)
 .
 delete_workspace_(Selections) :-
-	forall(member(Sel, Selections), (
-		atom_string(Ws, Sel), delete_workspace(Ws)
-	))
+	forall(member(Sel, Selections), (atom_string(Ws, Sel), delete_workspace(Ws)))
 .
 
 
@@ -248,6 +259,8 @@ cmd_desc(menu:goto_window      , "Go to selected window, raise and focus it").
 cmd_desc(menu:goto_workspace   , "Go to selected workspace").
 cmd_desc(menu:pull_from        , "Pull selected window to active workspace").
 cmd_desc(menu:push_to          , "Push focused window to the selected workspace").
+cmd_desc(menu:close_windows    , "Close selected windows").
+cmd_desc(menu:keep_windows     , "Close all windows other than the selected").
 cmd_desc(menu:create_workspace , "Create new workspaces").
 cmd_desc(menu:rename_workspace , "Rename selected workspace").
 cmd_desc(menu:reindex_workspace, "Reindex selected workspace").
@@ -390,6 +403,8 @@ list_cmds() :-
 		menu:goto_workspace,
 		menu:pull_from,
 		menu:push_to,
+		menu:close_windows,
+		menu:keep_windows,
 		menu:create_workspace,
 		menu:rename_workspace,
 		menu:reindex_workspace,

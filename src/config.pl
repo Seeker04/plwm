@@ -214,6 +214,9 @@ keymaps([
   alt +         p           ->  menu:pull_from                  ,
   alt + shift + p           ->  menu:push_to                    ,
 
+  alt + q                   ->  menu:close_windows              ,
+  alt + shift + q           ->  menu:keep_windows               ,
+
   alt + c                   ->  menu:create_workspace           ,
   alt + r                   ->  menu:rename_workspace           ,
   alt + i                   ->  menu:reindex_workspace          ,
