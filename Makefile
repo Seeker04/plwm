@@ -52,6 +52,11 @@ clang-tidy:
 	--extra-arg="-I/usr/lib/swi-prolog/include" \
 	src/plx.c --
 
+#=============================== Unit tests ===================================
+
+test:
+	tests/run_all.sh
+
 #============================ Install/uninstall ===============================
 
 VERSION = ${shell sed -n 's/^version(\([0-9.]\+\))\.$$/\1/p' src/plwm.pl}
