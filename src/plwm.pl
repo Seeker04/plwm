@@ -1092,7 +1092,7 @@ jobs_notify(Jobs) :-
 
 		StructureNotifyMask is 1 << 17,
 		plx:x_send_event(Dp, Rootwin, false, StructureNotifyMask, ConfigureEvent),
-		plx:x_sync(Dp, false), % flush the even queue
+		plx:x_sync(Dp, false), % flush the event queue
 		plx:c_free(ConfigureEvent)
 	; true)
 .
@@ -1383,7 +1383,10 @@ check_config() :-  % when config is invalid, quit right away with a nice error m
 	optcnf_then(bar_placement(BPlace), member(BPlace, [follow_focus, static])) - "bar_placement must be follow_focus or static",
 	optcnf_then(fifo_enabled(CFifoE), (CFifoE = true ; CFifoE = false))       - "fifo_enabled must be true or false",
 	optcnf_then(fifo_path(CFifoPath), string(CFifoPath))                      - "fifo_path must be a string",
-	optcnf_then(menucmd([A|As]), forall(member(Arg, [A|As]), string(Arg))) - "menucmd must be a non-empty list of strings",
+	optcnf_then(menucmd([A|As]), forall(member(Arg, [A|As]), string(Arg)))    - "menucmd must be a non-empty list of strings",
+	optcnf_then(animation_enabled(AnimE), (AnimE = true ; AnimE = false))     - "animation_enabled must be true or false",
+	optcnf_then(animation_time(AnimT), (utils:is_float(AnimT), 0.0 < AnimT))  - "animation_time must be a 0.0< float",
+	optcnf_then(animation_granularity(AnimG), (integer(AnimG), 1 =< AnimG))   - "animation_granularity must be a 1<= integer",
 
 	optcnf_then(rules(Rules),
 		forall(member((RName, RClass, RTitle -> RMon, RWs, RMode), Rules), (

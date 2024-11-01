@@ -46,7 +46,7 @@ Powered by [SWI-Prolog](https://www.swi-prolog.org/)
 * Support for any number of external bars, e.g., polybar, lemonbar, xmobar
 * Nice level of EWMH compilance: external bars work, dialogs, fullscreen and other size hints are recognized, etc. - **partially still work-in-progress**
 * Dynamic workspace operations: create, rename, reindex or delete workspaces on the fly
-* Misc features: multi-monitor support, adjustable tiling parameters, inner/outer gaps, menu integration with dmenu/rofi, rules and more
+* Misc features: multi-monitor support, adjustable tiling parameters, inner/outer gaps, menu integration with dmenu/rofi, rules, animations, command fifo and more
 * Performance: plwm is fast and light as a feather when it comes to resource usage
 * You can say: "My window manager is a semantic consequence of a set of axioms and implications which my computer is deducing/proving from an infinitely branching proof-tree"
 
@@ -227,6 +227,9 @@ While cooking your config, you can use the `-C` flag to quickly and easily check
 | `fifo_enabled`             | true or false<br>**Default:** false                             | Whether to spawn a command FIFO<br>(explained [here](#scriptability)) |
 | `fifo_path`                | string<br>**Default:** "/tmp/plwm_fifo"                         | Path of command FIFO                            |
 | `menucmd`                  | list of strings<br>**Default:** ["dmenu", "-i", "-l", "20", "-p"] | Command and its arguments to use for menu operations |
+| `animation_enabled`        | true or false<br>**Default:** false                             | Whether to animate window move/resize           |
+| `animation_time`           | 0.0< float<br>**Default:** 0.2                                  | Time of the animation                           |
+| `animation_granularity`    | 1<= integer<br>**Default:** 30                                  | Number of steps in animation interpolations     |
 | `modkey`                   | shift, lock, ctrl, alt, mod2, mod3, super, mod5<br>**Default:** super | Key you must hold for mouse operations |
 | `keymaps`                  | list of (Modifiers + Key -> Action)<br>**Default:** [see here](#default-keybindings) | Modifiers: see values at `modkey`<br/>Key: keycode, [usual X11 names](http://xahlee.info/linux/linux_show_keycode_keysym.html), or [special key](src/xf86names.pl)<br/>Action: arbitrary predicate |
 | `rules`                    | list of (Name, Class, Title -> Monitor, Workspace, Mode)<br>**Default:** [] | Auto place and configure matching windows (explained [here](#rules)) |

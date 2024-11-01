@@ -119,6 +119,21 @@ menucmd(["dmenu", "-i", "-l", "20", "-p"]).
 %menucmd(["rofi", "-dmenu"]).
 
 
+%********************************  Animations  ********************************
+
+% If turned on, movement/resizing of managed windows will be interpolated
+% animation_time is in seconds
+% animation_granularity means the data point count in the interpolation
+animation_enabled(false).
+animation_time(0.2).
+animation_granularity(30).
+
+% Note: Performance can largely vary based on various factors: hardware (GPU mostly),
+% whether a compositor is running or not, compositor's config, etc.
+% Everyone should experiment with the two values until the animation is tailored
+% to their system and liking
+
+
 %*******************************  Key bindings  *******************************
 
 % Key you must hold for mouse operations, i.e., moving or resizing windows

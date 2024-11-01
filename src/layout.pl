@@ -2,6 +2,8 @@
 
 :- module(layout, []).
 
+:- use_module(animation).
+
 % Supported layouts: (feel free to implement your own)
 is_layout(Layout) :- member(Layout, [
 	floating,  % No window is managed automatically, user is responsible for moving/resizing them
@@ -29,9 +31,8 @@ set_layout(Mon-Ws, Layout) :-
 			       (member(Win, Wins), win_properties(Win, [managed, false|_])),
 			       ManagedWins),
 			length(ManagedWins, WinCnt),
-
 			calculate_layout(Layout, Mon, WinCnt, Bounds, Geoms),
-			maplist(apply_geom, ManagedWins, Geoms)
+			apply_geoms(ManagedWins, Geoms)
 		; true),
 		global_key_newvalue(layout, Mon-Ws, Layout),
 
@@ -351,9 +352,27 @@ apply_inner_gaps_h(I, SizeSub, WinCnt, [[X, Y, W, H]|Gs], [[NewX, Y, NewW, H]|Ne
 	apply_inner_gaps_h(Iplus1, SizeSub, WinCnt, Gs, NewGs)
 .
 
-apply_geom(Win, [X, Y, W, H]) :-
-	display(Dp),
-	plx:x_move_resize_window(Dp, Win, X, Y, W, H),
-	win_newproperties(Win, [managed, false, [X, Y, W, H]])
+apply_geoms(Wins, Geoms) :-
+	utils:pair_up_lists(Wins, Geoms, WinGeomMap),
+
+	optcnf_then_else(animation_enabled(true), (                % sensible defaults
+		optcnf_then_else(animation_time(AnimT),        true, AnimT = 0.2),
+		optcnf_then_else(animation_granularity(AnimG), true, AnimG = 30),
+		findall(ThreadId, (
+			member(Win-[NewX, NewY, NewW, NewH], WinGeomMap),
+			win_properties(Win, [_, _, [X, Y, W, H]]),
+			thread_create(
+				animation:interpolate_geom(Win, X, Y, W, H, NewX, NewY, NewW, NewH, AnimG, AnimT)
+			, ThreadId),
+			win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])
+		), ThreadIds),
+		forall(member(ThreadId, ThreadIds), thread_join(ThreadId))
+	), (
+		forall(member(Win-[NewX, NewY, NewW, NewH], WinGeomMap), (
+			display(Dp),
+			plx:x_move_resize_window(Dp, Win, NewX, NewY, NewW, NewH),
+			win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])
+		))
+	))
 .
 

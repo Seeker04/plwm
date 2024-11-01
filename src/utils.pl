@@ -102,5 +102,8 @@ alternate_merge_(N, [X|Xs], [Y|Ys], MergedList) :-
 	;              alternate_merge_(Nplus1, [X|Xs], Ys, Rest), MergedList = [Y|Rest])
 .
 
+pair_up_lists([], [], []).
+pair_up_lists([X|Xs], [Y|Ys], [X-Y|Rest]) :- pair_up_lists(Xs, Ys, Rest).
+
 str_withoutlastch(Str, NewStr) :- string_length(Str, Len), Lenm1 is Len - 1, sub_string(Str, 0, Lenm1, _, NewStr).
 
