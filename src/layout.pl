@@ -6,6 +6,12 @@
 :- use_module(utils).
 
 % Supported layouts: (feel free to implement your own)
+
+%! is_layout(+Layout:term) is semidet
+%
+%  Checks if a term is a valid layout.
+%
+%  @arg Layout term that is a valid layout
 is_layout(Layout) :- member(Layout, [
 	floating,  % No window is managed automatically, user is responsible for moving/resizing them
 	monocle,   % Only the focused window is visible with maximum size (bar areas are preserved)
@@ -21,8 +27,19 @@ is_layout(Layout) :- member(Layout, [
 	cmaster    % Master windows are on the center in a stack, rest are in left and right stacks
 ]).
 
+%! set_layout(++Layout:term) is det
+%
+%  Sets the layout of the active monitor-workspace.
+%
+%  @arg Layout layout to set
 set_layout(Layout) :- active_mon_ws(ActMon, ActWs), set_layout(ActMon-ActWs, Layout).
 
+%! set_layout(++Mon-Ws:integer-atom, ++Layout:term) is det
+%
+%  Sets the layout of the specified monitor-workspace.
+%
+%  @arg Mon-Ws monitor index and workspace name to set the layout on
+%  @arg Layout layout to set
 set_layout(Mon-Ws, Layout) :-
 	(is_layout(Layout) ->
 		display(Dp), global_key_value(windows, Mon-Ws, Wins),
@@ -55,9 +72,26 @@ set_layout(Mon-Ws, Layout) :-
 		utils:warn_invalid_arg("set_layout", Layout))
 .
 
-relayout()       :- global_value(layout, Layout), set_layout(Layout).
+%! relayout() is det
+%
+%  Recalculates and redraws the layout on the active monitor-workspace.
+relayout() :- global_value(layout, Layout), set_layout(Layout).
+
+%! relayout(++Mon-Ws:integer-atom) is det
+%
+%  Recalculates and redraws the layout on the specified monitor-workspace.
 relayout(Mon-Ws) :- global_key_value(layout, Mon-Ws, Layout), set_layout(Mon-Ws, Layout).
 
+%! calculate_layout(++Layout:term, ++Mon:integer, ++WinCnt:integer, ++Bounds:[integer], --Geoms:[[integer]]) is det
+%
+%  Calculates the window geometries based on the desired layout, monitor, window count
+%  and reserved screen space.
+%
+%  @arg Layout the layout to calculate geometries for
+%  @arg Mon index of subject monitor
+%  @arg WinCnt number of managed windows in the layout
+%  @arg Bounds geometry of reserved space on the screen (i.e. screen size minus bars)
+%  @arg Geoms list of window geometries resulting from the layout calculation
 calculate_layout(_, _, 0, _, []) :- !.
 
 calculate_layout(Layout, Mon, 1, Bounds, Geoms) :- Layout \= monocle, !, calculate_layout(monocle, Mon, 1, Bounds, Geoms).
@@ -304,15 +338,42 @@ calculate_layout(MasterType, Mon, WinCnt, [BX, BY, BW, BH], Geoms) :-
 
 %*********************************  Helpers  **********************************
 
+%! max_border_width(-MaxBorderW:integer) is det
+%
+%  Returns the largest between config:border_width/1 and config:border_width_focused/1.
+%
+%  @arg MaxBorderW the largest configured border width
 max_border_width(MaxBorderW) :-
 	config(border_width(BorderW)),
 	config(border_width_focused(BorderWF)),
 	MaxBorderW is max(BorderW, BorderWF)
 .
 
+%! stack_xs(+Geom:[integer], -NewGeom:[integer]) is det
+%
+%  Increments the x coordinate in a geometry by the width and two times the border width.
+%
+%  @arg Geom input geometry
+%  @arg NewGeom output geometry with incremented x coordinate
 stack_xs([X, Y, W, H], [NewX, Y, W, H]) :- max_border_width(BorderW), NewX is X + W + 2 * BorderW.
+
+%! stack_ys(+Geom:[integer], -NewGeom:[integer]) is det
+%
+%  Increments the y coordinate in a geometry by the height and two times the border width.
+%
+%  @arg Geom input geometry
+%  @arg NewGeom output geometry with incremented y coordinate
 stack_ys([X, Y, W, H], [X, NewY, W, H]) :- max_border_width(BorderW), NewY is Y + H + 2 * BorderW.
 
+%! fill_spare_pixels_v(++SparePixels:integer, ++Added:integer, ++Geoms:[[integer]], -NewGeoms:[[integer]]) is det
+%
+%  Vertically distribute spare pixels among window geometries.
+%  The y coordinates and heights of geometries are incremented evenly.
+%
+%  @arg SparePixels count of pixels to distribute
+%  @arg Added count of already distributed pixels
+%  @arg Geoms input geometries
+%  @arg NewGeoms output geometries
 fill_spare_pixels_v(_, _, [], []).
 fill_spare_pixels_v(0, Added, [[X, Y, W, H]|Gs], [[X, NewY, W, H]|NewGs]) :-
 	!, NewY is Y + Added,
@@ -325,6 +386,15 @@ fill_spare_pixels_v(SP, Added, [[X, Y, W, H]|Gs], [[X, NewY, W, NewH]|NewGs]) :-
 	fill_spare_pixels_v(SPminus1, Addedplus1, Gs, NewGs)
 .
 
+%! fill_spare_pixels_h(++SparePixels:integer, ++Added:integer, ++Geoms:[[integer]], -NewGeoms:[[integer]]) is det
+%
+%  Horizontally distribute spare pixels among window geometries.
+%  The x coordinates and widths of geometries are incremented evenly.
+%
+%  @arg SparePixels count of pixels to distribute
+%  @arg Added count of already distributed pixels, should be 0 at the top-level call
+%  @arg Geoms input geometries
+%  @arg NewGeoms output geometries
 fill_spare_pixels_h(_, _, [], []).
 fill_spare_pixels_h(0, Added, [[X, Y, W, H]|Gs], [[NewX, Y, W, H]|NewGs]) :-
 	!, NewX is X + Added,
@@ -337,6 +407,16 @@ fill_spare_pixels_h(SP, Added, [[X, Y, W, H]|Gs], [[NewX, Y, NewW, H]|NewGs]) :-
 	fill_spare_pixels_h(SPminus1, Addedplus1, Gs, NewGs)
 .
 
+%! apply_inner_gaps_v(++I:integer, ++SizeSub:integer, ++WinCnt:integer, ++Geoms:[[integer]], -NewGeoms:[[integer]]) is det
+%
+%  Applies vertical inner gaps on window geometries, i.e. evenly subtracts from heights
+%  and shifts y coordinates accordingly.
+%
+%  @arg I index of processed window, should be 0 at the top-level call
+%  @arg SizeSub amount of pixels to subtract from each window's height
+%  @arg WinCnt count of windows in the current layout
+%  @arg Geoms input geometries
+%  @arg NewGeoms output geometries with inner gaps applied
 apply_inner_gaps_v(_, _, _, [], []).
 apply_inner_gaps_v(I, SizeSub, WinCnt, [[X, Y, W, H]|Gs], [[X, NewY, W, NewH]|NewGs]) :-
 	NewH is H - SizeSub,
@@ -345,6 +425,16 @@ apply_inner_gaps_v(I, SizeSub, WinCnt, [[X, Y, W, H]|Gs], [[X, NewY, W, NewH]|Ne
 	apply_inner_gaps_v(Iplus1, SizeSub, WinCnt, Gs, NewGs)
 .
 
+%! apply_inner_gaps_h(++I:integer, ++SizeSub:integer, ++WinCnt:integer, ++Geoms:[[integer]], -NewGeoms:[[integer]]) is det
+%
+%  Applies horizontal inner gaps on window geometries, i.e. evenly subtracts from widths
+%  and shifts x coordinates accordingly.
+%
+%  @arg I index of processed window, should be 0 at the top-level call
+%  @arg SizeSub amount of pixels to subtract from each window's width
+%  @arg WinCnt count of windows in the current layout
+%  @arg Geoms input geometries
+%  @arg NewGeoms output geometries with inner gaps applied
 apply_inner_gaps_h(_, _, _, [], []).
 apply_inner_gaps_h(I, SizeSub, WinCnt, [[X, Y, W, H]|Gs], [[NewX, Y, NewW, H]|NewGs]) :-
 	NewW is W - SizeSub,
@@ -353,6 +443,16 @@ apply_inner_gaps_h(I, SizeSub, WinCnt, [[X, Y, W, H]|Gs], [[NewX, Y, NewW, H]|Ne
 	apply_inner_gaps_h(Iplus1, SizeSub, WinCnt, Gs, NewGs)
 .
 
+%! apply_geoms(++Wins:[integer], ++Geoms:[integer]) is det
+%
+%  Sets the geometries of the specified windows by moving and resizing them.
+%
+%  If config:animation_enabled/1 is true, then the move-resize calls will be interpolated
+%  according to config:animation_time/1 and config:animation_granularity/1,
+%  or by using default values if they are absent.
+%
+%  @arg Wins list of XIDs of managed windows
+%  @arg Geoms list of geometries to set for Wins, must have the same length as Wins
 apply_geoms(Wins, Geoms) :-
 	utils:pair_up_lists(Wins, Geoms, WinGeomMap),
 

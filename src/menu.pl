@@ -5,6 +5,15 @@
 :- use_module(layout).
 :- use_module(utils).
 
+%! spawn_menu(++Prompt:string, ++Entries:[string], :Callback:callable) is det
+%
+%  Creates a menu process defined in config:menucmd/1, writes the list of possible
+%  selections to its stdin and if a selection happens (to stdout), passes it to
+%  the provided callback function.
+% 
+%  @arg Prompt string appended as final argument to config:menucmd/1
+%  @arg Entries list of single-line strings passed as input to config:menucmd/1
+%  @arg Callback predicate that is called on lines selected from Entries
 spawn_menu(_, [], _) :- !.
 spawn_menu(Prompt, Entries, Callback) :-
 	optcnf_then(menucmd([MenuCmd|MenuArgs]), (
@@ -24,6 +33,14 @@ spawn_menu(Prompt, Entries, Callback) :-
 	))
 .
 
+%! read_from_prompt(++Prompt:string, --Input:string) is semidet
+%
+%  Uses config:menucmd/1 with zero selection to create a graphical prompt and
+%  captures the text the user writes into the prompt.
+%  Fails if config:menucmd/1 is not set.
+%  
+%  @arg Prompt string appended as final argument to config:menucmd/1
+%  @arg Input string that the user wrote after the prompt
 read_from_prompt(Prompt, Input) :-  % use menucmd as a simple input prompt
 	optcnf_then_else(menucmd([MenuCmd|MenuArgs]),
 		(append(MenuArgs, [Prompt], MenuArgsWithPrompt),
@@ -37,6 +54,17 @@ read_from_prompt(Prompt, Input) :-  % use menucmd as a simple input prompt
 	)
 .
 
+%! mon_ws_format(++Mon:integer, ++Ws:atom, -Str:string) is det
+%
+%  From a monitor index and workspace name, formats a selection line for a list.
+%  The general format is "<monitor index> / <workspace name>".
+%  If there is only one monitor, it is omitted.
+%  If there is only one workspace, it is omitted.
+%  If there is only one monitor and one workspace, the output is empty.
+%  
+%  @arg Mon monitor index
+%  @arg Ws workspace name
+%  @arg string output of the formatting
 mon_ws_format(Mon, Ws, Str) :-
 	monitors(Mons), nb_getval(workspaces, Wss), length(Mons, MonCnt), length(Wss, WsCnt),
 	(1 == MonCnt, 1 == WsCnt -> Str = ""
@@ -45,6 +73,18 @@ mon_ws_format(Mon, Ws, Str) :-
 	;1 <  MonCnt, 1 <  WsCnt -> format(string(Str), "~d / ~a", [Mon, Ws]))
 .
 
+%! mon_ws_wint_format(++Mon:integer, ++Ws:atom, ++WinT:string -Str:string) is det
+%
+%  From a monitor index, workspace name and window title, formats a selection line for a list.
+%  The general format is "<monitor index> / <workspace name>    <window title>".
+%  If there is only one monitor, it is omitted.
+%  If there is only one workspace, it is omitted.
+%  If there is only one monitor and one workspace, the output is only the window title.
+%  
+%  @arg Mon monitor index
+%  @arg Ws workspace name
+%  @arg WinT window title string
+%  @arg string output of the formatting
 mon_ws_wint_format(Mon, Ws, WinT, Str) :-
 	monitors(Mons), nb_getval(workspaces, Wss), length(Mons, MonCnt), length(Wss, WsCnt),
 	maplist(atom_length, Wss, WsWidths),
@@ -57,6 +97,13 @@ mon_ws_wint_format(Mon, Ws, WinT, Str) :-
 		                    format(string(Str), Fmt, [Mon, Ws, WinT]))
 .
 
+%! spawn_winlist_menu(++Prompt:string, :Callback:callable) is det
+%
+%  Lists all windows to the user using spawn_menu/3.
+%  If a selection happens, runs the specified callback on it.
+%  
+%  @arg Prompt string appended as final argument to config:menucmd/1
+%  @arg Callback predicate that is called on the list of selected windows
 spawn_winlist_menu(Prompt, Callback) :-
 	display(Dp), monws_keys(Keys), XA_WM_NAME is 39,
 	findall(MenuEntries, (
@@ -75,6 +122,10 @@ spawn_winlist_menu(Prompt, Callback) :-
 
 %*********************    Navigation/window placement    **********************
 
+%! goto_workspace() is det
+%
+%  Lists all monitor-workspace combinations other than the active one using spawn_menu/3.
+%  If a selection happens, switches to that monitor-workspace.
 goto_workspace() :-
 	monws_keys(Keys), active_mon_ws(ActMon, ActWs),
 	findall(Mon-Ws-MenuEntry, (   % map key (Mon-Ws) to lines for later lookup
@@ -92,6 +143,10 @@ goto_workspace_(MenuEntries, [Selection]) :-
 	; true)
 .
 
+%! goto_window() is det
+%
+%  Lists all windows (grouped by monitor-workspace) other than the active one using spawn_menu/3.
+%  If a selection happens, switches its monitor-workspace, raises and focuses that window.
 goto_window() :-
 	spawn_winlist_menu("goto window", menu:goto_window_)
 .
@@ -104,6 +159,10 @@ goto_window_(MenuInput, [Selection]) :-
 	; true)
 .
 
+%! pull_from() is det
+%
+%  Lists all windows other than the ones on the active workspace using spawn_menu/3.
+%  If a selection happens, moves the selected window(s) to the active monitor-workspace.
 pull_from() :-
 	display(Dp), active_mon_ws(ActMon, ActWs), monws_keys(Keys), XA_WM_NAME is 39,
 	findall(MenuEntries, (
@@ -127,6 +186,10 @@ pull_from_(MenuInput, Selections) :-
 	))
 .
 
+%! push_to() is det
+%
+%  Lists all monitor-workspace combinations other than the active one using spawn_menu/3.
+%  If a selection happens, moves the active window to the selected location.
 push_to() :-
 	global_value(focused, FocusedWin),
 	(FocusedWin =\= 0 ->
@@ -149,6 +212,10 @@ push_to_(MenuEntries, [Selection]) :-
 	; true)
 .
 
+%! close_windows() is det
+%
+%  Lists all windows using spawn_menu/3.
+%  If a selection happens, closes the selected window(s).
 close_windows() :-
 	spawn_winlist_menu("close windows", menu:close_windows_)
 .
@@ -156,6 +223,10 @@ close_windows_(MenuInput, Selections) :-
 	forall((member(Sel, Selections), member(Win-Sel, MenuInput)), close_window(Win))
 .
 
+%! keep_windows() is det
+%
+%  Lists all windows using spawn_menu/3.
+%  If a selection happens, closes all windows other than the selected ones.
 keep_windows() :-
 	spawn_winlist_menu("keep windows", menu:keep_windows_)
 .
@@ -165,6 +236,10 @@ keep_windows_(MenuInput, Selections) :-
 
 %*********************  "Dynamic workspaces" operations  **********************
 
+%! create_workspace() is det
+%
+%  Prompts the user for a new workspace name.
+%  If it is non-empty and unique, creates it (i.e. appends to the list of workspaces).
 create_workspace() :-
 	(read_from_prompt("new workspace", Input) ->
 		atom_string(Ws, Input),
@@ -172,6 +247,10 @@ create_workspace() :-
 	; true)
 .
 
+%! rename_workspace() is det
+%
+%  Prompts the user for a new workspace name.
+%  If it is non-empty and unique, renames the active workspace to it.
 rename_workspace() :- % will rename the active one
 	active_mon_ws(_, ActWs),
 	(read_from_prompt("rename workspace to", Input) ->
@@ -180,6 +259,10 @@ rename_workspace() :- % will rename the active one
 	; true)
 .
 
+%! reindex_workspace() is det
+%
+%  Lists the possible new workspace indices for the active one.
+%  If a selection happens, the active workspace is re-indexed to the new position.
 reindex_workspace() :- % will reindex the active one
 	active_mon_ws(_, ActWs), nb_getval(workspaces, Wss), nth1(ActIdx, Wss, ActWs),
 	length(Wss, WsCnt),
@@ -190,6 +273,12 @@ reindex_workspace() :- % will reindex the active one
 .
 reindex_workspace_(Ws, [Selection]) :- number_string(Idx, Selection), reindex_workspace(Ws, Idx).
 
+%! delete_workspaces() is det
+%
+%  Lists all workspaces.
+%  If a selection happens, the selected ones are removed.
+%  Note: owned windows of deleted workspaces are moved to the next free workspace in the list.
+%  Note: the last workspace is never removed (e.g. if all of them are selected).
 delete_workspaces() :-
 	nb_getval(workspaces, Wss),
 	(Wss \= [_] ->  % don't even spawn the list if there is only one ws left
@@ -204,6 +293,13 @@ delete_workspace_(Selections) :-
 
 %*********************************  Extras  ***********************************
 
+%! cmd_desc(++Cmd:term, -Desc:string) is det
+%
+%  Takes a command predicate (i.e. predicate intended to be called by the user)
+%  and returns its brief description.
+%
+%  @arg Cmd command predicate to describe
+%  @arg Desc description of the specified command predicate
 cmd_desc(shift_focus(down) , "Focus next window in stack").
 cmd_desc(shift_focus(up)   , "Focus previous window in stack").
 cmd_desc(move_focused(down), "Swap focused window with the next").
@@ -272,28 +368,54 @@ cmd_desc(menu:list_keymaps     , "List all defined keymaps").
 cmd_desc(shellcmd(Cmd), D) :- format(string(D), "Run `~s`", [Cmd]).
 cmd_desc(shellcmd, "Run a shell command").
 
+%! keybind_padded(++Keybind:[char], -PaddedKeybind:[char]) is det
+%
+%  Takes a list of characters of a key binding definition (see: config:keymaps/1)
+%  and adds a ' ' (space) before and after each '+' in the list.
+%
+%  @arg Keybind original character list of key binding
+%  @arg PaddedKeybind character list of key binding padded with spaces
 keybind_padded([], []).
 keybind_padded(['+'|Cs], [' ', '+', ' '|Rest]) :- !, keybind_padded(Cs, Rest).
 keybind_padded([C|Cs], [C|Rest]) :- keybind_padded(Cs, Rest).
 
+%! change_nmaster_prompt() is semidet
+%
+%  Prompts the user for a new nmaster value and if valid, sets nmaster to it.
+%  Fails if the input is invalid.
 change_nmaster_prompt() :-
 	(read_from_prompt("nmaster (+N, -N or N)", Input) ->
 		ignore((catch(term_string(N, Input), Ex, (writeln(Ex), fail)), change_nmaster(N)))
 	; true)
 .
 
+%! change_mfact_prompt() is semidet
+%
+%  Prompts the user for a new mfact value and if valid, sets mfact to it.
+%  Fails if the input is invalid.
 change_mfact_prompt() :-
 	(read_from_prompt("mfact (+F, -F or F)", Input) ->
 		ignore((catch(term_string(F, Input), Ex, (writeln(Ex), fail)), change_mfact(F)))
 	; true)
 .
 
+%! shellcmd_prompt() is det
+%
+%  Prompts the user for a shell command to run and executes it. See utils:shellcmd/1 for details.
 shellcmd_prompt() :-
 	(read_from_prompt("shellcmd", Input) ->
 		shellcmd(Input)
 	; true)
 .
 
+%! run_cmd(++MenuEntries:[Action-Line], --Selection) is semidet
+%
+%  Should be passed as a callback to spawn_menu/3 with only the first argument filled.
+%  All passed command entries are listed to the user, who can select one which gets executed.
+%  Note: some commands will spawn additional prompt(s) to fill (see: read_from_prompt/2).
+%
+%  @arg MenuEntries command and line to display for that command in Action-Line format
+%  @arg Selection list of selections - unused, filled be spawn_menu/3
 run_cmd(MenuEntries, [Selection]) :-
 	(member(Cmd-Selection, MenuEntries) ->
 		(Cmd = change_nmaster -> change_nmaster_prompt
@@ -303,6 +425,12 @@ run_cmd(MenuEntries, [Selection]) :-
 	; true)
 .
 
+%! list_keymaps() is det
+%
+%  List all defined key mappings from config:keymaps/1 in the format:
+%    [Mod1 + ... + Modn +] Key      Command      Command description
+%
+%  If a selection happens, the selected mapping's Command is executed.
 list_keymaps() :-
 	config(keymaps(Keymaps)),
 	findall(KBStr,
@@ -328,6 +456,11 @@ list_keymaps() :-
 	spawn_menu("keymaps", Lines, menu:run_cmd(MenuEntries))
 .
 
+%! list_cmds() is det
+%
+%  List all defined user commands (i.e. predicate intended to be called by the user)
+%  with their descriptions.
+%  If a selection happens, the selected command is executed.
 list_cmds() :-
 	findall(layout:set_layout(Layout), layout:is_layout(Layout), SLCmds1),
 	delete(SLCmds1, layout:set_layout(nrows(_)), SLCmds2),

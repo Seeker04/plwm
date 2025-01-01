@@ -5,6 +5,13 @@
 
 :- module(xf86names, []).
 
+%! name_ksym(++Name:string, -Ksym:integer) is det
+%
+%  Maps key names to key codes.
+%
+%  @arg Name name of key as defined in <X11/XF86keysym.h>
+%  @arg Ksym key code associated with the given name
+
 % ModeLock
 name_ksym("ModeLock",           0x1008FF01).  % Mode Switch Lock
 
