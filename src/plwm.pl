@@ -260,18 +260,25 @@ grab_keys() :-
 %  Grabs the left and right mouse buttons with modifier config:modkey/1 using
 %  XGrabButton(3) to handle mouse events (e.g. window movement, resizing,
 %  focus by hover) in XNextEvent(3).
+%  Also grabs the scroll button to support running custom logic on scroll
 grab_buttons() :-
 	display(Dp), rootwin(Rootwin),
 	config(modkey(ModKey)),
 	modkey_mask_newmask(ModKey, 0, ModKeyVal),
-	GrabModeAsync is 1, Button1 is 1, Button3 is 3,
+	GrabModeAsync is 1,
+	Button1 is 1, Button3 is 3, % left and right mouse buttons
+	Button4 is 4, Button5 is 5, % up and down mouse scroll
 	ButtonPressMask   is 1 << 2,
 	ButtonReleaseMask is 1 << 3,
 	PointerMotionMask is 1 << 6,
-	ButtonMask        is ButtonPressMask \/ ButtonReleaseMask \/ PointerMotionMask,
+	ButtonMask is ButtonPressMask \/ ButtonReleaseMask \/ PointerMotionMask,
 
 	plx:x_grab_button(Dp, Button1, ModKeyVal, Rootwin, true, ButtonMask, GrabModeAsync, GrabModeAsync, 0, 0),
-	plx:x_grab_button(Dp, Button3, ModKeyVal, Rootwin, true, ButtonMask, GrabModeAsync, GrabModeAsync, 0, 0)
+	plx:x_grab_button(Dp, Button3, ModKeyVal, Rootwin, true, ButtonMask, GrabModeAsync, GrabModeAsync, 0, 0),
+
+	% mouse scroll
+	plx:x_grab_button(Dp, Button4, ModKeyVal, Rootwin, true, ButtonPressMask, GrabModeAsync, GrabModeAsync, 0, 0),
+	plx:x_grab_button(Dp, Button5, ModKeyVal, Rootwin, true, ButtonPressMask, GrabModeAsync, GrabModeAsync, 0, 0)
 .
 
 %! setup_event_mask() is det
@@ -1231,19 +1238,36 @@ rect_inmon(Rect, InMon) :- monitors(Mons), max_member(cmp_mons(Rect), InMon, Mon
 %  @arg EventArgs arguments from the X11 event, different for each event type
 handle_event(keypress, [_, _, _, _, _, _, _, _, _, _, _, State, Keycode, _]) :-
 	(keymap_internal(Keycode, State, Action) ->
-		call(Action)
+		catch(ignore(Action), Ex, (writeln(Ex), true))
 	; true)
 .
 
 handle_event(buttonpress, [_, _, Dp, _, _, Subwin, _, _, _, Xroot, Yroot, _, Button, _]) :-
-	nb_getval(bars, Bars),
-	(Subwin =\= 0, \+ member(Subwin, Bars) ->
-		focus(Subwin),
-		raise(Subwin),
-		(plx:x_get_window_attributes(Dp, Subwin, [X, Y, W, H], Status), Status =\= 0,
-		win_properties(Subwin, [_, false|_]) ->  % don't allow dragging fullscreen wins
-			nb_setval(drag_initial_winattr, [X, Y, W, H]),
-			nb_setval(dragged, [Subwin, Xroot, Yroot, Button])
+	Button1 is 1, Button3 is 3, Button4 is 4, Button5 is 5,
+
+	% scrolled up
+	(Button = Button4 ->
+		(config(scroll_up_action(Action)), Action \= none ->
+			catch(ignore(Action), Ex, (writeln(Ex), true))
+		; true)
+
+	% scrolled down
+	;Button = Button5 ->
+		(config(scroll_down_action(Action)), Action \= none ->
+			catch(ignore(Action), Ex, (writeln(Ex), true))
+		; true)
+
+	% left or right mouse clicked
+	;(Button = Button1 ; Button = Button3) ->
+		nb_getval(bars, Bars),
+		(Subwin =\= 0, \+ member(Subwin, Bars) ->
+			focus(Subwin),
+			raise(Subwin),
+			(plx:x_get_window_attributes(Dp, Subwin, [X, Y, W, H], Status), Status =\= 0,
+			win_properties(Subwin, [_, false|_]) ->  % don't allow dragging fullscreen wins
+				nb_setval(drag_initial_winattr, [X, Y, W, H]),
+				nb_setval(dragged, [Subwin, Xroot, Yroot, Button])
+			; true)
 		; true)
 	; true)
 .
@@ -1862,7 +1886,8 @@ check_config() :-
 	config(default_nmaster(Nmaster)), config(default_mfact(Mfact)), config(default_layout(Layout)),
 	config(border_width(BorderW)), config(border_width_focused(BorderWF)),
 	config(border_color(BorderColor)), config(border_color_focused(BorderColorFocused)),
-	config(workspaces(Wss)), config(starting_workspace(SWs)), config(modkey(Modkey)), config(keymaps(Keymaps)),
+	config(workspaces(Wss)), config(starting_workspace(SWs)), config(modkey(Modkey)),
+	config(scroll_up_action(ScrollUpAct)), config(scroll_down_action(ScrollDownAct)), config(keymaps(Keymaps)),
 
 	forall(member(Check-ErrMsg, [
 
@@ -1876,12 +1901,13 @@ check_config() :-
 	(string(BorderColorFocused))                          - "border_color_focused must be a string",
 	(lists:is_set(Wss), member(SWs, Wss), forall(member(Ws, Wss), atom(Ws))) - "workspaces must be a non-empty set of atoms containing starting_workspace",
 	(modifier(Modkey))                                    - "modkey must be shift, lock, ctrl, alt, mod2, mod3, super or mod5",
+	(utils:valid_callable(ScrollUpAct)   ; ScrollUpAct   = none) - "scroll_up_action must be a callable term or none",
+	(utils:valid_callable(ScrollDownAct) ; ScrollDownAct = none) - "scroll_down_action must be a callable term or none",
 
 	forall(member(Keybind -> Action, Keymaps), (
 		keybind_to_keylist(Keybind, KeyList),
 		forall(member(Key, KeyList), (modifier(Key) ; last(KeyList, Key))),
-		(Action = Module:Pred -> functor(Pred,   AFun, AAr), current_predicate(Module:AFun/AAr)
-		;                        functor(Action, AFun, AAr), current_predicate(AFun/AAr))
+		utils:valid_callable(Action)
 	)) - "invalid keymap detected",
 
 	% optional settings

@@ -140,6 +140,12 @@ animation_granularity(30).
 % People mostly use super or alt here, but can be any modifier key (see a little below)
 modkey(super).
 
+% Action to perform on modkey + mouse scroll, for example:
+% switch_workspace(next), switch_workspace(next_nonempty), switch_monitor(prev),...
+% Write 'none' for no action
+scroll_up_action(switch_workspace(next)).
+scroll_down_action(switch_workspace(prev)).
+
 % Format: [Mod1 + ... + Modn +] Key -> Action
 %     Modifiers: shift, lock, ctrl, alt, mod2, mod3, super, mod5
 %     Key must be a valid X11 key name (check xf86names.pl for special keys),

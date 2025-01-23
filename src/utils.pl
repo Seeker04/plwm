@@ -5,6 +5,24 @@
 :- module(utils, [global_key_value/3, global_key_newvalue/3, global_value/2, global_newvalue/2, shellcmd/1]).
 %                 ^ these are used quite often, so it's worth exporting them
 
+%! valid_callable(++Callable:callable) is det
+%
+%  Checks whether the predicate in the specified callable
+%  1. exists
+%  2. the number of its arguments matches its arity
+%  Module prefix can be included for external predicates.
+%
+%  @arg Callable callable term to check the validity of
+valid_callable(Module:Pred) :-
+	functor(Pred, Func, Arity),
+	current_predicate(Module:Func/Arity),
+	!
+.
+valid_callable(Pred) :-
+	functor(Pred, Func, Arity),
+	current_predicate(Func/Arity)
+.
+
 %! bool_negated(++B:bool, -NotB:bool) is det
 %
 %  Negates a boolean value.

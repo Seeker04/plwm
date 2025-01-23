@@ -8,6 +8,28 @@ times3(N, M) :- M is N * 3.
 
 :- use_module("../src/utils").
 
+test("valid_callable +") :-
+	assertion(utils:valid_callable(true)),
+	assertion(utils:valid_callable(ignore(false))),
+	assertion(utils:valid_callable(utils:is_float(0.0))),
+	assertion(utils:valid_callable(utils:valid_callable(true)))
+.
+
+test("valid_callable - (non-existing predicate)") :-
+	assertion(\+ utils:valid_callable(i_dont_exist)),
+	assertion(\+ utils:valid_callable(i_dont_exist(foo))),
+	assertion(\+ utils:valid_callable(i_dont_exist(foo, bar)))
+.
+
+test("valid_callable - (incorrect module specified)") :-
+	assertion(\+ utils:valid_callable(wrong_module:is_float(0.0)))
+.
+
+test("valid_callable - (arity mismatch)") :-
+	assertion(\+ utils:valid_callable(plus(2, 3))), % 3rd arg missing
+	assertion(\+ utils:valid_callable(utils:is_float(0.0, 1.0))) % extra arg
+.
+
 test("bool_negated +") :-
 	assertion(utils:bool_negated(true, false)),
 	assertion(utils:bool_negated(false, true))
