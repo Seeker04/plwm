@@ -21,6 +21,7 @@
   - [Layout overrides](#layout-overrides)
   - [Rules](#rules)
   - [Menus](#menus)
+  - [Hooks](#hooks)
   - [Scriptability](#scriptability)
 - [Screenshots](#screenshots)
 - [Project status](#project-status)
@@ -46,7 +47,7 @@ Powered by [SWI-Prolog](https://www.swi-prolog.org/)
 * Support for any number of external bars, e.g., polybar, lemonbar, xmobar
 * Nice level of EWMH compilance: external bars work, dialogs, fullscreen and other size hints are recognized, etc. - **partially still work-in-progress**
 * Dynamic workspace operations: create, rename, reindex or delete workspaces on the fly
-* Misc features: multi-monitor support, adjustable tiling parameters, inner/outer gaps, menu integration with dmenu/rofi, rules, animations, command fifo and more
+* Misc features: multi-monitor support, adjustable tiling parameters, inner/outer gaps, menu integration with dmenu/rofi, rules, hooks, animations, command fifo and more
 * Performance: plwm is fast and light as a feather when it comes to resource usage
 * You can say: "My window manager is a semantic consequence of a set of axioms and implications which my computer is deducing/proving from an infinitely branching proof-tree"
 
@@ -223,7 +224,6 @@ While cooking your config, you can use the `-C` flag to quickly and easily check
 | `layout_default_overrides` | list of (Monitor, Workspace -> Nmaster, Mfact, Layout)<br>**Default:** [] | Overrides of the 3 values to specific monitors and/or workspaces (explained [here](#layout-overrides)) |
 | `bar_class`                | the two strings from bar's WM_CLASS,<br/>query with [xprop(1)](https://linux.die.net/man/1/xprop)<br>**Default:** "polybar", "Polybar" | Space will be reserved for matching windows and they cannot be focused, resized, etc. |
 | `bar_placement`            | follow_focus, static<br>**Default:** follow_focus               | Determines placement of external bars (explained [here](#layout-overrides)) |
-| `startupcmd`               | string<br>**Default:** -                                        | Command to spawn at startup (e.g., for auto launching bars or compositors) |
 | `fifo_enabled`             | true or false<br>**Default:** false                             | Whether to spawn a command FIFO<br>(explained [here](#scriptability)) |
 | `fifo_path`                | string<br>**Default:** "/tmp/plwm_fifo"                         | Path of command FIFO                            |
 | `menucmd`                  | list of strings<br>**Default:** ["dmenu", "-i", "-l", "20", "-p"] | Command and its arguments to use for menu operations |
@@ -235,10 +235,9 @@ While cooking your config, you can use the `-C` flag to quickly and easily check
 | `scroll_down_action`       | callable term or 'none'<br>**Default:** switch_workspace(prev)  | Action to perform on modkey + scroll down       |
 | `keymaps`                  | list of (Modifiers + Key -> Action)<br>**Default:** [see here](#default-keybindings) | Modifiers: see values at `modkey`<br/>Key: keycode, [usual X11 names](http://xahlee.info/linux/linux_show_keycode_keysym.html), or [special key](src/xf86names.pl)<br/>Action: callable term |
 | `rules`                    | list of (Name, Class, Title -> Monitor, Workspace, Mode)<br>**Default:** [] | Auto place and configure matching windows (explained [here](#rules)) |
+| `hooks`                    | list of (Event -> Action)<br>**Default:** `[start -> writeln("plwm starting"), quit -> writeln("plwm quitting")]` | Run custom logic on certain events (explained [here](#hooks)) |
 
 **Notes**
-
-You can use multiple `startupcmd` lines if you want to spawn multiple commands at startup.
 
 In `keymaps/1`, the callback predicates can be arbitrary shell commands using `shellcmd/1`, even whole commandlines (some examples are included in the [default config](src/config.pl)).
 
@@ -246,7 +245,7 @@ In `keymaps/1`, the callback predicates can be arbitrary shell commands using `s
 
 First, you must specify `bar_class/2` based on the WM_CLASS properties of your bars, which you can find out using [xprop(1)](https://linux.die.net/man/1/xprop). Then you can both:
 * manually start/close bars while plwm is already running
-* automatically start bars using `startupcmd/1` in the config
+* automatically start bars using `hooks/1` and its `start` event in the config
 
 `bar_placement/1` can take two values:
 * `follow_focus`: space will be reserved for bars on all monitors and bars will always be moved to the focused monitor (this is the default behavior)
@@ -407,6 +406,46 @@ menucmd(["rofi", "-dmenu"]).
 **Note:** A prompt name will be written as last argument for `menucmd/1`, so if you are using dmenu, you should add `-p` as final argument.
 
 **Note:** `pull_from`, `delete_workspaces`, `close_windows` and `keep_windows` can operate on multiple selections. Use Ctrl+Enter in dmenu, or Shift+Enter with `-dmenu -multi-select` in rofi.
+
+## Hooks
+
+You can run custom logic on certain events with the `hooks/1` configuration. If you wish to execute multiple predicates, list them inside a parantheses, separated by commas.
+
+An example:
+```Prolog
+hooks([
+  start -> (
+    shellcmd("picom"),
+    shellcmd("pipewire"),
+    shellcmd("sleep .1; polybar top") % pipewire must be already running to display volume field
+  ),
+
+  switch_workspace_post -> (
+    active_mon_ws(_, Ws),
+    (Ws = '1' -> shellcmd("feh --bg-fill ~/pic/bg/lake.jpg")
+    ;Ws = '2' -> shellcmd("feh --bg-fill ~/pic/bg/forest.jpg")
+    ;Ws = '3' -> shellcmd("feh --bg-fill ~/pic/bg/mountain.jpg")
+    ;true)
+  ),
+]).
+```
+
+Supported events:
+
+| Event                 | Description                                            |
+| --------------------- | ------------------------------------------------------ |
+| start                 | after all initialization, but before main X event loop |
+| quit                  | before quitting, also before calling XCloseDisplay(3)  |
+| switch_workspace_pre  | before switching workspace                             |
+| switch_workspace_post | after switching workspace                              |
+| switch_monitor_pre    | before switching monitor                               |
+| switch_monitor_post   | after switching monitor                                |
+| window_create_pre     | before a window is mapped (won't run for bars)         |
+| window_create_post    | after a window is mapped (won't run for bars)          |
+| window_destroy_pre    | before a window is unmapped (won't run for bars)       |
+| window_destroy_post   | after a window is unmapped (won't run for bars)        |
+
+If you would like to hook to some other event, feel free to submit a GitHub issue for it.
 
 ## Scriptability
 

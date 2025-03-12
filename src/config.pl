@@ -91,13 +91,6 @@ bar_class("polybar", "Polybar").
 %                 to desired monitors is the responsibility of the user/external bar
 bar_placement(follow_focus).
 
-% Commands to spawn at startup, mainly used for starting bars, compositors, etc.
-% Multiple startupcmd lines can be added to spawn multiple commands
-% (Note: You can also start/terminate bars manually while plwm is already running,
-% as long as they comply with bar_class)
-%startupcmd("polybar").
-%startupcmd("picom").
-
 
 %*******************************  Command FIFO  *******************************
 
@@ -301,4 +294,33 @@ rules([
 % You can find out the name, class and title values of windows using xprop(1):
 % WM_CLASS(STRING) = name , class
 % WM_NAME(STRING)  = title
+
+
+%**********************************  Hooks  ***********************************
+
+% Run custom logic on certain events
+% Syntax:
+%   Event -> Action
+% Event can be:
+%   start                  after all initialization, but before main X event loop
+%   quit                   before quitting, also before calling XCloseDisplay(3)
+%   switch_workspace_pre   before switching workspace
+%   switch_workspace_post  after switching workspace
+%   switch_monitor_pre     before switching monitor
+%   switch_monitor_post    after switching monitor
+%   window_create_pre      before a window is mapped (won't run for bars)
+%   window_create_post     after a window is mapped (won't run for bars)
+%   window_destroy_pre     before a window is unmapped (won't run for bars)
+%   window_destroy_post    after a window is unmapped (won't run for bars)
+%
+% Tip: you can run multiple predicates as Action by writing a comma separated list in parentheses
+hooks([
+  start -> (
+    writeln("plwm starting")
+  ),
+
+  quit -> (
+    writeln("plwm quitting")
+  )
+]).
 

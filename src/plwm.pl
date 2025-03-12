@@ -19,6 +19,7 @@
 :- dynamic config_flag/1.
 :- dynamic keymap_internal/3.
 :- dynamic netatom/2.
+:- dynamic hook/2.
 :- dynamic jobs/1 as shared.
 
 version(0.3).
@@ -67,6 +68,7 @@ quit() :- quit(0).
 %
 %  @arg ExitCode the process should terminate with
 quit(ExitCode) :-
+	run_hook(quit),
 	(nb_current(display, Dp) -> plx:x_close_display(Dp) ; true),
 	current_output(S), close(S),
 	halt(ExitCode)
@@ -637,6 +639,8 @@ switch_workspace(Mon, Selector) :-
 	global_key_value(active_ws, Mon, OldWs),
 	(selector_workspace(Selector, NewWs) ->
 		(OldWs \= NewWs ->
+			run_hook(switch_workspace_pre),
+
 			display(Dp), rootwin(Rootwin),
 			global_key_newvalue(active_ws, Mon, NewWs), global_key_newvalue(prev_ws, Mon, OldWs),
 			global_key_value(windows, Mon-NewWs, NewWins),
@@ -654,7 +658,9 @@ switch_workspace(Mon, Selector) :-
 				netatom(activewindow, NetActiveWindow),
 				plx:x_delete_property(Dp, Rootwin, NetActiveWindow)
 			),
-			update_ws_atoms
+			update_ws_atoms,
+
+			run_hook(switch_workspace_post)
 		; true)
 	; utils:warn_invalid_arg("switch_workspace", Selector))
 .
@@ -699,6 +705,8 @@ switch_monitor(To) :-
 	active_mon_ws(ActMon, ActWs),
 	(selector_monitor(To, ToMon) ->
 		(ToMon \= ActMon ->
+			run_hook(switch_monitor_pre),
+
 			unfocus_at_onlyvisual(ActMon-ActWs, true), % switch focus
 			nb_setval(active_mon, ToMon), active_mon_ws(ToMon, NewActWs),
 			global_key_value(focused, ToMon-NewActWs, FocusedWin), focus(FocusedWin),
@@ -711,7 +719,9 @@ switch_monitor(To) :-
 				; true)
 			)),
 			update_ws_atoms,
-			update_workarea
+			update_workarea,
+
+			run_hook(switch_monitor_post)
 		; true)
 	; utils:warn_invalid_arg("switch_monitor", To))
 .
@@ -1362,6 +1372,8 @@ handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
 	;
 		global_value(windows, Wins),
 		(\+ memberchk(Win, Wins) ->
+			run_hook(window_create_pre),
+
 			optcnf_then_else(attach_bottom(true),
 				append(Wins, [Win], NewWins),
 				NewWins = [Win|Wins]
@@ -1385,7 +1397,9 @@ handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
 			win_newproperties(Win, [managed, false, Geom]),
 			update_wintype(Win),
 			update_ws_atoms,
-			WinSpawned = true
+			WinSpawned = true,
+
+			run_hook(window_create_post)
 		; true)
 	); true),
 	(WinSpawned = true ->
@@ -1414,6 +1428,8 @@ handle_event(destroynotify, [_, _, _, _, _, Win]) :-
 		update_free_win_space
 	;
 	(win_mon_ws(Win, Mon, Ws) ->
+		run_hook(window_destroy_pre),
+
 		global_key_value(windows, Mon-Ws, Wins),
 		(once(nth0(Idx, Wins, Win, RemainingWins)) ->
 			global_key_newvalue(windows, Mon-Ws, RemainingWins),
@@ -1434,7 +1450,9 @@ handle_event(destroynotify, [_, _, _, _, _, Win]) :-
 			(Ws == ActWs ->
 				layout:relayout(Mon-Ws)
 			; true)
-		; true)
+		; true),
+
+		run_hook(window_destroy_post)
 	; true))
 .
 
@@ -1744,12 +1762,25 @@ update_clientlist() :-
 	))
 .
 
-%! run_startupcmds() is det
+%! setup_hooks() is det
 %
-%  Executes all predicates from config:startupcmd/1.
-run_startupcmds() :-
-	(config_exists(startupcmd/1) ->
-		forall(config(startupcmd(Cmd)), shellcmd(Cmd))
+%  Registers actions to events parsed from config:hooks/1.
+setup_hooks() :-
+	config(hooks(Hooks)),
+	forall(member((Event -> Action), Hooks), (
+		assertz(hook(Event, Action))
+	))
+.
+
+%! run_hook(++Event:atom) is det
+%
+%  If a hook is registered for Event, it's executed.
+%  Exceptions are ignored, but logged. Failure of the hook is also ignored.
+%
+%  @arg Event which we want to execute the hook for (if any)
+run_hook(Event) :-
+	(hook(Event, Action) ->
+		ignore(catch(call(Action), Ex, (writeln(Ex), true)))
 	; true)
 .
 
@@ -1950,12 +1981,20 @@ check_config() :-
 		))
 	) - "invalid value in layout_default_overrides",
 
+	optcnf_then(hooks(Hooks),
+		forall(member((Event -> Action), Hooks), (
+			member(Event, [
+				start, quit, switch_workspace_pre, switch_workspace_post,
+				switch_monitor_pre, switch_monitor_post, window_create_pre,
+				window_create_post, window_destroy_pre, window_destroy_post
+			]),
+			utils:valid_callable(Action)
+		))
+	) - "invalid value in hooks",
+
 	% settings that can have multiple instances
 	(config_exists(bar_class/2) ->
-		forall(config(bar_class(BarN, BarC)), (string(BarN), string(BarC))) ; true) - "bar_class must take two strings",
-
-	(config_exists(startupcmd/1) ->
-		forall(config(startupcmd(Cmd)), string(Cmd)) ; true) - "startupcmd must take a string"
+		forall(config(bar_class(BarN, BarC)), (string(BarN), string(BarC))) ; true) - "bar_class must take two strings"
 
 	]), check_errmsg(Check, ErrMsg)),
 
@@ -2142,7 +2181,8 @@ main() :-
 
 	fifo:setup_fifo,
 
-	run_startupcmds,
+	setup_hooks,
+	run_hook(start),
 
 	eventloop
 .
