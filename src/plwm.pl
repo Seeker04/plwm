@@ -372,7 +372,10 @@ focus(Win) :-
 		(Ws == ActWs ->
 			rootwin(Rootwin), netatom(activewindow, NetActiveWindow),
 			XA_WINDOW is 33, PropModeReplace is 0,
-			plx:x_change_property(Dp, Rootwin, NetActiveWindow, XA_WINDOW, 32, PropModeReplace, [Win], 1)
+			plx:x_change_property(Dp, Rootwin, NetActiveWindow, XA_WINDOW, 32, PropModeReplace, [Win], 1),
+
+			wmatom(wmtakefocus, WMTakeFocus),
+			ignore(send_event(Win, WMTakeFocus)) % window may not implement WM_TAKE_FOCUS
 		; true),
 		global_key_newvalue(focused, Mon-Ws, Win),
 		set_border(Win)
@@ -1301,7 +1304,7 @@ unmanage(Win) :-
 					(Mon-Ws == ActMon-ActWs -> % predecessor win (if any) gets the focus
 						focus(PrevWin),
 						raise(PrevWin)
-					; global_key_newvalue(focused, Mon-Ws, PrevWin))
+					; true)
 				;
 					global_key_newvalue(focused, Mon-Ws, 0),
 					display(Dp), rootwin(Rootwin), netatom(activewindow, NetActiveWindow),
