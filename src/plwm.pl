@@ -18,6 +18,7 @@
 :- dynamic rootwin/1.
 :- dynamic config_flag/1.
 :- dynamic keymap_internal/3.
+:- dynamic wmatom/2.
 :- dynamic netatom/2.
 :- dynamic hook/2.
 :- dynamic jobs/1 as shared.
@@ -92,12 +93,32 @@ alloc_colors() :-
 	nb_setval(border_pixel_focused, BorderPixelF)
 .
 
+%! setup_wmatoms() is det
+%
+%  Initializes WM atoms (e.g. WM_STATE) for ICCCM compilance.
+%
+%  See: https://www.x.org/releases/X11R7.7/doc/xorg-docs/icccm/icccm.html
+setup_wmatoms() :-
+	display(Dp),
+	plx:x_intern_atom(Dp, "WM_STATE",         false, WmState),
+	plx:x_intern_atom(Dp, "WM_PROTOCOLS",     false, WmProtocols),
+	plx:x_intern_atom(Dp, "WM_TAKE_FOCUS",    false, WmTakeFocus),
+	plx:x_intern_atom(Dp, "WM_DELETE_WINDOW", false, WmDeleteWindow),
+
+	assertz(wmatom(wmstate,        WmState)),
+	assertz(wmatom(wmprotocols,    WmProtocols)),
+	assertz(wmatom(wmtakefocus,    WmTakeFocus)),
+	assertz(wmatom(wmdeletewindow, WmDeleteWindow))
+.
+
 %! setup_netatoms() is det
 %
-%  Initializes _NET atoms (e.g. _NET_NUMBER_OF_DESKTOPS) for EWMH compilance
-%    see: https://specifications.freedesktop.org/wm-spec/latest/
-%  Static atoms like _NET_WM_NAME will be set once
-%  Dynamic atoms like _NET_CLIENT_LIST are asserted as dynamic predicates for later use
+%  Initializes _NET atoms (e.g. _NET_NUMBER_OF_DESKTOPS) for EWMH compilance.
+%
+%  See: https://specifications.freedesktop.org/wm-spec/latest/
+%
+%  Static atoms like _NET_WM_NAME will be set once.
+%  Dynamic atoms like _NET_CLIENT_LIST are asserted as dynamic predicates for later use.
 setup_netatoms() :-
 	display(Dp), rootwin(Rootwin),
 	plx:x_intern_atom(Dp, "UTF8_STRING"             , false, Utf8string),
@@ -138,18 +159,16 @@ setup_netatoms() :-
 	plx:x_change_property(Dp, Rootwin   , NetSupportingWMCheck, XA_WINDOW , 32, PropModeReplace, [WMCheckWin], 1),
 
 	% These will be changed dynamically
-	assertz(netatom(clientlist      , NetClientList)),
-	assertz(netatom(numberofdesktops, NetNumberOfDesktops)),
-	assertz(netatom(currentdesktop  , NetCurrentDesktop)),
-	assertz(netatom(desktopnames    , NetDesktopNames)),
-	assertz(netatom(activewindow    , NetActiveWindow)),
-	assertz(netatom(workarea        , NetWorkArea)),
-
-	assertz(netatom(wmwindowtype       , NetWMWindowType)),
+	assertz(netatom(clientlist,          NetClientList)),
+	assertz(netatom(numberofdesktops,    NetNumberOfDesktops)),
+	assertz(netatom(currentdesktop,      NetCurrentDesktop)),
+	assertz(netatom(desktopnames,        NetDesktopNames)),
+	assertz(netatom(activewindow,        NetActiveWindow)),
+	assertz(netatom(workarea,            NetWorkArea)),
+	assertz(netatom(wmwindowtype,        NetWMWindowType)),
 	assertz(netatom(wmwindowtype_dialog, NetWMWindowTypeDialog)),
-
-	assertz(netatom(wmstate            , NetWMState)),
-	assertz(netatom(wmstatefullscreen  , NetWMStateFullscreen))
+	assertz(netatom(wmstate,             NetWMState)),
+	assertz(netatom(wmstatefullscreen,   NetWMStateFullscreen))
 .
 
 %! modifier(++Mod:atom) is det
@@ -454,11 +473,26 @@ show(Win) :-
 %
 %  Closes the specified window using XKillClient(3).
 %
+%  If the window implements the WM_DELETE_WINDOW protocol, then let it handle
+%  the event itself by sending a ClientMessage instead.
+%  E.g. this happens when Gimp only unmaps its Color Picker dialog to hide it.
+%  Calling XKillClient() on it would kill the Gimp main window too.
+%
 %  @arg Win XID of window to close
 close_window(Win) :-
-	(Win =\= 0 ->
-		display(Dp),
-		plx:x_kill_client(Dp, Win)
+	wmatom(wmdeletewindow, WmDeleteWindow),
+	(Win =\= 0, \+ send_event(Win, WmDeleteWindow) ->
+		display(Dp), DestroyAll is 0,
+
+		plx:x_grab_server(Dp),
+		plx:x_set_error_handler(true), % sets xerrordummy()
+		plx:x_set_close_down_mode(Dp, DestroyAll),
+
+		plx:x_kill_client(Dp, Win),
+
+		plx:x_sync(Dp, false),
+		plx:x_set_error_handler(false),
+		plx:x_ungrab_server(Dp)
 	; true)
 .
 
@@ -1242,6 +1276,45 @@ cmp_mons([X, Y, W, H], Mon1, Mon2) :-
 %  @arg InMon index of monitor which contains the most area from Rect
 rect_inmon(Rect, InMon) :- monitors(Mons), max_member(cmp_mons(Rect), InMon, Mons).
 
+%! unmanage(++Win:integer) is det
+%
+%  If the specified window was managed, unregisters it from plwm.
+%  It will be removed from the internal state; relevant atoms will be updated;
+%  re-focus and re-layout will be performed if needed.
+%
+%  Should be called on DestroyNotify and UnmapNotify events.
+%
+%  @arg Win XID of window to unmanage
+unmanage(Win) :-
+	(win_mon_ws(Win, Mon, Ws) ->
+		global_key_value(windows, Mon-Ws, Wins),
+		(once(nth0(Idx, Wins, Win, RemainingWins)) ->
+			global_key_newvalue(windows, Mon-Ws, RemainingWins),
+			term_to_atom(Win, WinAtom), nb_delete(WinAtom),
+			update_clientlist,
+			update_ws_atoms,
+			active_mon_ws(ActMon, ActWs),
+			(global_key_value(focused, Mon-Ws, Win) ->
+				NextIdx is max(0, Idx - 1),
+				(nth0(NextIdx, RemainingWins, PrevWin) ->
+					global_key_newvalue(focused, Mon-Ws, PrevWin),
+					(Mon-Ws == ActMon-ActWs -> % predecessor win (if any) gets the focus
+						focus(PrevWin),
+						raise(PrevWin)
+					; global_key_newvalue(focused, Mon-Ws, PrevWin))
+				;
+					global_key_newvalue(focused, Mon-Ws, 0),
+					display(Dp), rootwin(Rootwin), netatom(activewindow, NetActiveWindow),
+					plx:x_delete_property(Dp, Rootwin, NetActiveWindow)
+				)
+			; true),
+			(Ws == ActWs ->
+				layout:relayout(Mon-Ws)
+			; true)
+		; true)
+	; true)
+.
+
 %! handle_event(++EventType:atom, ++EventArgs:[term]) is det
 %
 %  Handles X11 events returned by XNextEvent(3).
@@ -1423,39 +1496,27 @@ handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
 	; true)
 .
 
+handle_event(unmapnotify, [_, _, SendEvent, Dp, _, Win, _]) :-
+	% Set withdrawn state
+	wmatom(wmstate, WMState), PropModeReplace is 0, WithdrawnState is 0, None is 0,
+	plx:x_change_property(Dp, Win, WMState, WMState, 32, PropModeReplace, [WithdrawnState, None], 2),
+
+	% Only unmanage the window if unmap was initiated by a user action
+	(SendEvent = false ->
+		unmanage(Win)
+	; true)
+.
+
 handle_event(destroynotify, [_, _, _, _, _, Win]) :-
 	nb_getval(bars, Bars),
 	(selectchk(Win, Bars, RemainingBars) ->  % bar is removed, get back its space
 		nb_setval(bars, RemainingBars),
 		update_free_win_space
 	;
-	(win_mon_ws(Win, Mon, Ws) ->
 		run_hook(window_destroy_pre),
-
-		global_key_value(windows, Mon-Ws, Wins),
-		(once(nth0(Idx, Wins, Win, RemainingWins)) ->
-			global_key_newvalue(windows, Mon-Ws, RemainingWins),
-			term_to_atom(Win, WinAtom), nb_delete(WinAtom),
-			update_clientlist,
-			update_ws_atoms,
-			active_mon_ws(ActMon, ActWs),
-			(global_key_value(focused, Mon-Ws, Win) ->
-				NextIdx is max(0, Idx - 1),
-				(nth0(NextIdx, RemainingWins, PrevWin) ->
-					global_key_newvalue(focused, Mon-Ws, PrevWin),
-					(Mon-Ws == ActMon-ActWs -> % predecessor win (if any) gets the focus
-						focus(PrevWin),
-						raise(PrevWin)
-					; global_key_newvalue(focused, Mon-Ws, PrevWin))
-				; global_key_newvalue(focused, Mon-Ws, 0))
-			; true),
-			(Ws == ActWs ->
-				layout:relayout(Mon-Ws)
-			; true)
-		; true),
-
+		unmanage(Win),
 		run_hook(window_destroy_post)
-	; true))
+	)
 .
 
 handle_event(propertynotify, [_, _, _, Win, Atom, _, _]) :-
@@ -1524,6 +1585,29 @@ handle_event(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
 	; true)
 .
 
+%! send_event(++Win:integer, ++Protocol:atom) is det
+%
+%  Sends a ClientMessage XEvent for the given window using the specified
+%  communication protocol (see WM_PROTOCOLS).
+%  Fails without any side-effect if the protocols cannot be queried, the window
+%  does not support the desired one or if the event creation fails.
+%
+%  @arg Win XID of window to send event for
+%  @arg Protocol communication protocol to use
+send_event(Win, Protocol) :-
+	display(Dp),
+	plx:x_get_wm_protocols(Dp, Win, Protocols, _),
+
+	(member(Protocol, Protocols) ->
+		NoEventMask is 0, CurrentTime is 0,
+		wmatom(wmprotocols, WmProtocols),
+
+		plx:create_clientmessage_event(Win, WmProtocols, 32, Protocol, CurrentTime, ClientMessage),
+		plx:x_send_event(Dp, Win, false, NoEventMask, ClientMessage),
+		plx:c_free(ClientMessage)
+	)
+.
+
 %! jobs_notify(++Jobs:[predicate]) is det
 %
 %  Asserts a list of predicates to the jobs/1 dynamic predicate which is
@@ -1536,7 +1620,7 @@ handle_event(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
 %  @arg Jobs list of predicates to execute by the main thread
 jobs_notify(Jobs) :-
 	display(Dp), rootwin(Rootwin),
-	(plx:create_x_configure_event(Dp, Rootwin, ConfigureEvent) ->
+	(plx:create_configure_event(Dp, Rootwin, ConfigureEvent) ->
 		% We can pass jobs from other threads using a dynamic predicate
 		assertz(jobs(Jobs)),
 
@@ -2011,7 +2095,7 @@ init_x() :-
 	plx:x_open_display("", Dp),           assertz(display(Dp)),
 	plx:default_root_window(Dp, Rootwin), assertz(rootwin(Rootwin)),
 	plx:default_screen(Dp, Screen),       assertz(screen(Screen)),
-	plx:x_set_error_handler
+	plx:x_set_error_handler(false)
 .
 
 %! config_exists(:Config:term) is semidet
@@ -2174,6 +2258,7 @@ main() :-
 	init_x,
 	init_state,
 	alloc_colors,
+	setup_wmatoms,
 	setup_netatoms,
 	grab_keys,
 	grab_buttons,

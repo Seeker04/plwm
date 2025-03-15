@@ -30,7 +30,8 @@
 /* Bindings to swipl predicates */
 static foreign_t x_open_display(term_t display_name, term_t display);
 static foreign_t x_close_display(term_t display);
-static foreign_t x_set_error_handler(void);
+static foreign_t x_set_error_handler(term_t to_dummy);
+static foreign_t x_set_close_down_mode(term_t display, term_t close_mode);
 static foreign_t x_grab_key(term_t display, term_t keycode, term_t modifiers, term_t grab_window,
                             term_t owner_events, term_t pointer_mode, term_t keyboard_mode);
 static foreign_t x_grab_button(term_t display, term_t button, term_t modifiers, term_t grab_window,
@@ -38,9 +39,11 @@ static foreign_t x_grab_button(term_t display, term_t button, term_t modifiers, 
                                term_t keyboard_mode, term_t confine_to, term_t cursor);
 static foreign_t x_grab_pointer(term_t display, term_t grab_window, term_t owner_events, term_t event_mask,
                                 term_t pointer_mode, term_t keyboard_mode, term_t confine_to, term_t cursor, term_t time);
+static foreign_t x_grab_server(term_t display);
 static foreign_t x_ungrab_key(term_t display, term_t keycode, term_t modifiers, term_t grab_window);
 static foreign_t x_ungrab_button(term_t display, term_t button, term_t modifiers, term_t grab_window);
 static foreign_t x_ungrab_pointer(term_t display, term_t time);
+static foreign_t x_ungrab_server(term_t display);
 static foreign_t x_keysym_to_keycode(term_t display, term_t keysym, term_t keycode);
 static foreign_t x_string_to_keysym(term_t string, term_t keysym);
 static foreign_t x_next_event(term_t display, term_t event_return);
@@ -71,6 +74,7 @@ static foreign_t x_create_simple_window(term_t display, term_t parent, term_t x,
 static foreign_t x_get_transient_for_hint(term_t display, term_t w, term_t prop_window_return, term_t status);
 static foreign_t x_get_window_property(term_t display, term_t w, term_t property, term_t delete, term_t req_type,
                                        term_t prop_return);
+static foreign_t x_get_wm_protocols(term_t display, term_t w, term_t protocols_return, term_t count_return);
 static foreign_t x_get_wm_normal_hints(term_t display, term_t w, term_t hints_return, term_t status);
 static foreign_t x_warp_pointer(term_t display, term_t src_w, term_t dest_w, term_t src_x, term_t src_y,
                                 term_t src_width, term_t src_height, term_t dest_x, term_t dest_y);
@@ -83,25 +87,31 @@ static foreign_t default_colormap(term_t display, term_t screen_number, term_t c
 static foreign_t xinerama_query_screens(term_t display, term_t screen_info);
 static foreign_t xft_color_alloc_name(term_t display, term_t visual, term_t cmap, term_t name, term_t result);
 
-static foreign_t create_x_configure_event(term_t display, term_t w, term_t configure_event);
+static foreign_t create_configure_event(term_t display, term_t w, term_t configure_event);
+static foreign_t create_clientmessage_event(term_t w, term_t message_type, term_t format, term_t datal0, term_t datal1,
+                                            term_t clientmessage);
 
 static foreign_t c_free(term_t ptr);
 
 /* Helpers */
 static int build_list(term_t dst, term_t *src, size_t size);
 static int xerror(Display __attribute__((unused)) *dpy, const XErrorEvent *ee); /* copied from dwm */
+static int xerrordummy(const Display *dpy, const XErrorEvent *ee); /* copied from dwm */
 
 static PL_extension predicates[] = {
 	/* functor name               arity C-callback                 flags   remarks */
 	{ "x_open_display"            ,  2, x_open_display             , 0 }, /* pass "" for XOpenDisplay(NULL) */
 	{ "x_close_display"           ,  1, x_close_display            , 0 },
-	{ "x_set_error_handler"       ,  0, x_set_error_handler        , 0 }, /* handler it sets is xerror() */
+	{ "x_set_error_handler"       ,  1, x_set_error_handler        , 0 }, /* it sets xerror() or xerrordummy() */
+	{ "x_set_close_down_mode"     ,  2, x_set_close_down_mode      , 0 },
 	{ "x_grab_key"                ,  7, x_grab_key                 , 0 },
 	{ "x_grab_button"             , 10, x_grab_button              , 0 },
 	{ "x_grab_pointer"            ,  9, x_grab_pointer             , 0 }, /* Unused */
+	{ "x_grab_server"             ,  1, x_grab_server              , 0 },
 	{ "x_ungrab_key"              ,  4, x_ungrab_key               , 0 },
 	{ "x_ungrab_button"           ,  4, x_ungrab_button            , 0 },
 	{ "x_ungrab_pointer"          ,  2, x_ungrab_pointer           , 0 }, /* Unused */
+	{ "x_ungrab_server"           ,  1, x_ungrab_server            , 0 },
 	{ "x_keysym_to_keycode"       ,  3, x_keysym_to_keycode        , 0 },
 	{ "x_string_to_keysym"        ,  2, x_string_to_keysym         , 0 },
 	{ "x_next_event"              ,  2, x_next_event               , 0 },
@@ -127,6 +137,7 @@ static PL_extension predicates[] = {
 	{ "x_create_simple_window"    , 10, x_create_simple_window     , 0 },
 	{ "x_get_transient_for_hint"  ,  4, x_get_transient_for_hint   , 0 },
 	{ "x_get_window_property"     ,  6, x_get_window_property      , 0 }, /* 4th, 5th, 8th-11th args are omitted */
+	{ "x_get_wm_protocols"        ,  4, x_get_wm_protocols         , 0 },
 	{ "x_get_wm_normal_hints"     ,  4, x_get_wm_normal_hints      , 0 }, /* supplied_return arg is ignored */
 	{ "x_warp_pointer"            ,  9, x_warp_pointer             , 0 }, /* Unused */
 
@@ -138,7 +149,8 @@ static PL_extension predicates[] = {
 	{ "xinerama_query_screens"    ,  2, xinerama_query_screens     , 0 },
 	{ "xft_color_alloc_name"      ,  5, xft_color_alloc_name       , 0 },
 
-	{ "create_x_configure_event"  ,  3, create_x_configure_event   , 0 }, /* only display and w are passed */
+	{ "create_configure_event"    ,  3, create_configure_event     , 0 }, /* must be de-allocated with c_free! */
+	{ "create_clientmessage_event",  6, create_clientmessage_event , 0 }, /* must be de-allocated with c_free! */
 
 	{ "c_free"                    ,  1, c_free                     , 0 },
 	{ NULL                        ,  0, NULL                       , 0 }
@@ -178,9 +190,30 @@ x_close_display(term_t display)
 }
 
 static foreign_t
-x_set_error_handler(void)
+x_set_error_handler(term_t to_dummy)
 {
-	XSetErrorHandler((XErrorHandler)xerror);
+	Bool dummy;
+
+	PL_TRY(PL_get_bool_ex(to_dummy, &dummy));
+	if (dummy) {
+		XSetErrorHandler((XErrorHandler)xerrordummy);
+	}
+	else {
+		XSetErrorHandler((XErrorHandler)xerror);
+	}
+	PL_succeed;
+}
+
+static foreign_t
+x_set_close_down_mode(term_t display, term_t close_mode)
+{
+	Display *dp;
+	int closemode;
+
+	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
+	PL_TRY(PL_get_integer_ex(close_mode, &closemode));
+
+	XSetCloseDownMode(dp, closemode);
 	PL_succeed;
 }
 
@@ -256,6 +289,16 @@ x_grab_pointer(term_t display, term_t grab_window, term_t owner_events, term_t e
 }
 
 static foreign_t
+x_grab_server(term_t display)
+{
+	Display *dp;
+
+	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
+	XGrabServer(dp);
+	PL_succeed;
+}
+
+static foreign_t
 x_ungrab_key(term_t display, term_t keycode, term_t modifiers, term_t grab_window)
 {
 	Display *dp;
@@ -297,6 +340,16 @@ x_ungrab_pointer(term_t display, term_t time)
 	PL_TRY(PL_get_uint64_ex(time, &t));
 
 	XUngrabPointer(dp, t);
+	PL_succeed;
+}
+
+static foreign_t
+x_ungrab_server(term_t display)
+{
+	Display *dp;
+
+	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
+	XUngrabServer(dp);
 	PL_succeed;
 }
 
@@ -354,6 +407,18 @@ x_next_event(term_t display, term_t event_return)
 		PL_TRY(PL_put_pointer(subts[4], ev.xmaprequest.display   ));
 		PL_TRY(PL_put_uint64 (subts[5], ev.xmaprequest.parent    ));
 		PL_TRY(PL_put_uint64 (subts[6], ev.xmaprequest.window    ));
+	}
+	else if (ev.type == UnmapNotify) {
+		stcnt = 8;
+		for (int i = 0; i < stcnt; ++i) { subts[i] = PL_new_term_ref(); }
+		PL_TRY(PL_put_atom_chars(subts[0], "unmapnotify"));
+		PL_TRY(PL_put_integer(subts[1], ev.xunmap.type          ));
+		PL_TRY(PL_put_uint64 (subts[2], ev.xunmap.serial        ));
+		PL_TRY(PL_put_bool   (subts[3], ev.xunmap.send_event    ));
+		PL_TRY(PL_put_pointer(subts[4], ev.xunmap.display       ));
+		PL_TRY(PL_put_uint64 (subts[5], ev.xunmap.event         ));
+		PL_TRY(PL_put_uint64 (subts[6], ev.xunmap.window        ));
+		PL_TRY(PL_put_bool   (subts[7], ev.xunmap.from_configure));
 	}
 	else if (ev.type == DestroyNotify) {
 		stcnt = 7;
@@ -759,7 +824,7 @@ x_change_property(term_t display, term_t w, term_t property, term_t atom, term_t
 	PL_TRY(PL_get_integer_ex(mode, &md));
 	PL_TRY(PL_get_integer_ex(nelements, &nelem));
 
-	if (XA_LAST_PREDEFINED < a) { /* handle the UTF8_STRING case separately */
+	if (PL_is_string(data)) { /* handle the UTF8_STRING case separately */
 		PL_TRY(PL_get_string_chars(data, &str, &len));
 		XChangeProperty(dp, win, prop, a, fmt, md, (unsigned char *)str, (int)len);
 		PL_succeed;
@@ -932,6 +997,42 @@ x_get_window_property(term_t display, term_t w, term_t property, term_t delete, 
 
 	PL_TRY(PL_unify_uint64(prop_return, propret));
 	PL_succeed;
+}
+
+static foreign_t
+x_get_wm_protocols(term_t display, term_t w, term_t protocols_return, term_t count_return)
+{
+	Display *dp;
+	Window win;
+	Atom *protocols;
+	int cnt;
+	term_t listt = PL_new_term_ref();
+
+	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
+	PL_TRY(PL_get_uint64_ex(w, &win));
+
+	if (XGetWMProtocols(dp, win, &protocols, &cnt) != 0) {
+		if (cnt == 0) {
+			PL_TRY(PL_unify_nil_ex(protocols_return));
+			PL_TRY(PL_unify_integer(count_return, 0));
+			PL_succeed;
+		}
+
+		term_t *subts = malloc((size_t)cnt * sizeof(term_t));
+		for (int i = 0; i < cnt; ++i) {
+			subts[i] = PL_new_term_ref();
+			PL_TRY(PL_put_uint64(subts[i], protocols[i]), XFree(protocols); free(subts));
+		}
+		build_list(listt, subts, (size_t)cnt);
+
+		PL_TRY(PL_unify(listt, protocols_return), XFree(protocols); free(subts));
+		PL_TRY(PL_unify_integer(count_return, cnt), XFree(protocols); free(subts));
+
+		XFree(protocols);
+		free(subts);
+		PL_succeed;
+	}
+	PL_fail;
 }
 
 static foreign_t
@@ -1133,7 +1234,7 @@ xft_color_alloc_name(term_t display, term_t visual, term_t cmap, term_t name, te
 }
 
 static foreign_t
-create_x_configure_event(term_t display, term_t w, term_t configure_event)
+create_configure_event(term_t display, term_t w, term_t configure_event)
 {
 	Display *dp;
 	Window win;
@@ -1149,6 +1250,36 @@ create_x_configure_event(term_t display, term_t w, term_t configure_event)
 		event->event = win;
 		event->window = win;
 		PL_TRY(PL_unify_pointer(configure_event, event));
+		PL_succeed;
+	}
+	PL_fail;
+}
+
+static foreign_t
+create_clientmessage_event(term_t w, term_t message_type, term_t format, term_t datal0, term_t datal1,
+                           term_t clientmessage)
+{
+	Window win;
+	Atom msgtype;
+	int fmt;
+	long datal[2];
+
+	PL_TRY(PL_get_uint64_ex(w, &win));
+	PL_TRY(PL_get_uint64_ex(message_type, &msgtype));
+	PL_TRY(PL_get_integer_ex(format, &fmt));
+	PL_TRY(PL_get_long_ex(datal0, datal));
+	PL_TRY(PL_get_long_ex(datal1, datal + 1));
+
+	XEvent *event = malloc(sizeof(XEvent));
+	if (event != NULL) {
+		memset(event, 0, sizeof(XEvent));
+		event->type = ClientMessage;
+		event->xclient.window = win;
+		event->xclient.message_type = msgtype;
+		event->xclient.format = fmt;
+		event->xclient.data.l[0] = datal[0];
+		event->xclient.data.l[1] = datal[1];
+		PL_TRY(PL_unify_pointer(clientmessage, event));
 		PL_succeed;
 	}
 	PL_fail;
@@ -1178,8 +1309,9 @@ build_list(term_t dst, term_t *src, size_t size)
 }
 
 static int
-xerror(Display __attribute__((unused)) *dpy, const XErrorEvent *ee) /* copied from dwm */
+xerror(Display __attribute__((unused)) *dpy, const XErrorEvent *ee)
 {
+	/* copied from dwm */
 	if (ee->error_code == BadWindow
 	|| (ee->request_code == X_SetInputFocus     && ee->error_code == BadMatch)
 	|| (ee->request_code == X_PolyText8         && ee->error_code == BadDrawable)
@@ -1193,5 +1325,12 @@ xerror(Display __attribute__((unused)) *dpy, const XErrorEvent *ee) /* copied fr
 	fprintf(stderr, "plx: fatal error: request code=%d, error code=%d\n",
 		ee->request_code, ee->error_code);
 	return -1;
+}
+
+static int
+xerrordummy(const Display __attribute__((unused)) *dpy, const XErrorEvent __attribute__((unused)) *ee)
+{
+	/* copied from dwm */
+	return 0;
 }
 
