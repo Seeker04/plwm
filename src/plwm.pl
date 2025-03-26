@@ -796,7 +796,7 @@ win_tomon_toworkspace_top(Win, ToMon, ToWs, Top) :-
 			hide(Win),
 			layout:relayout(FromMon-FromWs)
 		; true),
-		(active_mon_ws(ToMon, ToWs) ->
+		(global_key_value(active_ws, ToMon, ToWs) ->
 			layout:relayout(ToMon-ToWs)
 		; true),
 
