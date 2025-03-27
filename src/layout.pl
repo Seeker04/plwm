@@ -34,11 +34,11 @@ is_layout(Layout) :- member(Layout, [
 %  @arg Layout layout to set
 set_layout(Layout) :- active_mon_ws(ActMon, ActWs), set_layout(ActMon-ActWs, Layout).
 
-%! set_layout(++Mon-Ws:integer-atom, ++Layout:term) is det
+%! set_layout(++Mon-Ws:string-atom, ++Layout:term) is det
 %
 %  Sets the layout of the specified monitor-workspace.
 %
-%  @arg Mon-Ws monitor index and workspace name to set the layout on
+%  @arg Mon-Ws monitor and workspace name to set the layout on
 %  @arg Layout layout to set
 set_layout(Mon-Ws, Layout) :-
 	(is_layout(Layout) ->
@@ -77,18 +77,18 @@ set_layout(Mon-Ws, Layout) :-
 %  Recalculates and redraws the layout on the active monitor-workspace.
 relayout() :- global_value(layout, Layout), set_layout(Layout).
 
-%! relayout(++Mon-Ws:integer-atom) is det
+%! relayout(++Mon-Ws:string-atom) is det
 %
 %  Recalculates and redraws the layout on the specified monitor-workspace.
 relayout(Mon-Ws) :- global_key_value(layout, Mon-Ws, Layout), set_layout(Mon-Ws, Layout).
 
-%! calculate_layout(++Layout:term, ++Mon:integer, ++WinCnt:integer, ++Bounds:[integer], --Geoms:[[integer]]) is det
+%! calculate_layout(++Layout:term, ++Mon:string, ++WinCnt:integer, ++Bounds:[integer], --Geoms:[[integer]]) is det
 %
 %  Calculates the window geometries based on the desired layout, monitor, window count
 %  and reserved screen space.
 %
 %  @arg Layout the layout to calculate geometries for
-%  @arg Mon index of subject monitor
+%  @arg Mon name of subject monitor
 %  @arg WinCnt number of managed windows in the layout
 %  @arg Bounds geometry of reserved space on the screen (i.e. screen size minus bars)
 %  @arg Geoms list of window geometries resulting from the layout calculation

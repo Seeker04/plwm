@@ -66,13 +66,14 @@ ws_format_occupied("▘~w").
 % Underscore at the workspace column means "all workspaces" on that monitor
 % Leave an underscore in the nmaster, mfact, layout columns where you don't want an override
 % Note: a later override will overrule values of previous ones if there is an overlap
+% Note: for technical reasons, it is important to put monitors in "" and workspaces in ''
 % Examples:
 
 layout_default_overrides([
-%  monitor  workspace     nmaster  mfact   layout
-% ( _    ,  '2'       ->  _     ,  _    ,  grid    ),
-% ( 0    ,  _         ->  2     ,  1/2  ,  tmaster ),
-% ( 1    ,  '3'       ->  _     ,  0.90 ,  _       )
+%  monitor      workspace     nmaster  mfact   layout
+% ( _        ,  '2'       ->  _     ,  _    ,  grid    ),
+% ( "eDP-1"  ,  _         ->  2     ,  1/2  ,  tmaster ),
+% ( "HDMI-1" ,  '3'       ->  _     ,  0.90 ,  _       )
 ]).
 
 %**********************************  Bars  ************************************
@@ -220,7 +221,8 @@ keymaps([
   % For both switch_monitor and move_focused_to_monitor, you can pass:
   %   prev / next / prev_nonempty / next_nonempty (these wrap)
   %   left / right / up / down (direction relative to the active monitor, no wrapping)
-  %   screen numbers (indexed from 0)
+  %   output names, as seen in output of xrandr(1), e.g. "eDP-1", "HDMI-1"
+  %   monitor indices starting from 1
 
   % Menus
   alt +         w           ->  menu:goto_window                ,
@@ -262,9 +264,9 @@ keymaps([
 
 %**********************************  Rules  ***********************************
 
-% Windows matching all the name-class-title criterias can be auto assigned to
-% a predefined monitor (use screen number) and workspace (use the quoted name
-% or an index from 1) with a desired mode
+% Windows matching all the name-class-title criteria can be auto assigned to
+% a predefined monitor (use double quoted output names shown by xrandr(1)) and
+% workspace (use the quoted name or an index from 1) with a desired mode
 % Checking is done by substring matching, wrap the strings in exact() wherever
 % you wish to force an exact match
 % Underscores can be used as joker values (match any) at any of the three criteria columns
@@ -285,10 +287,10 @@ keymaps([
 % Examples:
 
 rules([
-%  name      class     title                monitor wspace   mode
-  (_      ,  _      ,  exact("gcolor2")  ->  _    ,  _    ,  [center, center, 1/3, 1/3]),
-  (_      ,  _      ,  "Firefox"         ->  1    ,  '2'  ,  fullscreen                ),
-  ("Bar"  ,  "Baz"  ,  _                 ->  1    ,  '1'  ,  fullscreen                )
+%  name      class     title                 monitor     wspace    mode
+  (_      ,  _      ,  exact("gcolor2")  ->  _        ,  _      ,  [center, center, 1/3, 1/3]),
+  (_      ,  _      ,  "Firefox"         ->  "eDP-1"  ,  'www'  ,  fullscreen                ),
+  ("Bar"  ,  "Baz"  ,  _                 ->  "HDMI-1" ,  '1'    ,  [700, 250, _, _]          )
 ]).
 
 % You can find out the name, class and title values of windows using xprop(1):

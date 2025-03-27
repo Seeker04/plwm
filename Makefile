@@ -9,7 +9,7 @@ WFLAGS  = -Wall -Wextra -Wconversion -Wshadow -pedantic -pedantic-errors
 OFLAGS  = -O2
 
 CFLAGS  = -std=$(CSTD) $(IFLAGS) $(WFLAGS) $(OFLAGS) -fpic
-LDFLAGS = -shared -lX11 -lXinerama -lXft
+LDFLAGS = -shared -lX11 -lXft -lXrandr
 
 SWIFLAGS = -p foreign=$(INSTALLDIR_LIB) \
            --goal=main --toplevel=halt --stand_alone=true -O -o plwm -c src/plwm.pl

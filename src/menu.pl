@@ -54,34 +54,34 @@ read_from_prompt(Prompt, Input) :-  % use menucmd as a simple input prompt
 	)
 .
 
-%! mon_ws_format(++Mon:integer, ++Ws:atom, -Str:string) is det
+%! mon_ws_format(++Mon:string, ++Ws:atom, -Str:string) is det
 %
-%  From a monitor index and workspace name, formats a selection line for a list.
-%  The general format is "<monitor index> / <workspace name>".
+%  From a monitor and workspace name, formats a selection line for a list.
+%  The general format is "<monitor name> / <workspace name>".
 %  If there is only one monitor, it is omitted.
 %  If there is only one workspace, it is omitted.
 %  If there is only one monitor and one workspace, the output is empty.
 %  
-%  @arg Mon monitor index
+%  @arg Mon monitor name
 %  @arg Ws workspace name
 %  @arg string output of the formatting
 mon_ws_format(Mon, Ws, Str) :-
 	monitors(Mons), nb_getval(workspaces, Wss), length(Mons, MonCnt), length(Wss, WsCnt),
 	(1 == MonCnt, 1 == WsCnt -> Str = ""
 	;1 == MonCnt, 1 <  WsCnt -> format(string(Str),      "~a", [     Ws])
-	;1 <  MonCnt, 1 == WsCnt -> format(string(Str), "~d"     , [Mon    ])
-	;1 <  MonCnt, 1 <  WsCnt -> format(string(Str), "~d / ~a", [Mon, Ws]))
+	;1 <  MonCnt, 1 == WsCnt -> format(string(Str), "~s"     , [Mon    ])
+	;1 <  MonCnt, 1 <  WsCnt -> format(string(Str), "~s / ~a", [Mon, Ws]))
 .
 
-%! mon_ws_wint_format(++Mon:integer, ++Ws:atom, ++WinT:string -Str:string) is det
+%! mon_ws_wint_format(++Mon:string, ++Ws:atom, ++WinT:string -Str:string) is det
 %
-%  From a monitor index, workspace name and window title, formats a selection line for a list.
-%  The general format is "<monitor index> / <workspace name>    <window title>".
+%  From a monitor name, workspace name and window title, formats a selection line for a list.
+%  The general format is "<monitor name> / <workspace name>    <window title>".
 %  If there is only one monitor, it is omitted.
 %  If there is only one workspace, it is omitted.
 %  If there is only one monitor and one workspace, the output is only the window title.
 %  
-%  @arg Mon monitor index
+%  @arg Mon monitor name
 %  @arg Ws workspace name
 %  @arg WinT window title string
 %  @arg string output of the formatting
@@ -90,10 +90,10 @@ mon_ws_wint_format(Mon, Ws, WinT, Str) :-
 	maplist(atom_length, Wss, WsWidths),
 	max_list(WsWidths, WsMaxWidth),
 	(1 == MonCnt, 1 == WsCnt -> format(string(Str),                    "~s", [WinT])
-	;1 <  MonCnt, 1 == WsCnt -> format(string(Str),              "~d    ~s", [Mon, WinT])
+	;1 <  MonCnt, 1 == WsCnt -> format(string(Str),              "~s    ~s", [Mon, WinT])
 	;1 == MonCnt, 1 <  WsCnt -> format(string(Fmt),       "~~a~~~d|    ~~s", [WsMaxWidth]),
 	                            format(string(Str), Fmt, [Ws, WinT])
-	;1 <  MonCnt, 1 <  WsCnt -> format(string(Fmt), "~~d / ~~a~~~d|    ~~s", [WsMaxWidth+4]),
+	;1 <  MonCnt, 1 <  WsCnt -> format(string(Fmt), "~~s / ~~a~~~d|    ~~s", [WsMaxWidth+4]),
 		                    format(string(Str), Fmt, [Mon, Ws, WinT]))
 .
 
@@ -344,7 +344,8 @@ cmd_desc(switch_monitor(left) , "Switch monitor in left direction").
 cmd_desc(switch_monitor(right), "Switch monitor in right direction").
 cmd_desc(switch_monitor(up)   , "Switch monitor in up direction").
 cmd_desc(switch_monitor(down) , "Switch monitor in down direction").
-cmd_desc(switch_monitor(N) , D) :- integer(N), format(string(D), "Switch to monitor #~d", [N]).
+cmd_desc(switch_monitor(Mon) , D) :- string(Mon), format(string(D), "Switch to monitor ~s", [Mon]).
+cmd_desc(switch_monitor(Idx) , D) :- integer(Idx), format(string(D), "Switch to monitor at index ~d", [Idx]).
 cmd_desc(move_focused_to_monitor(prev) , "Move focused window to previous monitor").
 cmd_desc(move_focused_to_monitor(next) , "Move focused window to next monitor").
 cmd_desc(move_focused_to_monitor(prev_nonempty), "Move focused window to previous non-empty monitor").
@@ -353,7 +354,8 @@ cmd_desc(move_focused_to_monitor(left) , "Move focused window to monitor in left
 cmd_desc(move_focused_to_monitor(right), "Move focused window to monitor in right direction").
 cmd_desc(move_focused_to_monitor(up)   , "Move focused window to monitor in up direction").
 cmd_desc(move_focused_to_monitor(down) , "Move focused window to monitor in down direction").
-cmd_desc(move_focused_to_monitor(N) , D) :- integer(N), format(string(D), "Moved focused window to monitor #~d", [N]).
+cmd_desc(move_focused_to_monitor(Mon) , D) :- string(Mon), format(string(D), "Move focused window to monitor ~s", [Mon]).
+cmd_desc(move_focused_to_monitor(Idx) , D) :- integer(Idx), format(string(D), "Move focused window to monitor at index ~d", [Idx]).
 cmd_desc(menu:goto_window      , "Go to selected window, raise and focus it").
 cmd_desc(menu:goto_workspace   , "Go to selected workspace").
 cmd_desc(menu:pull_from        , "Pull selected window to active workspace").
@@ -469,15 +471,16 @@ list_cmds() :-
 	append(SLCmds3, SLCmds4, SetLayoutCmds),
 
 	nb_getval(workspaces, Wss),
-	length(Wss, WsCnt),
 	findall(switch_workspace(Ws), member(Ws, Wss), SwitchWsByNameCmds),
-	findall(switch_workspace(Idx), between(1, WsCnt, Idx), SwitchWsByIdxCmds),
+	findall(switch_workspace(Idx), nth1(Idx, Wss, _), SwitchWsByIdxCmds),
 	findall(move_focused_to_workspace(Ws), member(Ws, Wss), MoveToWsByNameCmds),
-	findall(move_focused_to_workspace(Idx), between(1, WsCnt, Idx), MoveToWsByIdxCmds),
+	findall(move_focused_to_workspace(Idx), nth1(Idx, Wss, _), MoveToWsByIdxCmds),
 
 	monitors(Mons),
 	findall(switch_monitor(Mon), member(Mon, Mons), SwitchMonCmds),
+	findall(switch_monitor(Idx), nth1(Idx, Mons, _), SwitchMonByIdxCmds),
 	findall(move_focused_to_monitor(Mon), member(Mon, Mons), MoveToMonCmds),
+	findall(move_focused_to_monitor(Idx), nth1(Idx, Mons, _), MoveToMonByIdxCmds),
 
 	flatten([
 		[
@@ -515,6 +518,7 @@ list_cmds() :-
 		move_focused_to_workspace(next_nonempty)
 		],
 		SwitchMonCmds,
+		SwitchMonByIdxCmds,
 		[
 		switch_monitor(prev),
 		switch_monitor(next),
@@ -526,6 +530,7 @@ list_cmds() :-
 		switch_monitor(down)
 		],
 		MoveToMonCmds,
+		MoveToMonByIdxCmds,
 		[
 		move_focused_to_monitor(prev),
 		move_focused_to_monitor(next),

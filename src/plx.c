@@ -11,7 +11,7 @@
 #include <X11/Xproto.h>
 
 #include <X11/Xft/Xft.h>
-#include <X11/extensions/Xinerama.h>
+#include <X11/extensions/Xrandr.h>
 
 #include <SWI-Prolog.h>
 
@@ -84,8 +84,16 @@ static foreign_t default_screen(term_t display, term_t screen);
 static foreign_t default_visual(term_t display, term_t screen_number, term_t visual);
 static foreign_t default_colormap(term_t display, term_t screen_number, term_t colormap);
 
-static foreign_t xinerama_query_screens(term_t display, term_t screen_info);
+/* Xft */
 static foreign_t xft_color_alloc_name(term_t display, term_t visual, term_t cmap, term_t name, term_t result);
+
+/* XRandR */
+static foreign_t xrr_query_extension(term_t dpy, term_t event_base_return, term_t error_base_return);
+static foreign_t xrr_select_input(term_t dpy, term_t window, term_t mask);
+static foreign_t xrr_get_screen_resources(term_t dpy, term_t window, term_t screen_resources, term_t outputs);
+static foreign_t xrr_free_screen_resources(term_t resources);
+static foreign_t xrr_get_output_info(term_t dpy, term_t resources, term_t output_index, term_t output_info);
+static foreign_t xrr_get_crtc_info(term_t dpy, term_t resources, term_t crtc, term_t crtc_info);
 
 static foreign_t create_configure_event(term_t display, term_t w, term_t configure_event);
 static foreign_t create_clientmessage_event(term_t w, term_t message_type, term_t format, term_t datal0, term_t datal1,
@@ -97,6 +105,8 @@ static foreign_t c_free(term_t ptr);
 static int build_list(term_t dst, term_t *src, size_t size);
 static int xerror(Display __attribute__((unused)) *dpy, const XErrorEvent *ee); /* copied from dwm */
 static int xerrordummy(const Display *dpy, const XErrorEvent *ee); /* copied from dwm */
+
+static int rr_event_base = -1;
 
 static PL_extension predicates[] = {
 	/* functor name               arity C-callback                 flags   remarks */
@@ -146,8 +156,16 @@ static PL_extension predicates[] = {
 	{ "default_visual"            ,  3, default_visual             , 0 },
 	{ "default_colormap"          ,  3, default_colormap           , 0 },
 
-	{ "xinerama_query_screens"    ,  2, xinerama_query_screens     , 0 },
+	/* Xft */
 	{ "xft_color_alloc_name"      ,  5, xft_color_alloc_name       , 0 },
+
+	/* XRandR */
+	{ "xrr_query_extension"       ,  3, xrr_query_extension        , 0 },
+	{ "xrr_select_input"          ,  3, xrr_select_input           , 0 },
+	{ "xrr_get_screen_resources"  ,  4, xrr_get_screen_resources   , 0 }, /* also returns outputs directly */
+	{ "xrr_free_screen_resources" ,  1, xrr_free_screen_resources  , 0 },
+	{ "xrr_get_output_info"       ,  4, xrr_get_output_info        , 0 }, /* 3rd arg is output idx, last is list attrs */
+	{ "xrr_get_crtc_info"         ,  4, xrr_get_crtc_info          , 0 }, /* returns list of useful fields only */
 
 	{ "create_configure_event"    ,  3, create_configure_event     , 0 }, /* must be de-allocated with c_free! */
 	{ "create_clientmessage_event",  6, create_clientmessage_event , 0 }, /* must be de-allocated with c_free! */
@@ -497,6 +515,12 @@ x_next_event(term_t display, term_t event_return)
 		PL_TRY(PL_put_integer(subts[11], ev.xconfigure.border_width     ));
 		PL_TRY(PL_put_uint64 (subts[12], ev.xconfigure.above            ));
 		PL_TRY(PL_put_bool   (subts[13], ev.xconfigure.override_redirect));
+	}
+	/* XRandR */
+	else if (ev.type == rr_event_base + RRScreenChangeNotify) {
+		stcnt = 1;
+		subts[0] = PL_new_term_ref();
+		PL_TRY(PL_put_atom_chars(subts[0], "rrscreenchangenotify"));
 	}
 	else {
 		/* rest of the event types are very similar */
@@ -1170,47 +1194,6 @@ default_colormap(term_t display, term_t screen_number, term_t colormap)
 }
 
 static foreign_t
-xinerama_query_screens(term_t display, term_t screen_info)
-{
-	Display *dp;
-	XineramaScreenInfo *scrinfo;
-	int num;
-	term_t *subts;
-	term_t list = PL_new_term_ref();
-
-	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
-
-	scrinfo = XineramaQueryScreens(dp, &num);
-
-	if (num == 0) {
-		PL_unify_nil_ex(screen_info);
-		PL_succeed;
-	}
-
-	subts = malloc((size_t)num * 5 * sizeof(term_t));
-	for (int i = 0; i < num; ++i) {
-		subts[i * 5 + 0] = PL_new_term_ref();
-		subts[i * 5 + 1] = PL_new_term_ref();
-		subts[i * 5 + 2] = PL_new_term_ref();
-		subts[i * 5 + 3] = PL_new_term_ref();
-		subts[i * 5 + 4] = PL_new_term_ref();
-		PL_TRY(PL_put_integer(subts[i * 5 + 0], scrinfo[i].screen_number), XFree(scrinfo); free(subts));
-		PL_TRY(PL_put_integer(subts[i * 5 + 1], scrinfo[i].x_org),         XFree(scrinfo); free(subts));
-		PL_TRY(PL_put_integer(subts[i * 5 + 2], scrinfo[i].y_org),         XFree(scrinfo); free(subts));
-		PL_TRY(PL_put_integer(subts[i * 5 + 3], scrinfo[i].width),         XFree(scrinfo); free(subts));
-		PL_TRY(PL_put_integer(subts[i * 5 + 4], scrinfo[i].height),        XFree(scrinfo); free(subts));
-	}
-	build_list(list, subts, (size_t)num * 5);
-
-	XFree(scrinfo);
-	free(subts);
-	if (!PL_unify(list, screen_info)) {
-		return (foreign_t)PL_warning("xinerama_query_screens/2: PL_unify() on 'screen_info' failed!");
-	}
-	PL_succeed;
-}
-
-static foreign_t
 xft_color_alloc_name(term_t display, term_t visual, term_t cmap, term_t name, term_t result)
 {
 	Display *dp;
@@ -1230,6 +1213,160 @@ xft_color_alloc_name(term_t display, term_t visual, term_t cmap, term_t name, te
 	}
 
 	PL_TRY(PL_unify_uint64(result, res.pixel));
+	PL_succeed;
+}
+
+static foreign_t
+xrr_query_extension(term_t dpy, term_t event_base_return, term_t error_base_return)
+{
+	Display *dp;
+	int eventbase, errorbase;
+
+	PL_TRY(PL_get_pointer_ex(dpy, (void**)&dp));
+
+	if (XRRQueryExtension(dp, &eventbase, &errorbase)) {
+		PL_TRY(PL_unify_integer(event_base_return, eventbase));
+		PL_TRY(PL_unify_integer(error_base_return, errorbase));
+		rr_event_base = eventbase; /* shortcut: it's simpler to keep this in plx */
+		PL_succeed;
+	}
+	else {
+		return (foreign_t)PL_warning("xrr_query_extension: XRRQueryExtension() failed!");
+	}
+}
+
+static foreign_t xrr_select_input(term_t dpy, term_t window, term_t mask)
+{
+	Display *dp;
+	Window win;
+	int msk;
+
+	PL_TRY(PL_get_pointer_ex(dpy, (void**)&dp));
+	PL_TRY(PL_get_uint64_ex(window, &win));
+	PL_TRY(PL_get_integer_ex(mask, &msk));
+
+	XRRSelectInput(dp, win, msk);
+	PL_succeed;
+}
+
+static foreign_t
+xrr_get_screen_resources(term_t dpy, term_t window, term_t screen_resources, term_t outputs)
+{
+	Display *dp;
+	Window win;
+	XRRScreenResources *scrres;
+	term_t listt = PL_new_term_ref();
+
+	PL_TRY(PL_get_pointer_ex(dpy, (void**)&dp));
+	PL_TRY(PL_get_uint64_ex(window, &win));
+
+	if ((scrres = XRRGetScreenResources(dp, win)) == NULL) {
+		return (foreign_t)PL_warning("xrr_get_screen_resources: XRRGetScreenResources() returned NULL!");
+	}
+
+	PL_TRY(PL_unify_pointer(screen_resources, scrres), XRRFreeScreenResources(scrres));
+
+	if (scrres->noutput == 0) {
+		PL_TRY(PL_unify_nil_ex(outputs), XRRFreeScreenResources(scrres));
+	}
+	else {
+		term_t *subts = malloc((size_t)scrres->noutput * sizeof(term_t));
+		for (int i = 0; i < scrres->noutput; ++i) {
+			subts[i] = PL_new_term_ref();
+			PL_TRY(PL_put_uint64(subts[i], scrres->outputs[i]), XRRFreeScreenResources(scrres); free(subts));
+		}
+		build_list(listt, subts, (size_t)scrres->noutput);
+		PL_TRY(PL_unify(listt, outputs), XRRFreeScreenResources(scrres); free(subts));
+		free(subts);
+	}
+	PL_succeed;
+}
+
+static foreign_t
+xrr_free_screen_resources(term_t resources)
+{
+	XRRScreenResources *scrres;
+
+	PL_TRY(PL_get_pointer_ex(resources, (void**)&scrres));
+	XRRFreeScreenResources(scrres);
+	PL_succeed;
+}
+
+static foreign_t
+xrr_get_output_info(term_t dpy, term_t resources, term_t output_index, term_t output_info)
+{
+	Display *dp;
+	XRRScreenResources *scrres;
+	int oidx;
+	XRROutputInfo *oinfo;
+
+	PL_TRY(PL_get_pointer_ex(dpy, (void**)&dp));
+	PL_TRY(PL_get_pointer_ex(resources, (void**)&scrres));
+	PL_TRY(PL_get_integer_ex(output_index, &oidx));
+
+	if (oidx < 0 || scrres->noutput <= oidx) {
+		return (foreign_t)PL_warning("xrr_get_output_info: output_index: %d is out of bounds: 0..%d!",
+		                             oidx, scrres->noutput);
+	}
+
+	if ((oinfo = XRRGetOutputInfo(dp, scrres, scrres->outputs[oidx])) == NULL) {
+		return (foreign_t)PL_warning("xrr_get_output_info: XRRGetOutputInfo() returned NULL!");
+	}
+
+	term_t name = PL_new_term_ref();
+	term_t connection = PL_new_term_ref();;
+	term_t crtc = PL_new_term_ref();;
+	PL_TRY(PL_put_string_chars(name, oinfo->name),        XRRFreeOutputInfo(oinfo));
+	PL_TRY(PL_put_integer(connection, oinfo->connection), XRRFreeOutputInfo(oinfo));
+	PL_TRY(PL_put_uint64(crtc, oinfo->crtc),              XRRFreeOutputInfo(oinfo));
+
+	term_t tlist = PL_new_term_ref();
+	PL_TRY(PL_put_nil(tlist),                      XRRFreeOutputInfo(oinfo));
+	PL_TRY(PL_cons_list(tlist, crtc, tlist),       XRRFreeOutputInfo(oinfo));
+	PL_TRY(PL_cons_list(tlist, connection, tlist), XRRFreeOutputInfo(oinfo));
+	PL_TRY(PL_cons_list(tlist, name, tlist),       XRRFreeOutputInfo(oinfo));
+
+	PL_TRY(PL_unify(output_info, tlist), XRRFreeOutputInfo(oinfo));
+
+	XRRFreeOutputInfo(oinfo);
+	PL_succeed;
+}
+
+static foreign_t
+xrr_get_crtc_info(term_t dpy, term_t resources, term_t crtc, term_t crtc_info)
+{
+	Display *dp;
+	XRRScreenResources *scrres;
+	XRRCrtcInfo *crtcinfo;
+	RRCrtc rrcrtc;
+
+	PL_TRY(PL_get_pointer_ex(dpy, (void**)&dp));
+	PL_TRY(PL_get_pointer_ex(resources, (void**)&scrres));
+	PL_TRY(PL_get_uint64_ex(crtc, &rrcrtc));
+	
+	if ((crtcinfo = XRRGetCrtcInfo(dp, scrres, rrcrtc)) == NULL) {
+		return (foreign_t)PL_warning("xrr_get_crtc_info: XRRGetCrtcInfo() returned NULL!");
+	}
+
+	term_t x = PL_new_term_ref();
+	term_t y = PL_new_term_ref();
+	term_t w = PL_new_term_ref();
+	term_t h = PL_new_term_ref();
+	PL_TRY(PL_put_integer(x, crtcinfo->x),      XRRFreeCrtcInfo(crtcinfo));
+	PL_TRY(PL_put_integer(y, crtcinfo->y),      XRRFreeCrtcInfo(crtcinfo));
+	PL_TRY(PL_put_integer(w, crtcinfo->width),  XRRFreeCrtcInfo(crtcinfo));
+	PL_TRY(PL_put_integer(h, crtcinfo->height), XRRFreeCrtcInfo(crtcinfo));
+
+	term_t tlist = PL_new_term_ref();
+	PL_TRY(PL_put_nil(tlist),             XRRFreeCrtcInfo(crtcinfo));
+	PL_TRY(PL_cons_list(tlist, h, tlist), XRRFreeCrtcInfo(crtcinfo));
+	PL_TRY(PL_cons_list(tlist, w, tlist), XRRFreeCrtcInfo(crtcinfo));
+	PL_TRY(PL_cons_list(tlist, y, tlist), XRRFreeCrtcInfo(crtcinfo));
+	PL_TRY(PL_cons_list(tlist, x, tlist), XRRFreeCrtcInfo(crtcinfo));
+
+	PL_TRY(PL_unify(crtc_info, tlist), XRRFreeCrtcInfo(crtcinfo));
+
+	XRRFreeCrtcInfo(crtcinfo);
 	PL_succeed;
 }
 

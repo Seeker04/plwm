@@ -16,6 +16,7 @@
 :- dynamic display/1.
 :- dynamic screen/1.
 :- dynamic rootwin/1.
+:- dynamic xrandr_available/0.
 :- dynamic config_flag/1.
 :- dynamic keymap_internal/3.
 :- dynamic wmatom/2.
@@ -37,7 +38,7 @@ version(0.3).
 % drag_initial_winattr   Initial attributes of dragged window: [X, Y, W, H]
 % hide_empty_workspaces  true or false, whether to hide names of inactive and empty wss from bars
 %
-% Association lists indexed by monitors (screen numbers):
+% Association lists indexed by monitors (output names):
 %   monitor_geom         Monitor geometry: [X, Y, W, H]
 %   free_win_space       Monitor geometry minus space reserved for bars
 %   active_ws            Active workspace
@@ -567,17 +568,17 @@ toggle_hide_empty_workspaces() :-
 	update_ws_atoms
 .
 
-%! active_mon_ws(-ActMon:integer, -ActWs:atom) is det
+%! active_mon_ws(-ActMon:string, -ActWs:atom) is det
 %
-%  Returns the active monitor index and workspace name.
+%  Returns the active monitor and workspace name.
 active_mon_ws(ActMon, ActWs) :- nb_getval(active_mon, ActMon), global_key_value(active_ws, ActMon, ActWs).
 
-%! monitors(-Mons:[integer]) is det
+%! monitors(-Mons:[string]) is det
 %
-%  Returns the list of indices of the monitors X manages.
+%  Returns the list of output names of the monitors plwm manages.
 monitors(Mons) :- nb_getval(active_ws, Assoc), assoc_to_keys(Assoc, Mons).
 
-%! monws_keys(-MonWsKeys:[integer-atom]) is det
+%! monws_keys(-MonWsKeys:[string-atom]) is det
 %
 %  Returns the list of all Monitor-Workspace combinations.
 %
@@ -626,20 +627,23 @@ selector_workspace(Selector, Ws) :-
 compare_mongeom(x, Order, _-[X1  |_], _-[X2  |_]) :- compare(Order, X1, X2).
 compare_mongeom(y, Order, _-[_,Y1|_], _-[_,Y2|_]) :- compare(Order, Y1, Y2).
 
-%! selector_monitor(++Selector:term, -Mon:integer) is det
+%! selector_monitor(++Selector:term, -Mon:string) is det
 %
 %  Selects a monitor based on the specified selector expression:
-%  - concrete monitor index => that monitor
+%  - concrete monitor name => that monitor
+%  - monitor index => monitor on that index
 %  - left/right/up/down => monitor relative to the active one (no wrapping)
 %  - prev/next => previous/next to the active monitor (wraps at the front/end of the list)
 %  - prev_nonempty/next_nonempty => like prev/next, but only considering monitors with displayed windows
 %
-%  @arg Selector can be a monitor index, left, right, up, down, prev, next, prev_nonempty, next_nonempty
-%  @arg Mon monitor index the Selector points to
+%  @arg Selector a monitor name (string) or index, left, right, up, down, prev, next, prev_nonempty, next_nonempty
+%  @arg Mon monitor name the Selector points to
 selector_monitor(Selector, Mon) :-
 	monitors(Mons), nb_getval(active_mon, ActMon),
-	(member(Selector, Mons) ->  % we may pass the Mon (screen number) itself
+	(member(Selector, Mons) ->  % we may pass the Mon name itself
 		Mon = Selector
+	; integer(Selector) ->
+		nth1(Selector, Mons, Mon)
 	; member(Selector, [left, right, up, down]) ->  % lookup by direction from active mon
 		nb_getval(monitor_geom, AMonGeom), assoc_to_list(AMonGeom, MonGeomPairs),
 		((Selector = left ; Selector = right) -> predsort(compare_mongeom(x), MonGeomPairs, SortedPairs)
@@ -666,11 +670,11 @@ selector_monitor(Selector, Mon) :-
 %  @arg Selector can be workspace name (atom), an index, prev, next, prev_nonempty, next_nonempty
 switch_workspace(Selector) :- active_mon_ws(ActMon, _), switch_workspace(ActMon, Selector).
 
-%! switch_workspace(++Mon:integer, ++Selector:term) is det
+%! switch_workspace(++Mon:string, ++Selector:term) is det
 %
 %  Switches workspace on a given monitor to the one specified by a selector.
 %
-%  @arg Mon monitor index to switch workspace on
+%  @arg Mon monitor name to switch workspace on
 %  @arg Selector can be workspace name (atom), an index, prev, next, prev_nonempty, next_nonempty
 switch_workspace(Mon, Selector) :-
 	global_key_value(active_ws, Mon, OldWs),
@@ -702,7 +706,7 @@ switch_workspace(Mon, Selector) :-
 	; utils:warn_invalid_arg("switch_workspace", Selector))
 .
 
-%! shiftcoord_win_from_to(++Win:integer, ++FromMon:integer, ++ToMon:integer) is det
+%! shiftcoord_win_from_to(++Win:integer, ++FromMon:string, ++ToMon:string) is det
 %
 %  Shifts the screen coordinates of the specified window from a monitor to a new one.
 %  E.g. used when a floating window is moved from one monitor to another.
@@ -736,7 +740,7 @@ shiftcoord_win_from_to(Win, FromMon, ToMon) :-
 %
 %  Switches focus from the active monitor to a new one.
 %
-%  @arg To can be a monitor index, left, right, up, down, prev, next, prev_nonempty, next_nonempty
+%  @arg To can be a monitor name (string), left, right, up, down, prev, next, prev_nonempty, next_nonempty
 %       See selector_monitor/2 for more information about the values
 switch_monitor(To) :-
 	active_mon_ws(ActMon, ActWs),
@@ -763,7 +767,7 @@ switch_monitor(To) :-
 	; utils:warn_invalid_arg("switch_monitor", To))
 .
 
-%! win_tomon_toworkspace_top(++Win:integer, ++ToMon:integer, ++ToWs:atom, ++Top:bool) is det
+%! win_tomon_toworkspace_top(++Win:integer, ++ToMon:string, ++ToWs:atom, ++Top:bool) is det
 %
 %  Moves the specified window to the top/bottom of the window stack on a target
 %  monitor-workspace.
@@ -827,7 +831,7 @@ move_focused_to_workspace(Selector) :-
 %
 %  Moves the focused window to the active workspace on the specified monitor.
 %
-%  @arg Selector can be a monitor index, left, right, up, down, prev, next, prev_nonempty, next_nonempty
+%  @arg Selector can be a monitor name (string), left, right, up, down, prev, next, prev_nonempty, next_nonempty
 %       See selector_monitor/2 for more information about the values
 move_focused_to_monitor(Selector) :-
 	active_mon_ws(ActMon, _), global_value(focused, FocusedWin),
@@ -862,7 +866,7 @@ nonempty_workspaces(NonEmptyWss, IncludeAct) :-
 	        NonEmptyWss)
 .
 
-%! nonempty_monitors(-NonEmptyMons:[integer]) is det
+%! nonempty_monitors(-NonEmptyMons:[string]) is det
 %
 %  Returns the list of non-empty monitors.
 %
@@ -984,7 +988,7 @@ reindex_workspace(Ws, NewIdx) :-
 	update_ws_atoms
 .
 
-%! delete_ws_assocs(++Mon:integer, ++Ws:atom) is det
+%! delete_ws_assocs(++Mon:string, ++Ws:atom) is det
 %
 %  Deletes associations from memory related to a monitor-workspace.
 %
@@ -1030,7 +1034,7 @@ delete_workspace(Ws) :-
 	; true)
 .
 
-%! delete_monitor(++Mon:integer) is det
+%! delete_monitor(++Mon:string) is det
 %
 %  Deletes the specified monitor.
 %  If there were any windows on workspaces of the monitor, they are moved to
@@ -1039,7 +1043,7 @@ delete_workspace(Ws) :-
 %  Note: if the last monitor would be deleted, no operation takes place, so we
 %  keep the logic even if no physical monitor is connected (subject to change).
 %
-%  @arg Mon monitor index to delete
+%  @arg Mon Name of monitor to delete
 delete_monitor(Mon) :-
 	monitors(Mons),
 	(Mons \= [_] ->  % keep logic of final monitor even if it's disconnected
@@ -1121,7 +1125,9 @@ update_workarea() :-
 	display(Dp), rootwin(Rootwin), nb_getval(active_mon, ActMon),
 	global_key_value(free_win_space, ActMon, Geom),
 	nb_getval(workspaces, Wss), length(Wss, WsCnt),
+
 	utils:n_item_clones(WsCnt, Geom, Geoms), flatten(Geoms, Geoms1D),
+
 	netatom(workarea, NetWorkArea),
 	XA_CARDINAL is 6, PropModeReplace is 0, DataCnt is WsCnt * 4,
 	plx:x_change_property(Dp, Rootwin, NetWorkArea, XA_CARDINAL, 32, PropModeReplace, Geoms1D, DataCnt)
@@ -1253,7 +1259,7 @@ apply_rules(Win) :-
 	))
 .
 
-%! cmp_mons(+[X, Y, W, H]:[integer], +Mon1:integer, +Mon2:integer) is semidet
+%! cmp_mons(+[X, Y, W, H]:[integer], +Mon1:string, +Mon2:string) is semidet
 %
 %  Between two monitors, checks which of the two contains the specified rectangle
 %  "more", i.e. which of the two contains the larger area from the rectangle.
@@ -1270,13 +1276,13 @@ cmp_mons([X, Y, W, H], Mon1, Mon2) :-
 	Area1 =< Area2
 .
 
-%! rect_inmon(++Rect:[integer], -InMon:integer) is det
+%! rect_inmon(++Rect:[integer], -InMon:string) is det
 %
 %  Determines which monitor contains a rectangle geometry (window) the "most",
 %  i.e. the one that contains the most area from the given geometry.
 %
 %  @arg Rect [X,Y,W,H] geometry to check containment of
-%  @arg InMon index of monitor which contains the most area from Rect
+%  @arg InMon name of monitor which contains the most area from Rect
 rect_inmon(Rect, InMon) :- monitors(Mons), max_member(cmp_mons(Rect), InMon, Mons).
 
 %! unmanage(++Win:integer) is det
@@ -1554,31 +1560,9 @@ handle_event(clientmessage, [_, _, _, _, Win, MessageType, _, DataL0, DataL1, Da
 .
 
 handle_event(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
-	display(Dp), rootwin(Rootwin),
+	rootwin(Rootwin),
 	(Win == Rootwin ->
-		plx:xinerama_query_screens(Dp, ScreenInfo),
-		monitors(Mons),
-		length(Mons,       OldMonCnt),
-		length(ScreenInfo, ScreenInfoCnt),
-		NewMonCnt is ScreenInfoCnt div 5,
-		MonCntDiff is NewMonCnt - OldMonCnt,
-
-		% Monitor(s) got added
-		(0 < MonCntDiff ->
-			SplitAt is (NewMonCnt - MonCntDiff) * 5,
-			utils:split_at(SplitAt, ScreenInfo, _, NewScreenInfo),
-			init_monitors(NewScreenInfo)
-
-		% Monitor(s) got removed
-		; MonCntDiff < 0 ->
-			SplitAt is NewMonCnt,
-			utils:split_at(SplitAt, Mons, _, MonsToDelete),
-			forall(member(Mon, MonsToDelete), delete_monitor(Mon))
-		; true),
-
-		update_free_win_space,
-
-		% Notice of pending jobs is also implemented with a ConfigureNotify
+		% Notice of pending jobs is implemented with a ConfigureNotify
 		(utils:jobs(Jobs) ->
 			forall(member(Job, Jobs),
 				ignore(catch(call(Job), Ex, (writeln(Ex), true)))
@@ -1586,6 +1570,34 @@ handle_event(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
 			retract(utils:jobs(_))
 		; true)
 	; true)
+.
+
+handle_event(rrscreenchangenotify, _) :-
+	monitors(Mons),
+	query_outputs(OutputInfos),
+	forall(member(Output-Geom, OutputInfos), (
+
+		% Monitor already managed
+		(member(Output, Mons) ->
+
+			% Update geometry if it changed
+			global_key_value(monitor_geom, Output, PrevGeom),
+			(PrevGeom \= Geom ->
+				global_key_newvalue(monitor_geom, Output, Geom)
+			; true)
+
+		% Add new monitor
+		;
+			init_monitor(Output, Geom)
+		)
+	)),
+
+	% Remove no longer connected monitors
+	forall((member(Mon, Mons), \+ member(Mon-_, OutputInfos)), (
+		delete_monitor(Mon)
+	)),
+
+	update_free_win_space
 .
 
 %! send_event(++Win:integer, ++Protocol:atom) is semidet
@@ -1634,7 +1646,7 @@ jobs_notify(Jobs) :-
 	; true)
 .
 
-%! win_mon_ws(++Win:integer, -Mon:integer, -Ws:atom) is det
+%! win_mon_ws(++Win:integer, -Mon:string, -Ws:atom) is det
 %
 %  Returns the containing monitor and workspace of the specified window.
 %
@@ -1768,7 +1780,7 @@ move_focused(Direction) :-
 	; true)
 .
 
-%! trim_bar_space(++Mon, ++[BarX, BarY, BarW, BarH]:[integer]) is det
+%! trim_bar_space(++Mon:string, ++[BarX, BarY, BarW, BarH]:[integer]) is det
 %
 %  Logically trims the screen space from the specified monitor based on the
 %  specified status bar geometry by setting the free_win_space global.
@@ -1777,7 +1789,7 @@ move_focused(Direction) :-
 %  heuristics will still detect which edge it is closest to and will also
 %  trim the smaller space above/below/left/right of it.
 %
-%  @arg Mon index of monitor to trim the screen space from
+%  @arg Mon name of monitor to trim the screen space from
 %  @arg [BarX, BarY, BarW, BarH] window geometry of the status bar
 trim_bar_space(Mon, [BarX, BarY, BarW, BarH]) :-
 	global_key_value(free_win_space, Mon, [X, Y, W, H]),
@@ -1878,7 +1890,6 @@ run_hook(Event) :-
 %  Initializes the window manager base state, i.e. the global, per-monitor and
 %  per-workspace states with defaults.
 init_state() :-
-	display(Dp),
 	config(workspaces(Wss)),
 
 	empty_assoc(EmptyAMonGeom),      nb_setval(monitor_geom,   EmptyAMonGeom),
@@ -1892,10 +1903,13 @@ init_state() :-
 	empty_assoc(EmptyAFocused), nb_setval(focused, EmptyAFocused),
 	empty_assoc(EmptyAWins),    nb_setval(windows, EmptyAWins),
 
-	plx:xinerama_query_screens(Dp, ScreenInfo),
-	init_monitors(ScreenInfo),
+	(query_outputs(OutputInfos) ->
+		init_monitors(OutputInfos),
+		OutputInfos = [FstMon-_|_]
+	;
+		FstMon = "default"
+	),
 
-	ScreenInfo = [FstMon|_],
 	nb_setval(active_mon, FstMon),
 	nb_setval(workspaces, Wss),
 	nb_setval(bars, []),
@@ -1906,23 +1920,52 @@ init_state() :-
 	nb_setval(hide_empty_workspaces, State)
 .
 
-%! init_monitors(++Mons:[integer]) is det
+%! query_outputs(-OutputInfos:[string-[int,int,int,int]]) is det
 %
-%  Initializes the base state (globals) of a list of monitors passed in the following format:
-%  [Index1, X1, Y1, W1, H1, Index2, X2, Y2, W2, H2,...]
+%  Returns the list of active outputs and their geometries using the XRandR extension.
+%  Fails if the XRandR extension is not available (XRRQueryExtension() returns error).
 %
-%  @arg Mons flat list of monitor specifications
+%  @arg OutputInfos list of output information in format: Output-[X, Y, W, H]
+query_outputs(OutputInfos) :-
+	(xrandr_available ->
+		display(Dp), rootwin(Rootwin),
+		(xrr_get_screen_resources(Dp, Rootwin, ScreenResources, Outputs) ->
+			RR_Connected is 0,
+			findall(Output-[X, Y, W, H], (
+				nth0(Idx, Outputs, _),
+				(plx:xrr_get_output_info(Dp, ScreenResources, Idx, [Output, Connection, Crtc]) ->
+					Connection = RR_Connected ->
+						plx:xrr_get_crtc_info(Dp, ScreenResources, Crtc, [X, Y, W, H]))
+				),
+				OutputInfos
+			),
+			xrr_free_screen_resources(ScreenResources)
+		; true)
+	;
+		writeln("XRandR extension not available"),
+		fail
+	)
+.
+
+%! init_monitors(++OutputInfos:string-[int,int,int,int]) is det
+%
+%  Initializes the base state (globals) of monitors from output information of this form:
+%  [Output1-[X1, Y1, W1, H1], Output2-[X2, Y2, W2, H2],...]
+%
+%  E.g. [ "eDP-1"-[0, 0, 1920, 1080], "HDMI-1"-[1920, 1080, 1920, 1080] ]
+%
+%  @arg OutputInfos list of output names mapped to their geometries
 init_monitors([]).
-init_monitors([Mon, X, Y, W, H|Rest]) :-
+init_monitors([Mon-[X, Y, W, H]|Rest]) :-
 	init_monitor(Mon, [X, Y, W, H]),
 	init_monitors(Rest)
 .
 
-%! init_monitor(++Mon:integer, ++Geom:[integer]) is det
+%! init_monitor(++Mon:string, ++Geom:[integer]) is det
 %
 %  Initializes the base state (globals) of a monitor.
 %
-%  @arg Mon monitor index to initialize state for
+%  @arg Mon monitor name to initialize state for
 %  @arg Geom geometry of Mon
 init_monitor(Mon, Geom) :-
 	config(default_nmaster(Nmaster)), config(default_mfact(Mfact)), config(default_layout(Layout)),
@@ -1978,10 +2021,10 @@ init_monitor(Mon, Geom) :-
 %  @arg W width in pixels or percentage of screen width
 %  @arg H height in pixels or percentage of screen height
 geometry_spec(X, Y, W, H) :-
-	((integer(X), 0 =< X) ; (utils:is_float(X), 0 =< X, X =< 1) ; member(X, [left, right, center])),
-	((integer(Y), 0 =< Y) ; (utils:is_float(Y), 0 =< Y, Y =< 1) ; member(Y, [top, bottom, center])),
-	((integer(W), 0  < W) ; (utils:is_float(W), 0 =< W, W =< 1)),
-	((integer(H), 0  < H) ; (utils:is_float(H), 0 =< H, H =< 1))
+	(var(X) ; (integer(X), 0 =< X) ; (utils:is_float(X), 0 =< X, X =< 1) ; member(X, [left, right, center])),
+	(var(Y) ; (integer(Y), 0 =< Y) ; (utils:is_float(Y), 0 =< Y, Y =< 1) ; member(Y, [top, bottom, center])),
+	(var(W) ; (integer(W), 0  < W) ; (utils:is_float(W), 0 =< W, W =< 1)),
+	(var(H) ; (integer(H), 0  < H) ; (utils:is_float(H), 0 =< H, H =< 1))
 .
 
 %! check_errmsg(:Check:callable, ++ErrMsg:string) is det
@@ -2052,7 +2095,7 @@ check_config() :-
 			(var(RName)  ; string(RName)  ; (RName  = exact(Str), string(Str))),
 			(var(RClass) ; string(RClass) ; (RClass = exact(Str), string(Str))),
 			(var(RTitle) ; string(RTitle) ; (RTitle = exact(Str), string(Str))),
-			(var(RMon)   ; (integer(RMon), 0 =< RMon)),
+			(var(RMon)   ; string(RMon)),
 			(var(RWs)    ; atom(RWs) ; (integer(RWs), 0 < RWs)),
 			(var(RMode)  ; RMode = managed ; RMode = floating ; RMode = fullscreen
 			             ; (is_list(RMode), apply(geometry_spec, RMode)))
@@ -2062,7 +2105,7 @@ check_config() :-
 	optcnf_then(layout_default_overrides(LDefOverrides),
 		forall(member(LDefOverride, LDefOverrides), (
 			LDefOverride = (MonOR, WsOR -> NmasterOR, MfactOR, LayoutOR),
-			(var(MonOR)     ; (integer(MonOR), 0 =< MonOR)),
+			(var(MonOR)     ; string(MonOR)),
 			(var(WsOR)      ; atom(WsOR)),
 			(var(NmasterOR) ; (integer(NmasterOR), 0 =< NmasterOR)),
 			(var(MfactOR)   ; (utils:is_float(MfactOR), 0.05 =< MfactOR, MfactOR =< 0.95)),
@@ -2094,11 +2137,18 @@ check_config() :-
 %
 %  Initializes X: connects to Xorg with XOpenDisplay(3), queries base values like
 %  the display pointer or the root window.
+%  Also queries the XRandR extension.
 init_x() :-
 	plx:x_open_display("", Dp),           assertz(display(Dp)),
 	plx:default_root_window(Dp, Rootwin), assertz(rootwin(Rootwin)),
 	plx:default_screen(Dp, Screen),       assertz(screen(Screen)),
-	plx:x_set_error_handler(false)
+	plx:x_set_error_handler(false),
+
+	(plx:xrr_query_extension(Dp, _, _) ->
+		assertz(xrandr_available),
+		RRScreenChangeNotifyMask is 1,
+		plx:xrr_select_input(Dp, Rootwin, RRScreenChangeNotifyMask)
+	; true)
 .
 
 %! config_exists(:Config:term) is semidet

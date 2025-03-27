@@ -55,12 +55,12 @@ Powered by [SWI-Prolog](https://www.swi-prolog.org/)
 
 **Dependencies:**
 
-* Xorg with libxft, libxinerama (including the X11 development headers)
-* [SWI-Prolog](https://www.swi-prolog.org/Download.html) (most likely available from your distro's package repository)
+* `xorg` with `libx11-dev`, `libxft-dev`, `libxrandr-dev` (exact package names may vary)
+* [SWI-Prolog](https://www.swi-prolog.org/Download.html) (downloadable from most distros' package repos)
 
-On Ubuntu 22.04 you can install them with:
+On Ubuntu 22.04, easiest way to install them is:
 
-`$ sudo apt install swi-prolog libxinerama-dev libxft-dev`
+`$ sudo apt install xorg-dev swi-prolog`
 
 Run:
 
@@ -278,14 +278,15 @@ alt + shift + b -> shellcmd("pkill -fx 'polybar bot' || polybar bot")
 
 ## Multi-monitor
 
-The multi-monitor concept in plwm is similar to dwm's: the set of workspaces is cloned for each monitor. So if you're using the default config with two monitors, then you'll have two times nine unique workspaces: '0/1', '0/2',..., '1/9'.
+The multi-monitor concept in plwm is similar to dwm's: the set of workspaces is cloned for each monitor. So if you're using the default config with two monitors, then you'll have two times nine unique workspaces: `M1/1`, `M1/2`,..., `M2/9`.
 
 The `switch_monitor/1` and `move_focused_to_monitor/1` predicates can take many different values:
 
 * `prev`/`next` will go to the previous/next monitor (these will wrap) - only these have keymaps by default
 * `prev_nonempty`/`next_nonempty` will go to the previous/next _non-empty_ monitor (a monitor is considered empty if its currently displayed workspace is empty). If you use a lot of monitors, say six, it could be convenient to cycle through only the relevant, i.e., non-empty ones (these will wrap)
 * `left`/`right`/`up`/`down` will go to the specified direction relative to the active monitor calculated from x/y screen coordinates (these won't wrap)
-* An arbitrary screen number (indexed from 0). So if you use, let's say four monitors, you can also bind keys such as `switch_monitor(2)`, which will go to the 3rd one. If you have a consistent [xrandr(1)](https://man.archlinux.org/man/xrandr.1) setup, then you can refer to the screen numbers to write convinient key bindings for going to arbitrary monitors
+* An output name, shown by `xrandr(1)`, e.g. "eDP-1" or "HDMI-1". If you have a consistent [xrandr(1)](https://man.archlinux.org/man/xrandr.1) setup, then you can refer them to move to arbitrary monitors.
+* Index of managed monitor.
 
 You can also switch monitors by moving with the mouse between them. Likewise, windows can be dragged and dropped between monitors using the mouse.
 
@@ -303,10 +304,10 @@ Some examples:
 
 ```Prolog
 layout_default_overrides([
-%  monitor  workspace     nmaster  mfact   layout
-  ( _    ,  '2'       ->  _     ,  _    ,  grid    ),
-  ( 0    ,  _         ->  2     ,  1/2  ,  tmaster ),
-  ( 1    ,  '3'       ->  _     ,  0.90 ,  _       )
+%  monitor      workspace     nmaster  mfact   layout
+  ( _        ,  '2'       ->  _     ,  _    ,  grid    ),
+  ( "eDP-1"  ,  _         ->  2     ,  1/2  ,  tmaster ),
+  ( "HDMI-1" ,  '3'       ->  _     ,  0.90 ,  _       )
 ]).
 ```
 
@@ -314,7 +315,7 @@ layout_default_overrides([
 
 You can apply custom rules to newly spawned windows that match one or more criteria. You can match the window's name, class and title. These are substring matches by default, but you can wrap them in `exact()` to force an exact match, or can write any of them as `_` to ignore those particular checks.
 
-The `monitor` column takes a screen number, or you can leave it as `_`, which implies opening on the currently active monitor.
+The `monitor` column takes an output name, or you can leave it as `_`, which implies opening on the currently active monitor.
 
 The `workspace` column takes a workspace name (use single quotes), an index (from 1) or you can leave it as `_`, which implies opening on the currently active workspace.
 
@@ -335,11 +336,10 @@ Some examples:
 
 ```Prolog
 rules([
-% name    class      title             monitor  workspace  mode
-( _    ,  _       ,  exact("Foo")  ->  _     ,  '9'     ,  [right, top, _, _]         ),
-( _    ,  _       ,  "Foo",        ->  _     ,  _       ,  [center, center, 1/3, 1/3] ),
-( _    ,  _       ,  "FooBar"      ->  0     ,  _       ,  managed                    ),
-( "Bar",  "Baz"   ,  _             ->  1     ,  'www'   ,  fullscreen                 )
+%  name      class     title                 monitor     wspace    mode
+  (_      ,  _      ,  exact("gcolor2")  ->  _        ,  _      ,  [center, center, 1/3, 1/3]),
+  (_      ,  _      ,  "Firefox"         ->  "eDP-1"  ,  'www'  ,  fullscreen                ),
+  ("Bar"  ,  "Baz"  ,  _                 ->  "HDMI-1" ,  '1'    ,  [700, 250, _, _]          )
 ])
 ```
 
@@ -415,9 +415,10 @@ An example:
 ```Prolog
 hooks([
   start -> (
-    shellcmd("picom"),
-    shellcmd("pipewire"),
-    shellcmd("sleep .1; polybar top") % pipewire must be already running to display volume field
+    shellcmd("xrandr --output HDMI-1 --left-of eDP-1"), % setup 2nd monitor
+    shellcmd("picom"),                                  % compositor
+    shellcmd("polybar"),                                % status bar
+    switch_monitor("HDMI-1")
   ),
 
   switch_workspace_post -> (
@@ -479,8 +480,8 @@ echo "Ws = temp, create_workspace(Ws), switch_workspace(Ws)." > /tmp/plwm_fifo #
 
 You can write reusable script files like:
 ```Prolog
-% switch to first monitor
-switch_monitor(0),
+% switch to other monitor
+switch_monitor("HDMI-1"),
 
 % create some workspaces
 Workspaces = [a, b, c],
