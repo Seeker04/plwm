@@ -195,7 +195,7 @@ x_open_display(term_t display_name, term_t display)
 	}
 	PL_TRY(PL_unify_pointer(display, dp));
 
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -206,7 +206,7 @@ x_close_display(term_t display)
 	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
 
 	XCloseDisplay(dp);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -221,7 +221,7 @@ x_set_error_handler(term_t to_dummy)
 	else {
 		XSetErrorHandler((XErrorHandler)xerror);
 	}
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -234,7 +234,7 @@ x_set_close_down_mode(term_t display, term_t close_mode)
 	PL_TRY(PL_get_integer_ex(close_mode, &closemode));
 
 	XSetCloseDownMode(dp, closemode);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -255,7 +255,7 @@ x_grab_key(term_t display, term_t keycode, term_t modifiers, term_t grab_window,
 	PL_TRY(PL_get_integer_ex(keyboard_mode, &kmode));
 
 	XGrabKey(dp, kcode, (unsigned)mods, win, oevents, pmode, kmode);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -280,7 +280,7 @@ x_grab_button(term_t display, term_t button, term_t modifiers, term_t grab_windo
 	PL_TRY(PL_get_uint64_ex(cursor, &crsr));
 
 	XGrabButton(dp, (unsigned)btn, (unsigned)mods, win, oevents, (unsigned)emask, pmode, kmode, confto, crsr);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -305,7 +305,7 @@ x_grab_pointer(term_t display, term_t grab_window, term_t owner_events, term_t e
 	PL_TRY(PL_get_uint64_ex(time, &t));
 
 	XGrabPointer(dp, gwin, oevents, (unsigned)event_mask, ptrmode, kbmode, confto, csr, t);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -315,7 +315,7 @@ x_grab_server(term_t display)
 
 	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
 	XGrabServer(dp);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -331,7 +331,7 @@ x_ungrab_key(term_t display, term_t keycode, term_t modifiers, term_t grab_windo
 	PL_TRY(PL_get_uint64_ex(grab_window, &win));
 
 	XUngrabKey(dp, kcode, (unsigned)mods, win);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -347,7 +347,7 @@ x_ungrab_button(term_t display, term_t button, term_t modifiers, term_t grab_win
 	PL_TRY(PL_get_uint64_ex(grab_window, &win));
 
 	XUngrabButton(dp, (unsigned)btn, (unsigned)mods, win);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -360,7 +360,7 @@ x_ungrab_pointer(term_t display, term_t time)
 	PL_TRY(PL_get_uint64_ex(time, &t));
 
 	XUngrabPointer(dp, t);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -370,7 +370,7 @@ x_ungrab_server(term_t display)
 
 	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
 	XUngrabServer(dp);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -386,7 +386,7 @@ x_keysym_to_keycode(term_t display, term_t keysym, term_t keycode)
 	kcode = XKeysymToKeycode(dp, ksym);
 
 	PL_TRY(PL_unify_integer(keycode, kcode));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -401,7 +401,7 @@ x_string_to_keysym(term_t string, term_t keysym)
 	ksym = XStringToKeysym(str);
 
 	PL_TRY(PL_unify_uint64(keysym, ksym));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -551,7 +551,7 @@ x_next_event(term_t display, term_t event_return)
 			break;
 		default:
 			PL_TRY(PL_unify_atom_chars(event_return, "unsupported_event"));
-			PL_succeed;
+			return TRUE;
 		}
 
 		/* common fields */
@@ -573,7 +573,7 @@ x_next_event(term_t display, term_t event_return)
 	list = PL_new_term_ref();
 	build_list(list, subts, (size_t)stcnt);
 	PL_TRY(PL_unify(list, event_return));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -592,7 +592,7 @@ x_send_event(term_t display, term_t w, term_t propagate, term_t event_mask, term
 	PL_TRY(PL_get_pointer_ex(event_send, (void**)&esend));
 
 	XSendEvent(dp, win, propag, emask, esend);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -605,7 +605,7 @@ x_raise_window(term_t display, term_t w)
 	PL_TRY(PL_get_uint64_ex(w, &win));
 
 	XRaiseWindow(dp, w);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -638,7 +638,7 @@ x_get_window_attributes(term_t display, term_t w, term_t window_attributes_retur
 	build_list(list, subts, 4);
 	PL_TRY(PL_unify(list, window_attributes_return));
 	PL_TRY(PL_unify_integer(status, st));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -656,7 +656,7 @@ x_move_resize_window(term_t display, term_t w, term_t x, term_t y, term_t width,
 	PL_TRY(PL_get_integer_ex(height, &wheight));
 
 	XMoveResizeWindow(dp, win, wx, wy, (unsigned)wwidth, (unsigned)wheight);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -674,7 +674,7 @@ x_change_window_attributes(term_t display, term_t w, term_t valuemask, term_t ev
 
 	wa.event_mask = emask;
 	XChangeWindowAttributes(dp, win, vmask, &wa);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -689,7 +689,7 @@ x_select_input(term_t display, term_t w, term_t event_mask)
 	PL_TRY(PL_get_uint64_ex(w, &win));
 
 	XSelectInput(dp, win, emask);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -702,7 +702,7 @@ x_map_window(term_t display, term_t w)
 	PL_TRY(PL_get_uint64_ex(w, &win));
 
 	XMapWindow(dp, win);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -729,7 +729,7 @@ x_configure_window(term_t display, term_t w, term_t value_mask, term_t x, term_t
 	wc.border_width = bw; wc.sibling = sib; wc.stack_mode = stackm;
 
 	XConfigureWindow(dp, win, (unsigned)vmask, &wc);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -744,7 +744,7 @@ x_set_window_border(term_t display, term_t w, term_t border_pixel)
 	PL_TRY(PL_get_uint64_ex(border_pixel, &bp));
 
 	XSetWindowBorder(dp, win, bp);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -760,7 +760,7 @@ x_set_input_focus(term_t display, term_t focus, term_t revert_to, term_t time)
 	PL_TRY(PL_get_uint64_ex(time, &tim));
 
 	XSetInputFocus(dp, win, revto, tim);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -773,7 +773,7 @@ x_kill_client(term_t display, term_t resource)
 	PL_TRY(PL_get_uint64_ex(resource, &res));
 
 	XKillClient(dp, res);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -786,7 +786,7 @@ x_sync(term_t display, term_t discard)
 	PL_TRY(PL_get_bool_ex(discard, &discrd));
 
 	XSync(dp, discrd);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -804,7 +804,7 @@ x_intern_atom(term_t display, term_t atom_name, term_t only_if_exists, term_t at
 	a = XInternAtom(dp, aname, ifexists);
 
 	PL_TRY(PL_unify_uint64(atom, a));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -821,12 +821,12 @@ x_get_class_hint(term_t display, term_t w, term_t res_name, term_t res_class)
 		PL_TRY(PL_unify_string_chars(res_name , ch.res_name  ? ch.res_name  : ""));
 		PL_TRY(PL_unify_string_chars(res_class, ch.res_class ? ch.res_class : ""));
 	} else {
-		PL_fail;
+		return FALSE;
 	}
 
 	if (ch.res_class) XFree(ch.res_class);
 	if (ch.res_name)  XFree(ch.res_name);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -853,7 +853,7 @@ x_change_property(term_t display, term_t w, term_t property, term_t atom, term_t
 	if (PL_is_string(data)) { /* handle the UTF8_STRING case separately */
 		PL_TRY(PL_get_string_chars(data, &str, &len));
 		XChangeProperty(dp, win, prop, a, fmt, md, (unsigned char *)str, (int)len);
-		PL_succeed;
+		return TRUE;
 	}
 
 	alist = malloc((size_t)nelem * sizeof(*alist));
@@ -861,12 +861,12 @@ x_change_property(term_t display, term_t w, term_t property, term_t atom, term_t
 		if (!PL_get_uint64_ex(head, &alist[i++])) {
 			free(alist);
 			fprintf(stderr, "x_change_property: PL_get_uint64_ex() on 'data[%d]' failed!", i);
-			PL_fail;
+			return FALSE;
 		}
 	}
 	XChangeProperty(dp, win, prop, a, fmt, md, (unsigned char *)alist, nelem);
 	free(alist);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -881,7 +881,7 @@ x_delete_property(term_t display, term_t w, term_t property)
 	PL_TRY(PL_get_uint64_ex(property, &prop));
 
 	XDeleteProperty(dp, win, prop);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -904,7 +904,7 @@ x_utf8_text_list_to_text_property(term_t display, term_t list, term_t count, ter
 		if (!PL_get_chars(head, &strs[i++], CVT_ALL|REP_UTF8)) {
 			free(strs); free(tprop);
 			fprintf(stderr, "x_utf8_text_list_to_text_property: PL_get_chars() on 'list[%d]' failed!", i);
-			PL_fail;
+			return FALSE;
 		}
 	}
 	Xutf8TextListToTextProperty(dp, strs, cnt, (XICCEncodingStyle)sty, tprop);
@@ -912,7 +912,7 @@ x_utf8_text_list_to_text_property(term_t display, term_t list, term_t count, ter
 
 	/* Note: tprop must be freed with c_free/1 after no longer needed! */
 	PL_TRY(PL_unify_pointer(text_prop_return, tprop));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -939,7 +939,7 @@ x_get_text_property(term_t display, term_t w, term_t text, term_t property, term
 	}
 	PL_TRY(PL_unify_integer(status, st));
 	PL_TRY(PL_unify_string_chars(text, stext));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -956,7 +956,7 @@ x_set_text_property(term_t display, term_t w, term_t text_prop, term_t property)
 	PL_TRY(PL_get_uint64_ex(property, &prop));
 
 	XSetTextProperty(dp, win, tprop, prop);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -981,7 +981,7 @@ x_create_simple_window(term_t display, term_t parent, term_t x, term_t y, term_t
 	win = XCreateSimpleWindow(dp, pwin, wx, wy, (unsigned)ww, (unsigned)wh, (unsigned)bw, brd, bg);
 
 	PL_TRY(PL_unify_uint64(w, win));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -998,7 +998,7 @@ x_get_transient_for_hint(term_t display, term_t w, term_t prop_window_return, te
 
 	PL_TRY(PL_unify_uint64(prop_window_return, wret));
 	PL_TRY(PL_unify_integer(status, st));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1024,7 +1024,7 @@ x_get_window_property(term_t display, term_t w, term_t property, term_t delete, 
 	}
 
 	PL_TRY(PL_unify_uint64(prop_return, propret));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1043,7 +1043,7 @@ x_get_wm_protocols(term_t display, term_t w, term_t protocols_return, term_t cou
 		if (cnt == 0) {
 			PL_TRY(PL_unify_nil_ex(protocols_return));
 			PL_TRY(PL_unify_integer(count_return, 0));
-			PL_succeed;
+			return TRUE;
 		}
 
 		term_t *subts = malloc((size_t)cnt * sizeof(term_t));
@@ -1058,9 +1058,9 @@ x_get_wm_protocols(term_t display, term_t w, term_t protocols_return, term_t cou
 
 		XFree(protocols);
 		free(subts);
-		PL_succeed;
+		return TRUE;
 	}
-	PL_fail;
+	return FALSE;
 }
 
 static foreign_t
@@ -1110,7 +1110,7 @@ x_get_wm_normal_hints(term_t display, term_t w, term_t hints_return, term_t stat
 	}
 
 	PL_TRY(PL_unify_integer(status, st));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1132,7 +1132,7 @@ x_warp_pointer(term_t display, term_t src_w, term_t dest_w, term_t src_x, term_t
 	PL_TRY(PL_get_integer_ex(dest_y, &dy));
 
 	XWarpPointer(dp, swin, dwin, sx, sy, (unsigned)sw, (unsigned)sh, dx, dy);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1146,7 +1146,7 @@ default_root_window(term_t display, term_t w)
 	win = DefaultRootWindow(dp);
 
 	PL_TRY(PL_unify_uint64(w, win));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1160,7 +1160,7 @@ default_screen(term_t display, term_t screen)
 	scr = DefaultScreen(dp);
 
 	PL_TRY(PL_unify_integer(screen, scr));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1177,7 +1177,7 @@ default_visual(term_t display, term_t screen_number, term_t visual)
 
 	PL_TRY(PL_unify_pointer(visual, vis));
 
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1194,7 +1194,7 @@ default_colormap(term_t display, term_t screen_number, term_t colormap)
 
 	PL_TRY(PL_unify_uint64(colormap, cmap));
 
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1214,11 +1214,11 @@ xft_color_alloc_name(term_t display, term_t visual, term_t cmap, term_t name, te
 
 	if (!XftColorAllocName(dp, vis, cm, nam, &res)) {
 		fprintf(stderr, "xft_color_alloc_name: XftColorAllocName() failed!");
-		PL_fail;
+		return FALSE;
 	}
 
 	PL_TRY(PL_unify_uint64(result, res.pixel));
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1233,11 +1233,11 @@ xrr_query_extension(term_t dpy, term_t event_base_return, term_t error_base_retu
 		PL_TRY(PL_unify_integer(event_base_return, eventbase));
 		PL_TRY(PL_unify_integer(error_base_return, errorbase));
 		rr_event_base = eventbase; /* shortcut: it's simpler to keep this in plx */
-		PL_succeed;
+		return TRUE;
 	}
 	else {
 		fputs("xrr_query_extension: XRRQueryExtension() failed!", stderr);
-		PL_fail;
+		return FALSE;
 	}
 }
 
@@ -1252,7 +1252,7 @@ static foreign_t xrr_select_input(term_t dpy, term_t window, term_t mask)
 	PL_TRY(PL_get_integer_ex(mask, &msk));
 
 	XRRSelectInput(dp, win, msk);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1268,7 +1268,7 @@ xrr_get_screen_resources(term_t dpy, term_t window, term_t screen_resources, ter
 
 	if ((scrres = XRRGetScreenResources(dp, win)) == NULL) {
 		fputs("xrr_get_screen_resources: XRRGetScreenResources() returned NULL!", stderr);
-		PL_fail;
+		return FALSE;
 	}
 
 	PL_TRY(PL_unify_pointer(screen_resources, scrres), XRRFreeScreenResources(scrres));
@@ -1286,7 +1286,7 @@ xrr_get_screen_resources(term_t dpy, term_t window, term_t screen_resources, ter
 		PL_TRY(PL_unify(listt, outputs), XRRFreeScreenResources(scrres); free(subts));
 		free(subts);
 	}
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1296,7 +1296,7 @@ xrr_free_screen_resources(term_t resources)
 
 	PL_TRY(PL_get_pointer_ex(resources, (void**)&scrres));
 	XRRFreeScreenResources(scrres);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1314,12 +1314,12 @@ xrr_get_output_info(term_t dpy, term_t resources, term_t output_index, term_t ou
 	if (oidx < 0 || scrres->noutput <= oidx) {
 		fprintf(stderr, "xrr_get_output_info: output_index: %d is out of bounds: 0..%d!",
 		        oidx, scrres->noutput);
-		PL_fail;
+		return FALSE;
 	}
 
 	if ((oinfo = XRRGetOutputInfo(dp, scrres, scrres->outputs[oidx])) == NULL) {
 		fputs("xrr_get_output_info: XRRGetOutputInfo() returned NULL!", stderr);
-		PL_fail;
+		return FALSE;
 	}
 
 	term_t name = PL_new_term_ref();
@@ -1338,7 +1338,7 @@ xrr_get_output_info(term_t dpy, term_t resources, term_t output_index, term_t ou
 	PL_TRY(PL_unify(output_info, tlist), XRRFreeOutputInfo(oinfo));
 
 	XRRFreeOutputInfo(oinfo);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1355,7 +1355,7 @@ xrr_get_crtc_info(term_t dpy, term_t resources, term_t crtc, term_t crtc_info)
 	
 	if ((crtcinfo = XRRGetCrtcInfo(dp, scrres, rrcrtc)) == NULL) {
 		fputs("xrr_get_crtc_info: XRRGetCrtcInfo() returned NULL!", stderr);
-		PL_fail;
+		return FALSE;
 	}
 
 	term_t x = PL_new_term_ref();
@@ -1377,7 +1377,7 @@ xrr_get_crtc_info(term_t dpy, term_t resources, term_t crtc, term_t crtc_info)
 	PL_TRY(PL_unify(crtc_info, tlist), XRRFreeCrtcInfo(crtcinfo));
 
 	XRRFreeCrtcInfo(crtcinfo);
-	PL_succeed;
+	return TRUE;
 }
 
 static foreign_t
@@ -1397,9 +1397,9 @@ create_configure_event(term_t display, term_t w, term_t configure_event)
 		event->event = win;
 		event->window = win;
 		PL_TRY(PL_unify_pointer(configure_event, event));
-		PL_succeed;
+		return TRUE;
 	}
-	PL_fail;
+	return FALSE;
 }
 
 static foreign_t
@@ -1427,9 +1427,9 @@ create_clientmessage_event(term_t w, term_t message_type, term_t format, term_t 
 		event->xclient.data.l[0] = datal[0];
 		event->xclient.data.l[1] = datal[1];
 		PL_TRY(PL_unify_pointer(clientmessage, event));
-		PL_succeed;
+		return TRUE;
 	}
-	PL_fail;
+	return FALSE;
 }
 
 static foreign_t
@@ -1440,7 +1440,7 @@ c_free(term_t ptr)
 	PL_TRY(PL_get_pointer_ex(ptr, &p));
 	
 	free(p);
-	PL_succeed;
+	return TRUE;
 }
 
 static int
