@@ -1063,7 +1063,10 @@ delete_monitor(Mon) :-
 		forall(member(Ws, Wss), delete_ws_assocs(Mon, Ws)),
 
 		nb_getval(active_mon, ActMon),
-		(ActMon == Mon -> switch_monitor(NextMon) ; true)
+		(ActMon == Mon -> switch_monitor(NextMon) ; true),
+
+		format(string(Msg), "Monitor \"~s\" unmanaged", [Mon]),
+		writeln(Msg)
 	; true)
 .
 
@@ -1583,7 +1586,9 @@ handle_event(rrscreenchangenotify, _) :-
 			% Update geometry if it changed
 			global_key_value(monitor_geom, Output, PrevGeom),
 			(PrevGeom \= Geom ->
-				global_key_newvalue(monitor_geom, Output, Geom)
+				global_key_newvalue(monitor_geom, Output, Geom),
+				format(string(Msg), "Monitor \"~s\" geometry reconfigured", [Output]),
+				writeln(Msg)
 			; true)
 
 		% Add new monitor
@@ -1798,7 +1803,7 @@ trim_bar_space(Mon, [BarX, BarY, BarW, BarH]) :-
 		RoughLocation is BarY / H,
 		(RoughLocation < 0.5 ->
 			% top bar
-			NewX is X, NewY is BarY + BarH, NewW is W, NewH is H - BarH
+			NewX is X, NewY is Y + BarY + BarH, NewW is W, NewH is H - BarH
 		;
 			% bottom bar
 			NewX is X, NewY is Y, NewW is W, NewH is H - BarH)
@@ -1807,7 +1812,7 @@ trim_bar_space(Mon, [BarX, BarY, BarW, BarH]) :-
 		RoughLocation is BarX / W,
 		(RoughLocation < 0.5 ->
 			% left bar
-			NewX is BarX + BarW, NewY is Y, NewW is W - BarW, NewH is H
+			NewX is X + BarX + BarW, NewY is Y, NewW is W - BarW, NewH is H
 		;
 			% right bar
 			NewX is X, NewY is Y, NewW is W - BarW, NewH is H)),
@@ -1827,11 +1832,15 @@ update_free_win_space() :-
 		nb_getval(bars, Bars),
 		forall(member(Bar, Bars), (
 			(plx:x_get_window_attributes(Dp, Bar, BarGeom, Status), Status =\= 0 ->
+				rect_inmon(BarGeom, InMon),
 				((\+ config_exists(bar_placement/1) ; config(bar_placement(static))) ->
-					rect_inmon(BarGeom, InMon),
 					(Mon = InMon -> trim_bar_space(Mon, BarGeom) ; true)
 				;
-					trim_bar_space(Mon, BarGeom)
+					global_key_value(monitor_geom, InMon, [InMonX, InMonY, _, _]),
+					BarGeom = [BarX, BarY, BarW, BarH],
+					BarRelativeX is BarX - InMonX,
+					BarRelativeY is BarY - InMonY,
+					trim_bar_space(Mon, [BarRelativeX, BarRelativeY, BarW, BarH])
 				)
 			; true)
 		)),
@@ -1968,6 +1977,12 @@ init_monitors([Mon-[X, Y, W, H]|Rest]) :-
 %  @arg Mon monitor name to initialize state for
 %  @arg Geom geometry of Mon
 init_monitor(Mon, Geom) :-
+	% A monitor with this geometry is already managed, don't register mirror
+	nb_getval(monitor_geom, AMonGeom), gen_assoc(OldMon, AMonGeom, Geom) ->
+		format(string(Msg), "Monitor \"~s\" has same geometry as \"~s\", ignoring it", [Mon, OldMon]),
+		writeln(Msg)
+	;
+
 	config(default_nmaster(Nmaster)), config(default_mfact(Mfact)), config(default_layout(Layout)),
 	config(starting_workspace(StartWs)), config(workspaces(Wss)),
 
@@ -2009,7 +2024,9 @@ init_monitor(Mon, Geom) :-
 				(ground(LayoutOR)  -> global_key_newvalue(layout,  Mon-ForWs, LayoutOR)  ; true)
 			))
 		))
-	)
+	),
+	format(string(Msg), "Monitor \"~s\" managed", [Mon]),
+	writeln(Msg)
 .
 
 %! geometry_spec(++X:integer, ++Y:integer, ++W:integer, ++H:integer) is semidet
