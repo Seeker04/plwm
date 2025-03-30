@@ -43,9 +43,10 @@ rebuild: clean plwm
 #============================== Static checks =================================
 
 cppcheck:
-	cppcheck -q --enable=all --inconclusive --language=c --std=$(CSTD) \
-	--suppress=missingIncludeSystem \
-	--check-level=exhaustive \
+	cppcheck -q --enable=all --language=c --std=$(CSTD) \
+	--suppress=missingIncludeSystem --inline-suppr \
+	--check-level=exhaustive --inconclusive \
+	--error-exitcode=1 \
 	src/plx.c
 
 clang-tidy:
@@ -53,12 +54,13 @@ clang-tidy:
 	--extra-arg="-I/usr/include/freetype2" \
 	--extra-arg="-I/usr/lib/swipl/include" \
 	--extra-arg="-I/usr/lib/swi-prolog/include" \
+	--warnings-as-errors='*' \
 	src/plx.c --
 
 #=============================== Unit tests ===================================
 
 test:
-	tests/run_all.sh
+	tests/run_unit_tests.sh
 
 #============================ Install/uninstall ===============================
 
@@ -72,7 +74,9 @@ install: plwm
 	chmod 644 $(INSTALLDIR_MAN)/plwm.1
 
 uninstall:
-	rm -f $(INSTALLDIR)/plwm $(INSTALLDIR_LIB)/plx.so $(INSTALLDIR_MAN)/plwm.1
+	rm -f $(INSTALLDIR)/plwm \
+	      $(INSTALLDIR_LIB)/plx.so \
+	      $(INSTALLDIR_MAN)/plwm.1
 
 mkconfig:
 	install -D src/config.pl $(CONFIG_PATH)/config.pl

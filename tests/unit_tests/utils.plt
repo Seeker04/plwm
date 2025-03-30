@@ -57,13 +57,20 @@ test("is_float -") :-
 	assertion(\+ utils:is_float("bar"))
 .
 
-test("dumpstack", [cleanup(delete_file("/tmp/plwm_stack.log"))]) :-
-	utils:dumpstack,
-	open("/tmp/plwm_stack.log", read, File),
-	read_string(File, FileSize, _),
-	assertion(0 < FileSize),
-	close(File)
-.
+% In SWI-Prolog version 9.0.4 print_prolog_backtrace/2 fails with:
+%   received error: arg/3: Arguments are not sufficiently instantiated
+% This is related to the plunit stack, because it works outside of unit tests.
+% The issue is no longer present in SWI-Prolog version 9.2.9.
+%
+% TODO: re-add when SWI-Prolog gets to a working version in Docker's ubuntu:latest.
+%
+%test("dumpstack", [cleanup(delete_file("/tmp/plwm_stack.log"))]) :-
+%	utils:dumpstack,
+%	open("/tmp/plwm_stack.log", read, File),
+%	read_string(File, FileSize, _),
+%	assertion(0 < FileSize),
+%	close(File)
+%.
 
 test("startswith_char +") :-
 	assertion(utils:startswith_char([f], f)),

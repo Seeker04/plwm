@@ -6,6 +6,8 @@
 
 ignore_list="xf86names.pl config.pl"
 
+echo "[Predicate coverage]"
+
 for src in src/*.pl; do
 
 	if grep -q "$(sed 's/src\///' <<< $src)" <<< $ignore_list; then

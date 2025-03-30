@@ -177,6 +177,7 @@ static PL_extension predicates[] = {
 };
 
 install_t
+// cppcheck-suppress unusedFunction
 install(void)
 {
 	PL_register_extensions(predicates);
