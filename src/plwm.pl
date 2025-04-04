@@ -71,7 +71,7 @@ quit() :- quit(0).
 %  @arg ExitCode the process should terminate with
 quit(ExitCode) :-
 	run_hook(quit),
-	(nb_current(display, Dp) -> plx:x_close_display(Dp) ; true),
+	(display(Dp) -> plx:x_close_display(Dp) ; true),
 	current_output(S), close(S),
 	halt(ExitCode)
 .
@@ -303,11 +303,12 @@ grab_buttons() :-
 	plx:x_grab_button(Dp, Button5, ModKeyVal, Rootwin, true, ButtonPressMask, GrabModeAsync, GrabModeAsync, 0, 0)
 .
 
-%! setup_event_mask() is det
+%! setup_root_win() is det
 %
 %  Constructs the event mask for all X11 events the wm uses (e.g. ButtonPress, PointerMotion).
 %  The mask is then used to initialize X using XChangeWindowAttributes(3) and XSelectInput(3).
-setup_event_mask() :-
+%  Also initializes the default mouse cursor.
+setup_root_win() :-
 	CWEventMask is 1 << 11,
 	ButtonPressMask          is 1 << 2,
 	EnterWindowMask          is 1 << 4,
@@ -324,7 +325,11 @@ setup_event_mask() :-
 	display(Dp), rootwin(Rootwin),
 
 	plx:x_change_window_attributes(Dp, Rootwin, CWEventMask, EventMask),
-	plx:x_select_input(Dp, Rootwin, EventMask)
+	plx:x_select_input(Dp, Rootwin, EventMask),
+
+	XC_left_ptr is 68,
+	plx:x_create_font_cursor(Dp, XC_left_ptr, Cursor),
+	plx:x_define_cursor(Dp, Rootwin, Cursor)
 .
 
 %! set_border(++Win:integer) is det
@@ -2332,7 +2337,7 @@ main() :-
 	setup_netatoms,
 	grab_keys,
 	grab_buttons,
-	setup_event_mask,
+	setup_root_win,
 	update_free_win_space,
 	update_ws_atoms,
 

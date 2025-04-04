@@ -34,6 +34,9 @@ static foreign_t x_open_display(term_t display_name, term_t display);
 static foreign_t x_close_display(term_t display);
 static foreign_t x_set_error_handler(term_t to_dummy);
 static foreign_t x_set_close_down_mode(term_t display, term_t close_mode);
+static foreign_t x_create_font_cursor(term_t display, term_t shape, term_t cursor);
+static foreign_t x_define_cursor(term_t display, term_t w, term_t cursor);
+static foreign_t x_free_cursor(term_t display, term_t cursor);
 static foreign_t x_grab_key(term_t display, term_t keycode, term_t modifiers, term_t grab_window,
                             term_t owner_events, term_t pointer_mode, term_t keyboard_mode);
 static foreign_t x_grab_button(term_t display, term_t button, term_t modifiers, term_t grab_window,
@@ -116,6 +119,9 @@ static PL_extension predicates[] = {
 	{ "x_close_display"           ,  1, x_close_display            , 0 },
 	{ "x_set_error_handler"       ,  1, x_set_error_handler        , 0 }, /* it sets xerror() or xerrordummy() */
 	{ "x_set_close_down_mode"     ,  2, x_set_close_down_mode      , 0 },
+	{ "x_create_font_cursor"      ,  3, x_create_font_cursor       , 0 },
+	{ "x_define_cursor"           ,  3, x_define_cursor            , 0 },
+	{ "x_free_cursor"             ,  2, x_free_cursor              , 0 },
 	{ "x_grab_key"                ,  7, x_grab_key                 , 0 },
 	{ "x_grab_button"             , 10, x_grab_button              , 0 },
 	{ "x_grab_pointer"            ,  9, x_grab_pointer             , 0 }, /* Unused */
@@ -235,6 +241,50 @@ x_set_close_down_mode(term_t display, term_t close_mode)
 	PL_TRY(PL_get_integer_ex(close_mode, &closemode));
 
 	XSetCloseDownMode(dp, closemode);
+	return TRUE;
+}
+
+static foreign_t
+x_create_font_cursor(term_t display, term_t shape, term_t cursor)
+{
+	Display *dp;
+	int shp;
+	Cursor curs;
+
+	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
+	PL_TRY(PL_get_integer_ex(shape, &shp));
+
+	curs = XCreateFontCursor(dp, (unsigned)shp);
+
+	PL_TRY(PL_unify_uint64(cursor, curs));
+	return TRUE;
+}
+
+static foreign_t
+x_define_cursor(term_t display, term_t w, term_t cursor)
+{
+	Display *dp;
+	Window win;
+	Cursor curs;
+
+	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
+	PL_TRY(PL_get_uint64_ex(w, &win));
+	PL_TRY(PL_get_uint64_ex(cursor, &curs));
+
+	XDefineCursor(dp, win, curs);
+	return TRUE;
+}
+
+static foreign_t
+x_free_cursor(term_t display, term_t cursor)
+{
+	Display *dp;
+	Cursor curs;
+
+	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
+	PL_TRY(PL_get_uint64_ex(cursor, &curs));
+
+	XFreeCursor(dp, curs);
 	return TRUE;
 }
 
