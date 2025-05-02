@@ -44,7 +44,7 @@ version(0.3).
 %   active_ws            Active workspace
 %   prev_ws              Previous workspace (this is where toggle_workspace/0 goes)
 %
-% Association lists indexed by monitor-workspace pairs,
+% Association lists indexed by monitor-workspace pairs:
 %   nmaster              Number of master windows
 %   mfact                Size factor between master and stack windows
 %   layout               Currently applied layout
@@ -53,8 +53,8 @@ version(0.3).
 %
 % use the global_ predicates from utils.pl instead of the nb_ ones with these
 %
-% For all windows:                                  bool     4 integers
-%   XID                  Window properties: [State, Fullscr, [X,Y,W,H]]
+% For all windows:                                  bool     bool   4 integers
+%   XID                  Window properties: [State, Fullscr, Urgent [X,Y,W,H]]
 %                        State can be: managed, floating
 %
 
@@ -139,6 +139,7 @@ setup_netatoms() :-
 	plx:x_intern_atom(Dp, "_NET_WM_WINDOW_TYPE_DIALOG", false, NetWMWindowTypeDialog),
 
 	plx:x_intern_atom(Dp, "_NET_WM_STATE"             , false, NetWMState),
+	plx:x_intern_atom(Dp, "_NET_WM_STATE_URGENT"      , false, NetWMStateUrgent),
 	plx:x_intern_atom(Dp, "_NET_WM_STATE_FULLSCREEN"  , false, NetWMStateFullscreen),
 
 	XA_ATOM is 4, XA_CARDINAL is 6, XA_WINDOW is 33, PropModeReplace is 0,
@@ -169,6 +170,7 @@ setup_netatoms() :-
 	assertz(netatom(wmwindowtype,        NetWMWindowType)),
 	assertz(netatom(wmwindowtype_dialog, NetWMWindowTypeDialog)),
 	assertz(netatom(wmstate,             NetWMState)),
+	assertz(netatom(wmstateurgent,       NetWMStateUrgent)),
 	assertz(netatom(wmstatefullscreen,   NetWMStateFullscreen))
 .
 
@@ -351,7 +353,7 @@ set_border(Win) :-
 		config(border_width(BorderW)), CWBorderWidth is 1 << 4
 	),
 	% is in fullscreen?
-	(win_properties(Win, [_, true, _]) -> ActualBorderW is 0 ; ActualBorderW is BorderW),
+	(win_properties(Win, [_, true|_]) -> ActualBorderW is 0 ; ActualBorderW is BorderW),
 
 	plx:x_set_window_border(Dp, Win, BorderPixel),
 	plx:x_configure_window(Dp, Win, CWBorderWidth, 0, 0, 0, 0, ActualBorderW, 0, 0)
@@ -384,7 +386,11 @@ focus(Win) :-
 			ignore(send_event(Win, WMTakeFocus)) % window may not implement WM_TAKE_FOCUS
 		; true),
 		global_key_newvalue(focused, Mon-Ws, Win),
-		set_border(Win)
+		set_border(Win),
+
+		(win_properties(Win, [State, Fullscr, true|Rest]) ->
+			win_newproperties(Win, [State, Fullscr, false|Rest]) % drop urgency
+		; true)
 	; true)
 .
 
@@ -461,7 +467,7 @@ raise(Win) :-
 %  @arg Win XID of window to hide
 hide(Win) :-
 	display(Dp),
-	win_properties(Win, [_, _, [_, Y, W, H]]),
+	win_properties(Win, [_, _, _, [_, Y, W, H]]),
 	OuterX is -2 * W - 1,
 	plx:x_move_resize_window(Dp, Win, OuterX, Y, W, H) % move out of visible area
 .
@@ -474,7 +480,7 @@ hide(Win) :-
 %  @arg Win XID of window to show
 show(Win) :-
 	display(Dp),
-	win_properties(Win, [_, _, [X, Y, W, H]]),
+	win_properties(Win, [_, _, _, [X, Y, W, H]]),
 	plx:x_move_resize_window(Dp, Win, X, Y, W, H) % move back to visible area
 .
 
@@ -522,10 +528,31 @@ close_focused() :-
 %  @arg Win XID of window to set fullscreen status for
 %  @arg Fullscr fullscreen flag: true or false
 win_fullscreen(Win, Fullscr) :-
-	(win_properties(Win, [State, _, Geom]) ->
-		win_newproperties(Win, [State, Fullscr, Geom]),
+	(win_properties(Win, [State, _, Urgent, Geom]) ->
+		win_newproperties(Win, [State, Fullscr, Urgent, Geom]),
 		set_border(Win),
 		layout:relayout
+	; true)
+.
+
+%! set_urgent_hint(++Win:integer, ++Urgent:bool) is det
+%
+%  Sets urgent status of the specified window.
+%  If WM_HINTS property is set on the window, reports urgency with XSetWMHints().
+%
+%  @arg Win XID of window to set urgency status for
+%  @arg Urgent urgency flag: true or false
+set_urgent_hint(Win, Urgent) :-
+	win_properties(Win, [State, Fullscr, _|Rest]),
+	win_newproperties(Win, [State, Fullscr, Urgent|Rest]),
+	display(Dp),
+	XUrgencyHint is 1 << 8,
+	(plx:x_get_wm_hints(Dp, Win, WmHintsFlags) ->
+		(Urgent ->
+			NewWmHintsFlags is WmHintsFlags \/ XUrgencyHint
+		;
+			NewWmHintsFlags is WmHintsFlags /\ \XUrgencyHint),
+		plx:x_set_wm_hints(Dp, Win, NewWmHintsFlags)
 	; true)
 .
 
@@ -549,7 +576,7 @@ toggle_floating() :-
 toggle_fullscreen() :-
 	global_value(focused, FocusedWin),
 	(FocusedWin =\= 0 ->
-		win_properties(FocusedWin, [_, Fullscr, _]),
+		win_properties(FocusedWin, [_, Fullscr|_]),
 		utils:bool_negated(Fullscr, NFullscr),
 		win_fullscreen(FocusedWin, NFullscr)
 	; true)
@@ -730,8 +757,8 @@ shiftcoord_win_from_to(Win, FromMon, ToMon) :-
 			MonDiffY is FromMonY - ToMonY, NewY is Y - MonDiffY,
 			plx:x_move_resize_window(Dp, Win, NewX, NewY, W, H),
 			(nb_getval(bars, Bars), \+ member(Win, Bars) ->
-				win_properties(Win, [State, Fullscr, _]),
-				win_newproperties(Win, [State, Fullscr, [NewX, NewY, W, H]]),
+				win_properties(Win, [State, Fullscr, Urgent, _]),
+				win_newproperties(Win, [State, Fullscr, Urgent, [NewX, NewY, W, H]]),
 
 				global_key_value(active_ws, ToMon, ActWs), % re-hide (coord shift)
 				win_mon_ws(Win, ToMon, WsOfWin),           % if needed
@@ -1177,6 +1204,28 @@ update_wintype(Win) :-
 	(StateProperty == NetWMStateFullscreen -> win_fullscreen(Win, true) ; true)
 .
 
+%! update_wm_hints(++Win:integer) is det
+%
+%  Updates window manager hints for a window.
+%
+%  @arg Win XID of window to update the state for
+update_wm_hints(Win) :-
+	display(Dp),
+	(plx:x_get_wm_hints(Dp, Win, WmHintsFlags) ->
+		XUrgencyHint is 1 << 8,
+		UrgencySet is WmHintsFlags /\ XUrgencyHint,
+		active_mon_ws(ActMon, ActWs),
+		(global_key_value(focused, ActMon-ActWs, Win), UrgencySet \= 0 ->
+			NewWmHintsFlags is WmHintsFlags /\ \XUrgencyHint,
+			plx:x_set_wm_hints(Dp, Win, NewWmHintsFlags)
+		;
+			(UrgencySet = 0 -> Urgent = false ; Urgent = true),
+			win_properties(Win, [State, Fullscr, _|Rest]),
+			win_newproperties(Win, [State, Fullscr, Urgent|Rest])
+		)
+	; true)
+.
+
 %update_sizehints(Win) :-
 %	display(Dp),
 %	plx:x_get_wm_normal_hints(Dp, Win, [Flags, _, _, _, _, MinW, MinH, MaxW, MaxH, WInc, HInc,
@@ -1235,10 +1284,10 @@ apply_rules(Win) :-
 				(atom(Ws) -> member(Ws, Wss), ToWs = Ws ; nth1(Ws, Wss, ToWs, _)) -> true ; ToWs = ActWsOnToMon),
 
 				global_key_value(free_win_space, ActMon, [MX, MY, MW, MH]),
-				win_properties(Win, [_, Fullscr, [OldX, OldY, OldW, OldH]]),
+				win_properties(Win, [_, Fullscr, Urgent, [OldX, OldY, OldW, OldH]]),
 				(nonvar(Mode) ->
 					(Mode = floating ->
-						win_newproperties(Win, [floating, Fullscr, [OldX, OldY, OldW, OldH]])
+						win_newproperties(Win, [floating, Fullscr, Urgent, [OldX, OldY, OldW, OldH]])
 					; Mode = [X, Y, W, H] ->
 						(var(W) -> NewW is OldW
 						;EW is W, float(EW) -> NewW is round(MW * EW) ; NewW is W),
@@ -1256,7 +1305,7 @@ apply_rules(Win) :-
 						;EY is Y, (float(EY) -> NewY is MY + round(MH * EY) ; NewY is MY + Y)),
 
 						plx:x_move_resize_window(Dp, Win, NewX, NewY, NewW, NewH),
-						win_newproperties(Win, [floating, Fullscr, [NewX, NewY, NewW, NewH]])
+						win_newproperties(Win, [floating, Fullscr, Urgent, [NewX, NewY, NewW, NewH]])
 					; Mode = fullscreen ->
 						win_fullscreen(Win, true)
 					; true)
@@ -1432,9 +1481,9 @@ handle_event(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
 		)),
 
 		global_value(layout, Layout),  % become unmanaged when moved/resized in non-floating layout
-		win_properties(Win, [PrevState, Fullscr|_]),
+		win_properties(Win, [PrevState, Fullscr, Urgent|_]),
 		(Layout = floating, PrevState = managed -> NewState = managed ; NewState = floating),
-		win_newproperties(Win, [NewState, Fullscr, [FinalX, FinalY, FinalW, FinalH]]),
+		win_newproperties(Win, [NewState, Fullscr, Urgent, [FinalX, FinalY, FinalW, FinalH]]),
 
 		(Layout \= floating, PrevState = managed -> layout:relayout ; true)
 	;
@@ -1486,8 +1535,9 @@ handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
 
 			focus(Win),
 			raise(Win),
-			win_newproperties(Win, [managed, false, Geom]),
+			win_newproperties(Win, [managed, false, false, Geom]),
 			update_wintype(Win),
+			update_wm_hints(Win),
 			update_ws_atoms,
 			WinSpawned = true,
 
@@ -1503,8 +1553,8 @@ handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
 		% adjust it to top-left of free win space, so top bars are not covered
 		(global_key_value(layout, ActMon-ActWs, floating) ->
 			global_key_value(free_win_space, ActMon, [BaseX, BaseY, _, _]),
-			win_properties(Win,    [State, Fullscr, [    _,     _, W, H]]),
-			win_newproperties(Win, [State, Fullscr, [BaseX, BaseY, W, H]]),
+			win_properties(Win,    [State, Fullscr, Urgent, [    _,     _, W, H]]),
+			win_newproperties(Win, [State, Fullscr, Urgent, [BaseX, BaseY, W, H]]),
 			plx:x_move_resize_window(Dp, Win, BaseX, BaseY, W, H)
 		; true),
 
@@ -1537,8 +1587,13 @@ handle_event(destroynotify, [_, _, _, _, _, Win]) :-
 .
 
 handle_event(propertynotify, [_, _, _, Win, Atom, _, _]) :-
+	XA_WM_HINTS is 35,
 	XA_WM_TRANSIENT_FOR is 86,
 	netatom(wmwindowtype, NetWMWindowType), netatom(wmstate, NetWMState),
+
+	(Atom == XA_WM_HINTS ->
+		update_wm_hints(Win)
+	; true),
 
 	(Atom == XA_WM_TRANSIENT_FOR, win_properties(Win, [_|Rest]) ->
 		win_newproperties(Win, [floating|Rest])
@@ -1553,17 +1608,23 @@ handle_event(clientmessage, [_, _, _, _, Win, MessageType, _, DataL0, DataL1, Da
 	netatom(currentdesktop, NetCurrentDesktop),
 	netatom(wmstate, NetWMState),
 	netatom(wmstatefullscreen, NetWMStateFullscreen),
+	netatom(activewindow,NetActiveWindow),
 	(MessageType == NetWMState, (DataL1 == NetWMStateFullscreen ; DataL2 == NetWMStateFullscreen) ->
 		(DataL0 == 0 -> win_fullscreen(Win, false)  % _NET_WM_STATE_REMOVE
 		;DataL0 == 1 -> win_fullscreen(Win, true)   % _NET_WM_STATE_ADD
 		;DataL0 == 2 -> (                           % _NET_WM_STATE_TOGGLE
-			win_properties(Win, [_, Fullscr, _]),
+			win_properties(Win, [_, Fullscr|_]),
 			utils:bool_negated(Fullscr, NFullscr),
 			win_fullscreen(Win, NFullscr))
 		; true)
 	; MessageType == NetCurrentDesktop ->
 		NewWsIdx is DataL0 + 1,
 		switch_workspace(NewWsIdx)
+	; MessageType == NetActiveWindow ->
+		active_mon_ws(ActMon, ActWs),
+		(\+ global_key_value(focused, ActMon-ActWs, Win), win_properties(Win, [_, _, false|_]) ->
+			set_urgent_hint(Win, true)
+		; true)
 	; true)
 .
 
@@ -1671,9 +1732,10 @@ win_mon_ws(Win, Mon, Ws) :-
 %! win_properties(++Win:integer, -Properties:[term]) is det
 %
 %  Fetches the properties of the specified window in the following format:
-%  [State, Fullscr, [X,Y,W,H]] where State is managed or floating,
-%                                    Fullscr is bool,
-%                                    X,Y,W,H are integers
+%  [State, Fullscr, Urgent, [X,Y,W,H]] where State is managed or floating,
+%                                            Fullscr is bool,
+%                                            Urgent is bool,
+%                                            X,Y,W,H are integers
 %
 %  @arg Win XID of window to fetch the properties for
 %  @arg Properties property list of Win
@@ -1682,9 +1744,10 @@ win_properties(Win, Properties) :- term_to_atom(Win, WinAtom), nb_current(WinAto
 %! win_newproperties(++Win:integer, ++Properties:[term]) is det
 %
 %  Sets the properties of the specified window in the following format:
-%  [State, Fullscr, [X,Y,W,H]] where State is managed or floating,
-%                                    Fullscr is bool,
-%                                    X,Y,W,H are integers
+%  [State, Fullscr, Urgent, [X,Y,W,H]] where State is managed or floating,
+%                                            Fullscr is bool,
+%                                            Urgent is bool,
+%                                            X,Y,W,H are integers
 %
 %  @arg Win XID of window to set the properties for
 %  @arg Properties new property list for Win

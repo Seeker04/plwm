@@ -67,6 +67,8 @@ static foreign_t x_kill_client(term_t display, term_t resource);
 static foreign_t x_sync(term_t display, term_t discard);
 static foreign_t x_intern_atom(term_t display, term_t atom_name, term_t only_if_exists, term_t atom);
 static foreign_t x_get_class_hint(term_t display, term_t w, term_t res_name, term_t res_class);
+static foreign_t x_get_wm_hints(term_t display, term_t w, term_t wm_hints_flags);
+static foreign_t x_set_wm_hints(term_t display, term_t w, term_t wm_hints_flags);
 static foreign_t x_change_property(term_t display, term_t w, term_t property, term_t atom, term_t format,
                                    term_t mode, term_t data, term_t nelements);
 static foreign_t x_delete_property(term_t display, term_t w, term_t property);
@@ -124,11 +126,11 @@ static PL_extension predicates[] = {
 	{ "x_free_cursor"             ,  2, x_free_cursor              , 0 },
 	{ "x_grab_key"                ,  7, x_grab_key                 , 0 },
 	{ "x_grab_button"             , 10, x_grab_button              , 0 },
-	{ "x_grab_pointer"            ,  9, x_grab_pointer             , 0 }, /* Unused */
+	{ "x_grab_pointer"            ,  9, x_grab_pointer             , 0 }, /* unused */
 	{ "x_grab_server"             ,  1, x_grab_server              , 0 },
 	{ "x_ungrab_key"              ,  4, x_ungrab_key               , 0 },
 	{ "x_ungrab_button"           ,  4, x_ungrab_button            , 0 },
-	{ "x_ungrab_pointer"          ,  2, x_ungrab_pointer           , 0 }, /* Unused */
+	{ "x_ungrab_pointer"          ,  2, x_ungrab_pointer           , 0 }, /* unused */
 	{ "x_ungrab_server"           ,  1, x_ungrab_server            , 0 },
 	{ "x_keysym_to_keycode"       ,  3, x_keysym_to_keycode        , 0 },
 	{ "x_string_to_keysym"        ,  2, x_string_to_keysym         , 0 },
@@ -137,7 +139,7 @@ static PL_extension predicates[] = {
 	{ "x_raise_window"            ,  2, x_raise_window             , 0 },
 	{ "x_get_window_attributes"   ,  4, x_get_window_attributes    , 0 },
 	{ "x_move_resize_window"      ,  6, x_move_resize_window       , 0 },
-	{ "x_change_window_attributes",  4, x_change_window_attributes , 0 }, /* Only sets event_mask for now! */
+	{ "x_change_window_attributes",  4, x_change_window_attributes , 0 }, /* only sets event_mask for now! */
 	{ "x_select_input"            ,  3, x_select_input             , 0 },
 	{ "x_map_window"              ,  2, x_map_window               , 0 },
 	{ "x_configure_window"        , 10, x_configure_window         , 0 },
@@ -147,6 +149,8 @@ static PL_extension predicates[] = {
 	{ "x_sync"                    ,  2, x_sync                     , 0 },
 	{ "x_intern_atom"             ,  4, x_intern_atom              , 0 },
 	{ "x_get_class_hint"          ,  4, x_get_class_hint           , 0 },
+	{ "x_get_wm_hints"            ,  3, x_get_wm_hints             , 0 }, /* only returns the flags part of XWMHints */
+	{ "x_set_wm_hints"            ,  3, x_set_wm_hints             , 0 }, /* only sets the flags part of XWMHints */
 	{ "x_change_property"         ,  8, x_change_property          , 0 },
 	{ "x_delete_property"         ,  3, x_delete_property          , 0 },
 	{ "x_utf8_text_list_to_text_property",  5, x_utf8_text_list_to_text_property, 0 },
@@ -157,7 +161,7 @@ static PL_extension predicates[] = {
 	{ "x_get_window_property"     ,  6, x_get_window_property      , 0 }, /* 4th, 5th, 8th-11th args are omitted */
 	{ "x_get_wm_protocols"        ,  4, x_get_wm_protocols         , 0 },
 	{ "x_get_wm_normal_hints"     ,  4, x_get_wm_normal_hints      , 0 }, /* supplied_return arg is ignored */
-	{ "x_warp_pointer"            ,  9, x_warp_pointer             , 0 }, /* Unused */
+	{ "x_warp_pointer"            ,  9, x_warp_pointer             , 0 }, /* unused */
 
 	{ "default_root_window"       ,  2, default_root_window        , 0 },
 	{ "default_screen"            ,  2, default_screen             , 0 },
@@ -175,8 +179,8 @@ static PL_extension predicates[] = {
 	{ "xrr_get_output_info"       ,  4, xrr_get_output_info        , 0 }, /* 3rd arg is output idx, last is list attrs */
 	{ "xrr_get_crtc_info"         ,  4, xrr_get_crtc_info          , 0 }, /* returns list of useful fields only */
 
-	{ "create_configure_event"    ,  3, create_configure_event     , 0 }, /* must be de-allocated with c_free! */
-	{ "create_clientmessage_event",  6, create_clientmessage_event , 0 }, /* must be de-allocated with c_free! */
+	{ "create_configure_event"    ,  3, create_configure_event     , 0 }, /* de-allocat with c_free! */
+	{ "create_clientmessage_event",  6, create_clientmessage_event , 0 }, /* de-allocat with c_free! */
 
 	{ "c_free"                    ,  1, c_free                     , 0 },
 	{ NULL                        ,  0, NULL                       , 0 }
@@ -880,6 +884,47 @@ x_get_class_hint(term_t display, term_t w, term_t res_name, term_t res_class)
 	return TRUE;
 }
 
+static foreign_t x_get_wm_hints(term_t display, term_t w, term_t wm_hints_flags)
+{
+	Display *dp;
+	Window win;
+	XWMHints *wmhints;
+
+	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
+	PL_TRY(PL_get_uint64_ex(w, &win));
+
+	if (!(wmhints = XGetWMHints(dp, win))) {
+		return FALSE;
+	}
+
+	PL_TRY(PL_unify_integer(wm_hints_flags, wmhints->flags), XFree(wmhints));
+
+	XFree(wmhints);
+	return TRUE;
+}
+
+static foreign_t x_set_wm_hints(term_t display, term_t w, term_t wm_hints_flags)
+{
+	Display *dp;
+	Window win;
+	long flags;
+	XWMHints *wmhints;
+
+	PL_TRY(PL_get_pointer_ex(display, (void**)&dp));
+	PL_TRY(PL_get_uint64_ex(w, &win));
+	PL_TRY(PL_get_long_ex(wm_hints_flags, &flags));
+
+	if (!(wmhints = XGetWMHints(dp, win))) {
+		return FALSE;
+	}
+
+	wmhints->flags = flags;
+	XSetWMHints(dp, win, wmhints);
+
+	XFree(wmhints);
+	return TRUE;
+}
+
 static foreign_t
 x_change_property(term_t display, term_t w, term_t property, term_t atom, term_t format,
                                    term_t mode, term_t data, term_t nelements)
@@ -1447,7 +1492,7 @@ create_configure_event(term_t display, term_t w, term_t configure_event)
 		event->display = dp;
 		event->event = win;
 		event->window = win;
-		PL_TRY(PL_unify_pointer(configure_event, event));
+		PL_TRY(PL_unify_pointer(configure_event, event), free(event));
 		return TRUE;
 	}
 	return FALSE;
@@ -1477,7 +1522,7 @@ create_clientmessage_event(term_t w, term_t message_type, term_t format, term_t 
 		event->xclient.format = fmt;
 		event->xclient.data.l[0] = datal[0];
 		event->xclient.data.l[1] = datal[1];
-		PL_TRY(PL_unify_pointer(clientmessage, event));
+		PL_TRY(PL_unify_pointer(clientmessage, event), free(event));
 		return TRUE;
 	}
 	return FALSE;

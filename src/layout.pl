@@ -55,7 +55,7 @@ set_layout(Mon-Ws, Layout) :-
 		global_key_newvalue(layout, Mon-Ws, Layout),
 
 		% This is needed for restoring sizes of floating wins that exited fullscreen
-		forall((member(Win, Wins), win_properties(Win, [State, false, [X, Y, W, H]])), (
+		forall((member(Win, Wins), win_properties(Win, [State, false, _, [X, Y, W, H]])), (
 			((Layout = floating ; State = floating) ->
 				plx:x_move_resize_window(Dp, Win, X, Y, W, H)
 			; true)
@@ -461,18 +461,18 @@ apply_geoms(Wins, Geoms) :-
 		optcnf_then_else(animation_granularity(AnimG), true, AnimG = 30),
 		findall(ThreadId, (
 			member(Win-[NewX, NewY, NewW, NewH], WinGeomMap),
-			win_properties(Win, [_, _, [X, Y, W, H]]),
+			win_properties(Win, [_, _, _, [X, Y, W, H]]),
 			thread_create(
 				animation:interpolate_geom(Win, X, Y, W, H, NewX, NewY, NewW, NewH, AnimG, AnimT)
 			, ThreadId),
-			win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])
+			win_newproperties(Win, [managed, false, false, [NewX, NewY, NewW, NewH]])
 		), ThreadIds),
 		forall(member(ThreadId, ThreadIds), thread_join(ThreadId))
 	), (
 		forall(member(Win-[NewX, NewY, NewW, NewH], WinGeomMap), (
 			display(Dp),
 			plx:x_move_resize_window(Dp, Win, NewX, NewY, NewW, NewH),
-			win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])
+			win_newproperties(Win, [managed, false, false, [NewX, NewY, NewW, NewH]])
 		))
 	))
 .
