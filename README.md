@@ -521,6 +521,10 @@ done > /tmp/plwm_fifo
 |:--:|
 | *bmaster / nmaster=1 / mfact=2/3 / 3px focused border / 26px inner & outer gaps / polybar / picom /w rounded corners & shadows* |
 
+| <video src="https://github.com/user-attachments/assets/e99ada44-6aa8-48c6-80bb-4e135d6ead79"></video> |
+|:--:|
+| *layout demonstration with animations enabled / time 0.2 / granularity 30* |
+
 # Project status
 
 **!!! Disclaimer:** plwm is still in an experimental state. First stable release will be v1.0. While crashes or other major bugs don't really occur, it's good to keep this in mind **!!!**
