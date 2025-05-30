@@ -13,16 +13,16 @@
 :- use_module(menu).
 :- use_module(utils).
 
-:- dynamic display/1.
-:- dynamic screen/1.
-:- dynamic rootwin/1.
-:- dynamic xrandr_available/0.
-:- dynamic config_flag/1.
-:- dynamic keymap_internal/3.
-:- dynamic wmatom/2.
-:- dynamic netatom/2.
-:- dynamic hook/2.
-:- dynamic jobs/1 as shared.
+:- dynamic display/1.          % Stores Display pointer returned by XOpenDisplay(3)
+:- dynamic screen/1.           % Stores Screen returned by DefaultScreen(3)
+:- dynamic rootwin/1.          % Stores Window returned by DefaultRootWindow(3)
+:- dynamic xrandr_available/0. % Fact if XRRQueryExtension(3) returns true
+:- dynamic config_flag/1.      % Custom config path specified with --config (if any)
+:- dynamic keymap_internal/3.  % Holds (KeyCode, ModMask, Action) triples parsed from config:keymaps/1
+:- dynamic wmatom/2.           % Holds interned WM atoms, e.g. query WM_STATE with wmatom(wmstate, WmState)
+:- dynamic netatom/2.          % Holds interned NET atoms, e.g. query _NET_WM_STATE with netatom(wmstate, NetWMState)
+:- dynamic hook/2.             % Holds (Event, Action) pairs parsed from config:hooks/1
+:- dynamic jobs/1 as shared.   % Holds pending list of command terms waiting for execution
 
 version(0.4).
 
