@@ -536,18 +536,13 @@ For known problems, see [the Issues with bug labels](https://github.com/Seeker04
 
 # Contribution
 
-First and foremost, if you find any bugs, please create a GitHub issue, preferably, with all details you can provide. (First, please check if it's not reported already).
+First and foremost, if you find any bugs, please [create a GitHub issue](https://github.com/Seeker04/plwm/issues/new), preferably, with all details you can provide. (First, please check if it's not reported already).
 
 If you have a feature request, please do the same.
 
 Any code contribution is also welcome. Especially if it solves some known issue. For brand new ideas, I recommend creating an issue first, so we can discuss it.
 
-**Note:** a base criteria for merging is successful validation done by [tests/check_all.sh](tests/check_all.sh). This includes unit tests and some other checks and is done automatically in the CI. If you wish to validate locally, you can do so with the Docker image:
-
-```bash
-DOCKER_BUILDKIT=1 sudo docker build -t plwm:latest .
-sudo docker run plwm:latest
-```
+Please read the [Development Guide](docs/development_guide.md).
 
 # FAQ
 
@@ -580,22 +575,6 @@ to your `.xinitrc` should solve this problem.
 Most likely your configuration is faulty. Run `plwm --check`, then you should see the problem.
 
 If you don't see a config error, then please report it as an issue. Preferably by attaching any message plwm dumps to stderr or to its logfile with `-l`.
-
-**How do I debug this?**
-
-You can use the above mentioned `-l` flag with `writeln/1` and `format/2` calls to dump messages.
-
-You can also use the `utils:dumpstack/0` predicate to manually dump the stack at any given point.
-
-For more sophisticated debugging, replace the `exec plwm` line in your `.xinitrc` with an `exec <terminal-you-use>`, then after starting X, run:
-
-```bash
-swipl -p foreign=/usr/local/lib src/plwm.pl
-```
-
-From the toplevel you can use `trace/0` or `debug/0` to start debugging and then `main/0` to start stepping through plwm. Or use `spy/1` for placing breakpoints... You can learn more about the interactive debugger starting from [here](https://www.swi-prolog.org/pldoc/man?section=debugoverview).
-
-If you wish to peek into the X11 bindings in plx.c, then you can add `-g` to `CFLAGS` in the Makefile, recompile, then use `attach <PID>` in `gdb` as root.
 
 **Something is missing...**
 

@@ -1,0 +1,24 @@
+<diagram program="umletino" version="15.1"><zoom_level>10</zoom_level><element><id>UMLClass</id><coordinates><x>450</x><y>500</y><w>80</w><h>40</h></coordinates><panel_attributes>plwm
+valign=center
+bg=#69A354</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>840</x><y>500</y><w>80</w><h>40</h></coordinates><panel_attributes>X server
+valign=center
+bg=blue</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>580</x><y>500</y><w>80</w><h>40</h></coordinates><panel_attributes>plx.so
+valign=center
+bg=#69A354</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>710</x><y>500</y><w>80</w><h>40</h></coordinates><panel_attributes>libX11
+valign=center
+bg=gray</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>740</x><y>570</y><w>80</w><h>30</h></coordinates><panel_attributes>libXft
+valign=center
+bg=gray</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>740</x><y>610</y><w>80</w><h>30</h></coordinates><panel_attributes>libXrandr
+valign=center
+bg=gray</panel_attributes><additional_attributes></additional_attributes></element><element><id>Relation</id><coordinates><x>520</x><y>500</y><w>80</w><h>30</h></coordinates><panel_attributes>lt=-&gt;</panel_attributes><additional_attributes>10;10;60;10</additional_attributes></element><element><id>Relation</id><coordinates><x>510</x><y>510</y><w>100</w><h>60</h></coordinates><panel_attributes>lt=&lt;-
+
+
+x_next_event</panel_attributes><additional_attributes>20;20;70;20</additional_attributes></element><element><id>Relation</id><coordinates><x>650</x><y>520</y><w>80</w><h>30</h></coordinates><panel_attributes>lt=&lt;-</panel_attributes><additional_attributes>10;10;60;10</additional_attributes></element><element><id>Relation</id><coordinates><x>650</x><y>500</y><w>80</w><h>30</h></coordinates><panel_attributes>lt=-&gt;</panel_attributes><additional_attributes>10;10;60;10</additional_attributes></element><element><id>Relation</id><coordinates><x>780</x><y>520</y><w>80</w><h>30</h></coordinates><panel_attributes>lt=&lt;-</panel_attributes><additional_attributes>10;10;60;10</additional_attributes></element><element><id>Relation</id><coordinates><x>780</x><y>500</y><w>80</w><h>30</h></coordinates><panel_attributes>lt=-&gt;</panel_attributes><additional_attributes>10;10;60;10</additional_attributes></element><element><id>Relation</id><coordinates><x>540</x><y>460</y><w>30</w><h>70</h></coordinates><panel_attributes>lt=.</panel_attributes><additional_attributes>10;10;10;50</additional_attributes></element><element><id>Text</id><coordinates><x>510</x><y>430</y><w>90</w><h>40</h></coordinates><panel_attributes>/SWI-Prolog/
+/FFI/
+halign=center
+valign=center</panel_attributes><additional_attributes></additional_attributes></element><element><id>Relation</id><coordinates><x>860</x><y>460</y><w>30</w><h>60</h></coordinates><panel_attributes>lt=.</panel_attributes><additional_attributes>10;10;10;40</additional_attributes></element><element><id>Text</id><coordinates><x>830</x><y>430</y><w>90</w><h>40</h></coordinates><panel_attributes>/e.g. Xorg/
+halign=center
+valign=center</panel_attributes><additional_attributes></additional_attributes></element><element><id>Relation</id><coordinates><x>710</x><y>530</y><w>50</w><h>110</h></coordinates><panel_attributes>lt=-
+</panel_attributes><additional_attributes>10;10;10;90;30;90</additional_attributes></element><element><id>Relation</id><coordinates><x>710</x><y>570</y><w>50</w><h>30</h></coordinates><panel_attributes>lt=-</panel_attributes><additional_attributes>10;10;30;10</additional_attributes></element><element><id>Relation</id><coordinates><x>680</x><y>560</y><w>60</w><h>60</h></coordinates><panel_attributes>lt=.</panel_attributes><additional_attributes>40;10;10;40</additional_attributes></element><element><id>Text</id><coordinates><x>630</x><y>600</y><w>70</w><h>30</h></coordinates><panel_attributes>/extensions/
+halign=center
+valign=center</panel_attributes><additional_attributes></additional_attributes></element></diagram>
