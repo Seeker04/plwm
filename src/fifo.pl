@@ -13,7 +13,9 @@ setup_fifo() :-
 		string_concat("mkfifo ", FifoPath, MkFifoCmd), % no swipl predicate for this
 		shell(MkFifoCmd, ExitCode),
 		(ExitCode == 0 ->
-			thread_create(fifo:process_fifo(FifoPath), _, [detached(true)])
+			thread_create(
+				catch(fifo:process_fifo(FifoPath), _, true),
+				_, [detached(true)])
 		; writeln(user_error, "Could not spawn command fifo!"))
 	)))
 .
