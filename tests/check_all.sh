@@ -43,9 +43,9 @@ echo "----------------------------------------------------------------------"
 [ "$(stat -c "%a" /usr/local/lib/plx.so)"            -eq 755 ] && echo "plx.so mode OK" || false
 [ "$(stat -c "%a" /usr/local/share/man/man1/plwm.1)" -eq 644 ] && echo "plwm.1 mode OK" || false
 
-diff -q plwm                                /usr/local/bin/plwm              && echo "plwm diff OK"   || false
-diff -q plx.so                              /usr/local/lib/plx.so            && echo "plx.so diff OK" || false
-diff -q <(sed "s/VERSION/$version/" plwm.1) /usr/local/share/man/man1/plwm.1 && echo "plwm.1 diff OK" || false
+diff -q plwm                                     /usr/local/bin/plwm              && echo "plwm diff OK"   || false
+diff -q plx.so                                   /usr/local/lib/plx.so            && echo "plx.so diff OK" || false
+diff -q <(sed "s/VERSION/$version/" docs/plwm.1) /usr/local/share/man/man1/plwm.1 && echo "plwm.1 diff OK" || false
 
 echo
 echo "----------------------------------------------------------------------"

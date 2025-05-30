@@ -70,7 +70,7 @@ install: plwm
 	install -D --mode=755 plwm $(INSTALLDIR)/plwm
 	install -D --mode=755 plx.so $(INSTALLDIR_LIB)/plx.so
 	mkdir -p $(INSTALLDIR_MAN)
-	sed 's/VERSION/$(VERSION)/' < plwm.1 > $(INSTALLDIR_MAN)/plwm.1
+	sed 's/VERSION/$(VERSION)/' < docs/plwm.1 > $(INSTALLDIR_MAN)/plwm.1
 	chmod 644 $(INSTALLDIR_MAN)/plwm.1
 
 uninstall:
