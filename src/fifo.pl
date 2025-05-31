@@ -2,18 +2,20 @@
 
 :- module(fifo, []).
 
-%! setup_fifo() is det
+%! setup_fifo(Tid) is det
 %
 %  If config:fifo_enabled/1 and config:fifo_path/1 are set, attempts to create
 %  a named pipe with mkfifo(1).
-%  If the fifo is created, its path is passed to fifo:process_fifo/1 on a detached thread.
-setup_fifo() :-
+%  If the fifo is created, its path is passed to fifo:process_fifo/1.
+%
+%  @arg Tid thread id of the fifo handler
+setup_fifo(Tid) :-
 	optcnf_then(fifo_enabled(true), optcnf_then(fifo_path(FifoPath), (
 		catch(delete_file(FifoPath), _, true), % cleanup from previous execution
 		string_concat("mkfifo ", FifoPath, MkFifoCmd), % no swipl predicate for this
 		shell(MkFifoCmd, ExitCode),
 		(ExitCode == 0 ->
-			thread_create(fifo:process_fifo(FifoPath), _, [detached(true)])
+			thread_create(fifo:process_fifo(FifoPath), Tid)
 		; writeln(user_error, "Could not spawn command fifo!"))
 	)))
 .
@@ -30,12 +32,21 @@ setup_fifo() :-
 %
 %  @arg FifoPath file path to the command fifo
 process_fifo(FifoPath) :-
-	open(FifoPath, read, Fifo),
-	(read_terms(Fifo, Jobs) ->
-		jobs_notify(Jobs)
-	; true),
-	close(Fifo),
-	process_fifo(FifoPath)
+	thread_peek_message(shutdown) ->
+		thread_get_message(shutdown)
+		;
+		catch(
+			% open/3 blocks when FIFO's other end isn't open for
+			% writing. In order to poll the message queue in a
+			% timely manner, we need this timeout.
+			(call_with_time_limit(0.1, open(FifoPath, read, Fifo)),
+				(read_terms(Fifo, Jobs) ->
+					jobs_notify(Jobs)
+				; true),
+				close(Fifo)
+			), _, true
+		),
+		process_fifo(FifoPath)
 .
 
 %! read_terms(++S:stream, --Terms:[term]) is semidet

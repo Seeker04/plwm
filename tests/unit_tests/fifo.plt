@@ -9,39 +9,35 @@ optcnf_then(fifo_path(FifoPath), Then) :- FifoPath = "/tmp/test-fifo", Then.
 :- use_module("../../src/fifo").
 
 test("setup_fifo +", [
-	setup(
-		optcnf_then(fifo_path(FifoPath), true)
-	),
-	cleanup(
+	setup((
+		optcnf_then(fifo_path(FifoPath), true),
+		fifo:setup_fifo(FifoThread)
+	)),
+	cleanup((
+		thread_send_message(FifoThread, shutdown),
+		thread_join(FifoThread),
 		delete_file(FifoPath)
-		% Note: thread spawned by setup_fifo is detached, so no need to join
-	)
+	))
 ]) :-
-	assertion(fifo:setup_fifo),
 	assertion(access_file(FifoPath, read)),
-
-	% Check if setup_fifo started the thread for process_fifo,
-	% i.e. an extra thread is running next to 'main' and 'gc'
-	findall(T, thread_property(T, _), Threads),
-	assertion(list_to_set(Threads, [main, gc, _]))
+	assertion(thread_property(FifoThread, status(running)))
 .
 
 test("setup_fifo + (already exists)", [
 	setup((
 		optcnf_then(fifo_path(FifoPath), true),
-		open(FifoPath, write, _) % create empty file
+		open(FifoPath, write, Stream), % create empty file
+		fifo:setup_fifo(FifoThread)
 	)),
-	cleanup(
+	cleanup((
+		close(Stream),
+		thread_send_message(FifoThread, shutdown),
+		thread_join(FifoThread),
 		delete_file(FifoPath)
-	)
+	))
 ]) :-
-	assertion(fifo:setup_fifo),
 	assertion(access_file(FifoPath, read)),
-
-	findall(T, thread_property(T, _), Threads),
-	assertion(list_to_set(Threads, [main, gc, _, _]))
-	% Note: one more thread due to execution of prior testcase,
-	% unfortunately we cannot destroy detached threads:/
+	assertion(thread_property(FifoThread, status(running)))
 .
 
 test("process_fifo", [
