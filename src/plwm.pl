@@ -2341,11 +2341,13 @@ main() :-
 	update_free_win_space,
 	update_ws_atoms,
 
-	fifo:setup_fifo,
+	fifo:setup_fifo(FifoThread),
 
 	setup_hooks,
 	run_hook(start),
 
-	eventloop
+	eventloop,
+	thread_send_message(FifoThread, shutdown),
+	thread_join(FifoThread)
 .
 
