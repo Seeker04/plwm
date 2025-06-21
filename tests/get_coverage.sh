@@ -4,7 +4,7 @@
 
 [[ "$1" == "-v" || "$1" == "--verbose" ]] && verbose=1
 
-ignore_list="xf86names.pl config.pl"
+ignore_list="xf86names.pl"
 
 echo "[Predicate coverage]"
 

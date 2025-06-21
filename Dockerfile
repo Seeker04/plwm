@@ -9,9 +9,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Use UTF-8 encoding, otherwise swipl throws "Illegal multibyte Sequence" errors
 ENV LANG=en_US.UTF-8
 
-# Set user config directory
-ENV XDG_CONFIG_HOME=/home/testuser/.config
-
 # Update package list and install required packages
 RUN apt-get update &&   \
     apt-get install -y  \

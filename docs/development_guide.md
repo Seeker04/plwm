@@ -51,10 +51,10 @@ User interaction is possible by three methods:
 | ----------------------------------- | ----------------------------------------- |
 | [plwm.pl](../src/plwm.pl)           | entry point, event loop and wm logic      |
 | [animation.pl](../src/animation.pl) | window animations                         |
-| [config.pl](../src/config.pl)       | default configuration                     |
 | [fifo.pl](../src/fifo.pl)           | command fifo implementation               |
 | [layout.pl](../src/layout.pl)       | layout definitions                        |
 | [menu.pl](../src/menu.pl)           | menu commands                             |
+| [setting.pl](../src/setting.pl)     | settings related predicates               |
 | [utils.pl](../src/utils.pl)         | common utilities used by multiple modules |
 | [xf86names.pl](../src/xf86names.pl) | definitions for special keys              |
 | [plx.c](../src/plx.c)               | libX11 bindings                           |

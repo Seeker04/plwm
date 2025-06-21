@@ -14,15 +14,10 @@ LDFLAGS = -shared -lX11 -lXft -lXrandr
 SWIFLAGS = -p foreign=$(INSTALLDIR_LIB) \
            --goal=main --toplevel=halt --stand_alone=true -O -o plwm -c src/plwm.pl
 
-INSTALLDIR     = /usr/local/bin
+INSTALLDIR_BIN = /usr/local/bin
 INSTALLDIR_LIB = /usr/local/lib
+INSTALLDIR_CNF = /etc/plwm
 INSTALLDIR_MAN = /usr/local/share/man/man1
-
-ifdef XDG_CONFIG_HOME
-CONFIG_PATH = $(XDG_CONFIG_HOME)/plwm
-else
-CONFIG_PATH = $(HOME)/.config/plwm
-endif
 
 #================================== Build =====================================
 
@@ -67,18 +62,16 @@ test:
 VERSION = ${shell sed -n 's/^version(\([0-9.]\+\))\.$$/\1/p' src/plwm.pl}
 
 install: plwm
-	install -D --mode=755 plwm $(INSTALLDIR)/plwm
+	install -D --mode=755 plwm $(INSTALLDIR_BIN)/plwm
 	install -D --mode=755 plx.so $(INSTALLDIR_LIB)/plx.so
+	install -D --mode=644 -C --backup=numbered config/config.pl $(INSTALLDIR_CNF)/config.pl
 	mkdir -p $(INSTALLDIR_MAN)
 	sed 's/VERSION/$(VERSION)/' < docs/plwm.1 > $(INSTALLDIR_MAN)/plwm.1
 	chmod 644 $(INSTALLDIR_MAN)/plwm.1
 
 uninstall:
-	rm -f $(INSTALLDIR)/plwm \
+	rm -f $(INSTALLDIR_BIN)/plwm \
 	      $(INSTALLDIR_LIB)/plx.so \
 	      $(INSTALLDIR_MAN)/plwm.1
-
-mkconfig:
-	install -D src/config.pl $(CONFIG_PATH)/config.pl
-	sed -i 's/module(config/module(runtime_config/' $(CONFIG_PATH)/config.pl
+	[ -d $(INSTALLDIR_CNF) ] && echo "Note: $(INSTALLDIR_CNF) is kept" || true
 

@@ -1,9 +1,9 @@
 % MIT License, Copyright (c) 2023-2025 Barnabás Zahorán, see LICENSE
 
 % mocks
-config(border_width(1)).
-config(border_width_focused(2)).
-optcnf_then_else(inner_gaps(20), Then, _) :- Then.
+border_width(1).
+border_width_focused(2).
+inner_gaps(20).
 display(0x7fffffffe2ec).
 global_key_value(windows, _, [1, 2, 3, 4]).
 global_key_value(monitor_geom, _, [0, 0, 1920, 1080]).

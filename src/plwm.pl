@@ -4,27 +4,60 @@
 %
 % See README.md for getting started
 
+version(0.4).
+
 :- use_module(library(assoc)).
 
-:- use_module(config).
-:- use_module(xf86names).
 :- use_module(fifo).
 :- use_module(layout).
 :- use_module(menu).
+:- use_module(setting).
 :- use_module(utils).
+:- use_module(xf86names).
 
 :- dynamic display/1.          % Stores Display pointer returned by XOpenDisplay(3)
 :- dynamic screen/1.           % Stores Screen returned by DefaultScreen(3)
 :- dynamic rootwin/1.          % Stores Window returned by DefaultRootWindow(3)
 :- dynamic xrandr_available/0. % Fact if XRRQueryExtension(3) returns true
 :- dynamic config_flag/1.      % Custom config path specified with --config (if any)
-:- dynamic keymap_internal/3.  % Holds (KeyCode, ModMask, Action) triples parsed from config:keymaps/1
+:- dynamic keymap_internal/3.  % Holds (KeyCode, ModMask, Action) triples parsed from keymaps/1
 :- dynamic wmatom/2.           % Holds interned WM atoms, e.g. query WM_STATE with wmatom(wmstate, WmState)
 :- dynamic netatom/2.          % Holds interned NET atoms, e.g. query _NET_WM_STATE with netatom(wmstate, NetWMState)
-:- dynamic hook/2.             % Holds (Event, Action) pairs parsed from config:hooks/1
+:- dynamic hook/2.             % Holds (Event, Action) pairs parsed from hooks/1
 :- dynamic jobs/1 as shared.   % Holds pending list of command terms waiting for execution
 
-version(0.4).
+% Configuration predicates
+:- dynamic default_nmaster/1.
+:- dynamic default_mfact/1.
+:- dynamic default_layout/1.
+:- dynamic attach_bottom/1.
+:- dynamic border_width/1.
+:- dynamic border_width_focused/1.
+:- dynamic border_color/1.
+:- dynamic border_color_focused/1.
+:- dynamic snap_threshold/1.
+:- dynamic outer_gaps/1.
+:- dynamic inner_gaps/1.
+:- dynamic workspaces/1.
+:- dynamic starting_workspace/1.
+:- dynamic hide_empty_workspaces/1.
+:- dynamic ws_format/1.
+:- dynamic ws_format_occupied/1.
+:- dynamic layout_default_overrides/1.
+:- dynamic bar_classes/1.
+:- dynamic bar_placement/1.
+:- dynamic fifo_enabled/1.
+:- dynamic fifo_path/1.
+:- dynamic menucmd/1.
+:- dynamic animation_enabled/1.
+:- dynamic animation_time/1.
+:- dynamic animation_granularity/1.
+:- dynamic modkey/1.
+:- dynamic scroll_up_action/1.
+:- dynamic scroll_down_action/1.
+:- dynamic keymaps/1.
+:- dynamic rules/1.
+:- dynamic hooks/1.
 
 %*********************************  Globals  **********************************
 %
@@ -32,11 +65,10 @@ version(0.4).
 % border_pixel_focused   Allocated color for border of focused windows
 %
 % active_mon             Active monitor
-% workspaces             Workspace names (same as config:workspaces at the beginning)
-% bars                   XIDs of windows considered bars, see: config:bar_class/2
+% workspaces             Workspace names (same as workspaces at the beginning)
+% bars                   XIDs of windows considered bars, see: bar_classes/1
 % dragged                XID and mouse parameters of window being dragged: [Subwin, Xroot, Yroot, Button] or none
 % drag_initial_winattr   Initial attributes of dragged window: [X, Y, W, H]
-% hide_empty_workspaces  true or false, whether to hide names of inactive and empty wss from bars
 %
 % Association lists indexed by monitors (output names):
 %   monitor_geom         Monitor geometry: [X, Y, W, H]
@@ -76,14 +108,33 @@ quit(ExitCode) :-
 	halt(ExitCode)
 .
 
+%! reassert(++Callable:callable) is det
+%
+%  First, retracts all rules of the given predicate (arity is fixed),
+%  then asserts with the new arguments.
+%
+%  E.g. if foo(a, b) holds, then after reassert(foo(x, y)) only foo(x, y) will hold.
+%
+%  Note: this predicate cannot go inside the utils module, because it would
+%  automatically assert under the utils: namespace.
+%
+%  @arg Callable predicate to re-assert
+reassert(Pred) :-
+	functor(Pred, Name, Arity),
+	utils:n_item_clones(Arity, _, Placeholders),
+	compound_name_arguments(PredToRetract, Name, Placeholders), % e.g. foo(_, _)
+	retractall(PredToRetract),
+	assertz(Pred)
+.
+
 %! alloc_colors() is det
 %
 %  Allocates Xft colors, e.g. for colored window borders.
 alloc_colors() :-
 	display(Dp), screen(Screen),
 
-	config(border_color(BorderColor)),
-	config(border_color_focused(BorderColorFocused)),
+	border_color(BorderColor),
+	border_color_focused(BorderColorFocused),
 
 	plx:default_colormap(Dp, Screen, Colormap),
 	plx:default_visual(Dp, Screen, Visual),
@@ -232,7 +283,11 @@ translate_keymap(Key, Mods, Action) :-
 	plx:x_keysym_to_keycode(Dp, Ksym, Kcode),
 	(Kcode =\= 0 ->
 		modkeys_mask(Mods, ModMask),
-		assertz(keymap_internal(Kcode, ModMask, Action)))
+		ignore(retractall(keymap_internal(Kcode, ModMask, _))), % allow overwriting with new action
+		(Action \= none ->
+			assertz(keymap_internal(Kcode, ModMask, Action))
+		; true)
+	)
 .
 
 %! keybind_to_keylist(++Keybind:term, -KeyList:[term]) is det
@@ -256,13 +311,18 @@ keybind_to_keylist(L + R, List) :-
 
 %! grab_keys() is det
 %
-%  Registers all key mappings defined by config:keymaps/1. Produces a warning
+%  Registers all key mappings defined by keymaps/1. Produces a warning
 %  message for any invalid mapping.
 %  For all successfully registered mappings, grabs its keys with XGrabKey(3),
 %  i.e. these key combinations will be listened to and handled in XNextEvent(3).
 grab_keys() :-
-	display(Dp), rootwin(Rootwin), GrabModeAsync is 1,
-	config(keymaps(Keymaps)),
+	display(Dp), rootwin(Rootwin), GrabModeAsync is 1, AnyKey is 0, AnyModifier is 1 << 15,
+
+	% ungrab first, because grab_keys/0 can be re-run when the keymaps/1 setting gets changed
+	retractall(keymap_internal(_, _, _)),
+	plx:x_ungrab_key(Dp, AnyKey, AnyModifier, Rootwin),
+
+	keymaps(Keymaps),
 	forall(member(Keybind -> Action, Keymaps), (
 		keybind_to_keylist(Keybind, KeyList), length(KeyList, N), Nm1 is N - 1,
 		utils:split_at(Nm1, KeyList, Mods, [Key]),
@@ -279,21 +339,25 @@ grab_keys() :-
 
 %! grab_buttons() is det
 %
-%  Grabs the left and right mouse buttons with modifier config:modkey/1 using
+%  Grabs the left and right mouse buttons with modifier modkey/1 using
 %  XGrabButton(3) to handle mouse events (e.g. window movement, resizing,
 %  focus by hover) in XNextEvent(3).
 %  Also grabs the scroll button to support running custom logic on scroll
 grab_buttons() :-
 	display(Dp), rootwin(Rootwin),
-	config(modkey(ModKey)),
+	modkey(ModKey),
 	modkey_mask_newmask(ModKey, 0, ModKeyVal),
 	GrabModeAsync is 1,
 	Button1 is 1, Button3 is 3, % left and right mouse buttons
 	Button4 is 4, Button5 is 5, % up and down mouse scroll
+	AnyButton is 0, AnyModifier is 1 << 15,
 	ButtonPressMask   is 1 << 2,
 	ButtonReleaseMask is 1 << 3,
 	PointerMotionMask is 1 << 6,
 	ButtonMask is ButtonPressMask \/ ButtonReleaseMask \/ PointerMotionMask,
+
+	% ungrab first, because grab_buttons/0 can be re-run when the modkey/1 setting gets changed
+	plx:x_ungrab_button(Dp, AnyButton, AnyModifier, Rootwin),
 
 	plx:x_grab_button(Dp, Button1, ModKeyVal, Rootwin, true, ButtonMask, GrabModeAsync, GrabModeAsync, 0, 0),
 	plx:x_grab_button(Dp, Button3, ModKeyVal, Rootwin, true, ButtonMask, GrabModeAsync, GrabModeAsync, 0, 0),
@@ -335,8 +399,8 @@ setup_root_win() :-
 %! set_border(++Win:integer) is det
 %
 %  Sets the border of the specified window.
-%  For focused windows, config:border_width_focused/1 implies the width,
-%  otherwise config:border_width/1 is used.
+%  For focused windows, border_width_focused/1 implies the width,
+%  otherwise border_width/1 is used.
 %  Fullscreen windows are borderless.
 %
 %  @arg Win XID of window to set the border for
@@ -345,10 +409,10 @@ set_border(Win) :-
 
 	(global_value(focused, Win) ->
 		nb_getval(border_pixel_focused, BorderPixel),
-		config(border_width_focused(BorderW)), CWBorderWidth is 1 << 4
+		border_width_focused(BorderW), CWBorderWidth is 1 << 4
 	;
 		nb_getval(border_pixel, BorderPixel),
-		config(border_width(BorderW)), CWBorderWidth is 1 << 4
+		border_width(BorderW), CWBorderWidth is 1 << 4
 	),
 	% is in fullscreen?
 	(win_properties(Win, [_, true, _]) -> ActualBorderW is 0 ; ActualBorderW is BorderW),
@@ -565,12 +629,11 @@ toggle_workspace() :-
 
 %! toggle_hide_empty_workspaces() is det
 %
-%  Toggles between hiding and showing empty workspaces initially set from
-%  config:hide_empty_workspaces/1.
+%  Toggles between hiding and showing empty workspaces.
 toggle_hide_empty_workspaces() :-
-	nb_getval(hide_empty_workspaces, State), utils:bool_negated(State, NState),
-	nb_setval(hide_empty_workspaces, NState),
-	update_ws_atoms
+	hide_empty_workspaces(State),
+	utils:bool_negated(State, NState),
+	set(hide_empty_workspaces, NState)
 .
 
 %! active_mon_ws(-ActMon:string, -ActWs:atom) is det
@@ -757,13 +820,11 @@ switch_monitor(To) :-
 			nb_setval(active_mon, ToMon), active_mon_ws(ToMon, NewActWs),
 			global_key_value(focused, ToMon-NewActWs, FocusedWin), focus(FocusedWin),
 
-			optcnf_then(bar_placement(BPlace), (
-				(BPlace = follow_focus ->
-					nb_getval(bars, Bars),
-					forall(member(Bar, Bars), shiftcoord_win_from_to(Bar, ActMon, ToMon))
-					% move the bar(s) to the newly active monitor
-				; true)
-			)),
+			(bar_placement(follow_focus) ->
+				nb_getval(bars, Bars),
+				forall(member(Bar, Bars), shiftcoord_win_from_to(Bar, ActMon, ToMon))
+				% move the bar(s) to the newly active monitor
+			; true),
 			update_ws_atoms,
 			update_workarea,
 
@@ -896,7 +957,7 @@ create_workspace(Ws) :-
 	(\+ member(Ws, Wss) -> % ws with this name must not already exist
 		monitors(Mons),
 		forall(member(Mon, Mons), (
-			config(default_nmaster(Nmaster)), config(default_mfact(Mfact)), config(default_layout(Layout)),
+			default_nmaster(Nmaster), default_mfact(Mfact), default_layout(Layout),
 			nb_getval(nmaster, ANmaster), nb_getval(mfact, AMfact), nb_getval(layout, ALayout),
 			nb_getval(focused, AFocused), nb_getval(windows, AWins),
 			put_assoc(Mon-Ws, ANmaster, Nmaster, NewANmaster),
@@ -907,13 +968,12 @@ create_workspace(Ws) :-
 			nb_setval(nmaster, NewANmaster), nb_setval(mfact, NewAMfact), nb_setval(layout, NewALayout),
 			nb_setval(focused, NewAFocused), nb_setval(windows, NewAWins),
 
-			optcnf_then(layout_default_overrides(LDefOverrides),
-				forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
-					(ground(NmasterOR) -> global_key_newvalue(nmaster, Mon-Ws, NmasterOR) ; true),
-					(ground(MfactOR)   -> global_key_newvalue(mfact,   Mon-Ws, MfactOR)   ; true),
-					(ground(LayoutOR)  -> global_key_newvalue(layout,  Mon-Ws, LayoutOR)  ; true)
-				))
-			)
+			layout_default_overrides(LDefOverrides),
+			forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
+				(ground(NmasterOR) -> global_key_newvalue(nmaster, Mon-Ws, NmasterOR) ; true),
+				(ground(MfactOR)   -> global_key_newvalue(mfact,   Mon-Ws, MfactOR)   ; true),
+				(ground(LayoutOR)  -> global_key_newvalue(layout,  Mon-Ws, LayoutOR)  ; true)
+			))
 		)),
 		append(Wss, [Ws], NewWss),
 		nb_setval(workspaces, NewWss),
@@ -1102,17 +1162,17 @@ update_ws_atoms() :-
 
 	nonempty_workspaces_and_act(RelevantWss),
 	nonempty_workspaces(NonEmptyWss),
-	(nb_getval(hide_empty_workspaces, Hide), Hide = true -> WssToUse = RelevantWss ; WssToUse = Wss),
+	(hide_empty_workspaces(true) -> WssToUse = RelevantWss ; WssToUse = Wss),
 
 	length(WssToUse, WsCnt),
 	findall(DisplayedName,
 		(nth1(Idx, Wss, Ws), selectchk(Ws, WssToUse, _),
 		(selectchk(Ws, NonEmptyWss, _) ->
-			optcnf_then_else(ws_format_occupied(Fmt),
-				format_ws_name(Fmt, [Idx, Ws], DisplayedName), DisplayedName = Ws)
+			ws_format_occupied(Fmt),
+			format_ws_name(Fmt, [Idx, Ws], DisplayedName)
 		;
-			optcnf_then_else(ws_format(Fmt),
-				format_ws_name(Fmt, [Idx, Ws], DisplayedName), DisplayedName = Ws)
+			ws_format(Fmt),
+			format_ws_name(Fmt, [Idx, Ws], DisplayedName)
 		)),
 		DisplayedNames
 	),
@@ -1210,61 +1270,60 @@ ruletest_on(exact(Str), Str).
 
 %! apply_rules(++Win:integer) is det
 %
-%  Checks if the specified window matches any of config:rules/1, in case of a match,
+%  Checks if the specified window matches any of rules/1, in case of a match,
 %  applies mode of said rule (only that of the first match).
 %  Checks include: name, class and title of the window, see XGetClassHint(3)
 %  Modes include: managed, floating, [X,Y,W,H], fullscreen
 %
-%  For more details, see description of config:rules/1.
+%  For more details, see description of rules/1.
 %
 %  @arg Win XID of window to check and apply rules for
 apply_rules(Win) :-
-	optcnf_then(rules(Rules), (
-		(display(Dp), XA_WM_NAME is 39,
-		plx:x_get_class_hint(Dp, Win, WName, WClass),
-		plx:x_get_text_property(Dp, Win, WTitle, XA_WM_NAME, Status), Status =\= 0 ->
-			once((member((Name, Class, Title -> Mon, Ws, Mode), Rules),
-			ruletest_on(Name,  WName),
-			ruletest_on(Class, WClass),
-			ruletest_on(Title, WTitle) ->
-				active_mon_ws(ActMon, _),
-				(ground(Mon), monitors(Mons), member(Mon, Mons) -> ToMon = Mon ; ToMon = ActMon),
+	rules(Rules),
+	(Rules \= [], display(Dp), XA_WM_NAME is 39,
+	plx:x_get_class_hint(Dp, Win, WName, WClass),
+	plx:x_get_text_property(Dp, Win, WTitle, XA_WM_NAME, Status), Status =\= 0 ->
+		once((member((Name, Class, Title -> Mon, Ws, Mode), Rules),
+		ruletest_on(Name,  WName),
+		ruletest_on(Class, WClass),
+		ruletest_on(Title, WTitle) ->
+			active_mon_ws(ActMon, _),
+			(ground(Mon), monitors(Mons), member(Mon, Mons) -> ToMon = Mon ; ToMon = ActMon),
 
-				global_key_value(active_ws, ToMon, ActWsOnToMon),
-				(ground(Ws), nb_getval(workspaces, Wss),
-				(atom(Ws) -> member(Ws, Wss), ToWs = Ws ; nth1(Ws, Wss, ToWs, _)) -> true ; ToWs = ActWsOnToMon),
+			global_key_value(active_ws, ToMon, ActWsOnToMon),
+			(ground(Ws), nb_getval(workspaces, Wss),
+			(atom(Ws) -> member(Ws, Wss), ToWs = Ws ; nth1(Ws, Wss, ToWs, _)) -> true ; ToWs = ActWsOnToMon),
 
-				global_key_value(free_win_space, ActMon, [MX, MY, MW, MH]),
-				win_properties(Win, [_, Fullscr, [OldX, OldY, OldW, OldH]]),
-				(nonvar(Mode) ->
-					(Mode = floating ->
-						win_newproperties(Win, [floating, Fullscr, [OldX, OldY, OldW, OldH]])
-					; Mode = [X, Y, W, H] ->
-						(var(W) -> NewW is OldW
-						;EW is W, float(EW) -> NewW is round(MW * EW) ; NewW is W),
-						(var(H) -> NewH is OldH
-						;EH is H, float(EH) -> NewH is round(MH * EH) ; NewH is H),
-						(var(X)     -> NewX is OldX
-						;X = left   -> NewX is MX
-						;X = right  -> NewX is MX + MW - NewW
-						;X = center -> NewX is round(MX + MW / 2 - NewW / 2)
-						;EX is X, (float(EX) -> NewX is MX + round(MW * EX) ; NewX is MX + X)),
-						(var(Y)     -> NewY is OldY
-						;Y = top    -> NewY is MY
-						;Y = bottom -> NewY is MY + MH - NewH
-						;Y = center -> NewY is round(MY + MH / 2 - NewH / 2)
-						;EY is Y, (float(EY) -> NewY is MY + round(MH * EY) ; NewY is MY + Y)),
+			global_key_value(free_win_space, ActMon, [MX, MY, MW, MH]),
+			win_properties(Win, [_, Fullscr, [OldX, OldY, OldW, OldH]]),
+			(nonvar(Mode) ->
+				(Mode = floating ->
+					win_newproperties(Win, [floating, Fullscr, [OldX, OldY, OldW, OldH]])
+				; Mode = [X, Y, W, H] ->
+					(var(W) -> NewW is OldW
+					;EW is W, float(EW) -> NewW is round(MW * EW) ; NewW is W),
+					(var(H) -> NewH is OldH
+					;EH is H, float(EH) -> NewH is round(MH * EH) ; NewH is H),
+					(var(X)     -> NewX is OldX
+					;X = left   -> NewX is MX
+					;X = right  -> NewX is MX + MW - NewW
+					;X = center -> NewX is round(MX + MW / 2 - NewW / 2)
+					;EX is X, (float(EX) -> NewX is MX + round(MW * EX) ; NewX is MX + X)),
+					(var(Y)     -> NewY is OldY
+					;Y = top    -> NewY is MY
+					;Y = bottom -> NewY is MY + MH - NewH
+					;Y = center -> NewY is round(MY + MH / 2 - NewH / 2)
+					;EY is Y, (float(EY) -> NewY is MY + round(MH * EY) ; NewY is MY + Y)),
 
-						plx:x_move_resize_window(Dp, Win, NewX, NewY, NewW, NewH),
-						win_newproperties(Win, [floating, Fullscr, [NewX, NewY, NewW, NewH]])
-					; Mode = fullscreen ->
-						win_fullscreen(Win, true)
-					; true)
-				; true),
-				win_tomon_toworkspace_top(Win, ToMon, ToWs, true)
-			; true))
-		; true)
-	))
+					plx:x_move_resize_window(Dp, Win, NewX, NewY, NewW, NewH),
+					win_newproperties(Win, [floating, Fullscr, [NewX, NewY, NewW, NewH]])
+				; Mode = fullscreen ->
+					win_fullscreen(Win, true)
+				; true)
+			; true),
+			win_tomon_toworkspace_top(Win, ToMon, ToWs, true)
+		; true))
+	; true)
 .
 
 %! cmp_mons(+[X, Y, W, H]:[integer], +Mon1:string, +Mon2:string) is semidet
@@ -1349,13 +1408,13 @@ handle_event(buttonpress, [_, _, Dp, _, _, Subwin, _, _, _, Xroot, Yroot, _, But
 
 	% scrolled up
 	(Button = Button4 ->
-		(config(scroll_up_action(Action)), Action \= none ->
+		(scroll_up_action(Action), Action \= none ->
 			catch(ignore(Action), Ex, (writeln(Ex), true))
 		; true)
 
 	% scrolled down
 	;Button = Button5 ->
-		(config(scroll_down_action(Action)), Action \= none ->
+		(scroll_down_action(Action), Action \= none ->
 			catch(ignore(Action), Ex, (writeln(Ex), true))
 		; true)
 
@@ -1392,7 +1451,7 @@ handle_event(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
 		win_tomon_toworkspace_top(Win, Mon, ActWs, false), % dragged to other monitor
 
 		nb_getval(drag_initial_winattr, [AX, AY, AW, AH]),
-		config(border_width(BorderW)),
+		border_width(BorderW),
 		Xdiff is Xroot - SXroot,
 		Ydiff is Yroot - SYroot,
 		(SButton is 1 -> NewX is AX + Xdiff ; NewX is AX),
@@ -1400,8 +1459,12 @@ handle_event(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
 		(SButton is 3 -> NewW is max(1, AW + Xdiff) ; NewW is max(1, AW)),
 		(SButton is 3 -> NewH is max(1, AH + Ydiff) ; NewH is max(1, AH)),
 
-		% Check and apply snapping to screen edge if enabled
-		optcnf_then_else(snap_threshold(SnapPixel), (
+		% Apply snapping to screen edge
+		snap_threshold(SnapPixel),
+		(SnapPixel = 0 ->
+			plx:x_move_resize_window(Dp, Win, NewX, NewY, NewW, NewH),
+			FinalX is NewX, FinalY is NewY, FinalW is NewW, FinalH is NewH
+		;
 			global_key_value(free_win_space, Mon, [MX, MY, MW, MH]),
 			BdiffL is abs(MX - NewX), BdiffR is abs((MX + MW) - (NewX + NewW)),
 			BdiffT is abs(MY - NewY), BdiffB is abs((MY + MH) - (NewY + NewH)),
@@ -1424,12 +1487,7 @@ handle_event(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
 				NewYSnap is NewY
 			; true),
 			plx:x_move_resize_window(Dp, Win, NewXSnap, NewYSnap, NewWSnap, NewHSnap),
-			FinalX is NewXSnap, FinalY is NewYSnap, FinalW is NewWSnap, FinalH is NewHSnap
-		)
-		, (
-			plx:x_move_resize_window(Dp, Win, NewX, NewY, NewW, NewH),
-			FinalX is NewX, FinalY is NewY, FinalW is NewW, FinalH is NewH
-		)),
+			FinalX is NewXSnap, FinalY is NewYSnap, FinalW is NewWSnap, FinalH is NewHSnap),
 
 		global_value(layout, Layout),  % become unmanaged when moved/resized in non-floating layout
 		win_properties(Win, [PrevState, Fullscr|_]),
@@ -1448,13 +1506,13 @@ handle_event(keyrelease, _).
 handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
 	active_mon_ws(ActMon, ActWs),
 	(plx:x_get_window_attributes(Dp, Win, Geom, Status), Status =\= 0 ->
-	(config_exists(bar_class/2), plx:x_get_class_hint(Dp, Win, Name, Class),
-	 once(config(bar_class(Name, Class))) ->
+	(plx:x_get_class_hint(Dp, Win, Name, Class),
+	bar_classes(BarClasses), member(Name-Class, BarClasses) ->
 		nb_getval(bars, Bars),
 		(\+ memberchk(Win, Bars) ->
 			nb_setval(bars, [Win|Bars]),
 			plx:x_map_window(Dp, Win),
-			((\+ config_exists(bar_placement/1) ; config(bar_placement(follow_focus))) ->
+			(bar_placement(follow_focus) ->
 				rect_inmon(Geom, InMon),
 				shiftcoord_win_from_to(Win, InMon, ActMon)
 			; true),
@@ -1466,15 +1524,12 @@ handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
 		(\+ memberchk(Win, Wins) ->
 			run_hook(window_create_pre),
 
-			optcnf_then_else(attach_bottom(true),
-				append(Wins, [Win], NewWins),
-				NewWins = [Win|Wins]
-			),
+			(attach_bottom(true) -> append(Wins, [Win], NewWins) ; NewWins = [Win|Wins]),
 			global_newvalue(windows, NewWins),
 			plx:x_map_window(Dp, Win),
 
 			CWBorderWidth is 1 << 4,
-			config(border_width(BorderW)),
+			border_width(BorderW),
 			nb_getval(border_pixel, BorderPixel),
 			plx:x_configure_window(Dp, Win, CWBorderWidth, 0, 0, 0, 0, BorderW, 0, 0),
 			plx:x_set_window_border(Dp, Win, BorderPixel),
@@ -1838,7 +1893,7 @@ update_free_win_space() :-
 		forall(member(Bar, Bars), (
 			(plx:x_get_window_attributes(Dp, Bar, BarGeom, Status), Status =\= 0 ->
 				rect_inmon(BarGeom, InMon),
-				((\+ config_exists(bar_placement/1) ; config(bar_placement(static))) ->
+				(bar_placement(static) ->
 					(Mon = InMon -> trim_bar_space(Mon, BarGeom) ; true)
 				;
 					global_key_value(monitor_geom, InMon, [InMonX, InMonY, _, _]),
@@ -1849,12 +1904,13 @@ update_free_win_space() :-
 				)
 			; true)
 		)),
-		optcnf_then(outer_gaps(GapPixel), (
+		outer_gaps(GapPixel),
+		(GapPixel \= 0 ->
 			global_key_value(free_win_space, Mon, [X, Y, W, H]),
 			NewX is min(X + GapPixel, X + W), NewW is max(1, W - 2 * GapPixel),
 			NewY is min(Y + GapPixel, Y + H), NewH is max(1, H - 2 * GapPixel),
 			global_key_newvalue(free_win_space, Mon, [NewX, NewY, NewW, NewH])
-		)),
+		; true),
 
 		global_key_value(active_ws, Mon, ActWs),
 		layout:relayout(Mon-ActWs)
@@ -1879,9 +1935,10 @@ update_clientlist() :-
 
 %! setup_hooks() is det
 %
-%  Registers actions to events parsed from config:hooks/1.
+%  Registers actions to events parsed from hooks/1.
 setup_hooks() :-
-	config(hooks(Hooks)),
+	retractall(hook(_, _)),
+	hooks(Hooks),
 	forall(member((Event -> Action), Hooks), (
 		assertz(hook(Event, Action))
 	))
@@ -1904,7 +1961,7 @@ run_hook(Event) :-
 %  Initializes the window manager base state, i.e. the global, per-monitor and
 %  per-workspace states with defaults.
 init_state() :-
-	config(workspaces(Wss)),
+	workspaces(Wss),
 
 	empty_assoc(EmptyAMonGeom),      nb_setval(monitor_geom,   EmptyAMonGeom),
 	empty_assoc(EmptyAFreeWinSpace), nb_setval(free_win_space, EmptyAFreeWinSpace),
@@ -1928,10 +1985,7 @@ init_state() :-
 	nb_setval(workspaces, Wss),
 	nb_setval(bars, []),
 	nb_setval(dragged, none),
-	nb_setval(drag_initial_winattr, none),
-
-	optcnf_then_else(hide_empty_workspaces(State), true, State = false),
-	nb_setval(hide_empty_workspaces, State)
+	nb_setval(drag_initial_winattr, none)
 .
 
 %! query_outputs(-OutputInfos:[string-[int,int,int,int]]) is semidet
@@ -1988,8 +2042,8 @@ init_monitor(Mon, Geom) :-
 		writeln(Msg)
 	;
 
-	config(default_nmaster(Nmaster)), config(default_mfact(Mfact)), config(default_layout(Layout)),
-	config(starting_workspace(StartWs)), config(workspaces(Wss)),
+	default_nmaster(Nmaster), default_mfact(Mfact), default_layout(Layout),
+	starting_workspace(StartWs), workspaces(Wss),
 
 	global_key_newvalue(monitor_geom, Mon, Geom),
 
@@ -2020,139 +2074,17 @@ init_monitor(Mon, Geom) :-
 	nb_setval(focused,   NewAFocused),  nb_setval(windows, NewAWins),
 
 	% Apply per-monitor, per-workspace overrides
-	optcnf_then(layout_default_overrides(LDefOverrides),
-		forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
-			(ground(Ws) -> ForWss = [Ws] ; ForWss = Wss),
-			forall(member(ForWs, ForWss), (
-				(ground(NmasterOR) -> global_key_newvalue(nmaster, Mon-ForWs, NmasterOR) ; true),
-				(ground(MfactOR)   -> global_key_newvalue(mfact,   Mon-ForWs, MfactOR)   ; true),
-				(ground(LayoutOR)  -> global_key_newvalue(layout,  Mon-ForWs, LayoutOR)  ; true)
-			))
+	layout_default_overrides(LDefOverrides),
+	forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
+		(ground(Ws) -> ForWss = [Ws] ; ForWss = Wss),
+		forall(member(ForWs, ForWss), (
+			(ground(NmasterOR) -> global_key_newvalue(nmaster, Mon-ForWs, NmasterOR) ; true),
+			(ground(MfactOR)   -> global_key_newvalue(mfact,   Mon-ForWs, MfactOR)   ; true),
+			(ground(LayoutOR)  -> global_key_newvalue(layout,  Mon-ForWs, LayoutOR)  ; true)
 		))
-	),
+	)),
 	format(string(Msg), "Monitor \"~s\" managed", [Mon]),
 	writeln(Msg)
-.
-
-%! geometry_spec(++X:integer, ++Y:integer, ++W:integer, ++H:integer) is semidet
-%
-%  Checks whether X,Y,W,H form a window geometry specification, fails if not.
-%
-%  @arg X horizontal coordinate, percentage from left screen edge or left, right, center
-%  @arg Y vertical coordinate, percentage from top screen edge or top, bottom, center
-%  @arg W width in pixels or percentage of screen width
-%  @arg H height in pixels or percentage of screen height
-geometry_spec(X, Y, W, H) :-
-	(var(X) ; (integer(X), 0 =< X) ; (utils:is_float(X), 0 =< X, X =< 1) ; member(X, [left, right, center])),
-	(var(Y) ; (integer(Y), 0 =< Y) ; (utils:is_float(Y), 0 =< Y, Y =< 1) ; member(Y, [top, bottom, center])),
-	(var(W) ; (integer(W), 0  < W) ; (utils:is_float(W), 0 =< W, W =< 1)),
-	(var(H) ; (integer(H), 0  < H) ; (utils:is_float(H), 0 =< H, H =< 1))
-.
-
-%! check_errmsg(:Check:callable, ++ErrMsg:string) is det
-%
-%  Runs Check. If it fails, writes ErrMsg to stderr and terminates plwm with error.
-%
-%  @arg Check predicate to call and test success of
-%  @arg ErrMsg error message to print if Check fails
-check_errmsg(Check, ErrMsg) :- call(Check) -> true ; writeln(user_error, ErrMsg), quit(1).
-
-%! check_config() is det
-%
-%  Checks the existence of all mandatory configurations and validity of setting values.
-%  In case of an issue, an error message is printed and plwm is terminated.
-check_config() :-
-	% existence of mandatory settings
-	forall(member(Setting, [
-		default_nmaster/1, default_mfact/1, default_layout/1, border_width/1, border_width_focused/1,
-		border_color/1, border_color_focused/1, workspaces/1, starting_workspace/1, modkey/1, keymaps/1
-	]), (config_exists(Setting) ; (write(user_error, "mandatory setting missing: "), writeln(user_error, Setting), quit(1)))),
-
-	config(default_nmaster(Nmaster)), config(default_mfact(Mfact)), config(default_layout(Layout)),
-	config(border_width(BorderW)), config(border_width_focused(BorderWF)),
-	config(border_color(BorderColor)), config(border_color_focused(BorderColorFocused)),
-	config(workspaces(Wss)), config(starting_workspace(SWs)), config(modkey(Modkey)),
-	config(scroll_up_action(ScrollUpAct)), config(scroll_down_action(ScrollDownAct)), config(keymaps(Keymaps)),
-
-	forall(member(Check-ErrMsg, [
-
-	% mandatory settings
-	(integer(Nmaster), 0 =< Nmaster)                      - "default_nmaster must be a 0<= integer",
-	(utils:is_float(Mfact), 0.05 =< Mfact, Mfact =< 0.95) - "default_mfact must be a float between 0.05 and 0.95",
-	(layout:is_layout(Layout))                            - "default_layout is invalid (see: layout:is_layout)",
-	(integer(BorderW),  0 =< BorderW)                     - "border_width must be a 0<= integer",
-	(integer(BorderWF), 0 =< BorderWF)                    - "border_width_focused must be a 0<= integer",
-	(string(BorderColor))                                 - "border_color must be a string",
-	(string(BorderColorFocused))                          - "border_color_focused must be a string",
-	(lists:is_set(Wss), member(SWs, Wss), forall(member(Ws, Wss), atom(Ws))) - "workspaces must be a non-empty set of atoms containing starting_workspace",
-	(modifier(Modkey))                                    - "modkey must be shift, lock, ctrl, alt, mod2, mod3, super or mod5",
-	(utils:valid_callable(ScrollUpAct)   ; ScrollUpAct   = none) - "scroll_up_action must be a callable term or none",
-	(utils:valid_callable(ScrollDownAct) ; ScrollDownAct = none) - "scroll_down_action must be a callable term or none",
-
-	forall(member(Keybind -> Action, Keymaps), (
-		keybind_to_keylist(Keybind, KeyList),
-		forall(member(Key, KeyList), (modifier(Key) ; last(KeyList, Key))),
-		utils:valid_callable(Action)
-	)) - "invalid keymap detected",
-
-	% optional settings
-	optcnf_then(attach_bottom(AttachB), (AttachB = true ; AttachB = false))   - "attach_bottom must be true or false",
-	optcnf_then(snap_threshold(SnapT),  (integer(SnapT), 0 =< SnapT))         - "snap_threshold must be a 0<= integer",
-	optcnf_then(outer_gaps(GapPixelO),  (integer(GapPixelO), 0 =< GapPixelO)) - "outer_gaps must be a 0<= integer",
-	optcnf_then(inner_gaps(GapPixelI),  (integer(GapPixelI), 0 =< GapPixelI)) - "inner_gaps must be a 0<= integer",
-	optcnf_then(hide_empty_workspaces(HEWs), (HEWs = true ; HEWs = false))    - "hide_empty_workspaces must be true or false",
-	optcnf_then(ws_format(Fmt),           catch(format_ws_name(Fmt,  [0, a], _), _, fail)) - "ws_format must have ~w or ~d followed by ~w",
-	optcnf_then(ws_format_occupied(FmtO), catch(format_ws_name(FmtO, [0, a], _), _, fail)) - "ws_format_occupied must have ~w or ~d followed by ~w",
-	optcnf_then(bar_placement(BPlace), member(BPlace, [follow_focus, static])) - "bar_placement must be follow_focus or static",
-	optcnf_then(fifo_enabled(CFifoE), (CFifoE = true ; CFifoE = false))       - "fifo_enabled must be true or false",
-	optcnf_then(fifo_path(CFifoPath), string(CFifoPath))                      - "fifo_path must be a string",
-	optcnf_then(menucmd([A|As]), forall(member(Arg, [A|As]), string(Arg)))    - "menucmd must be a non-empty list of strings",
-	optcnf_then(animation_enabled(AnimE), (AnimE = true ; AnimE = false))     - "animation_enabled must be true or false",
-	optcnf_then(animation_time(AnimT), (utils:is_float(AnimT), 0.0 < AnimT))  - "animation_time must be a 0.0< float",
-	optcnf_then(animation_granularity(AnimG), (integer(AnimG), 1 =< AnimG))   - "animation_granularity must be a 1<= integer",
-
-	optcnf_then(rules(Rules),
-		forall(member(Rule, Rules), (
-			Rule = (RName, RClass, RTitle -> RMon, RWs, RMode),
-			(var(RName)  ; string(RName)  ; (RName  = exact(Str), string(Str))),
-			(var(RClass) ; string(RClass) ; (RClass = exact(Str), string(Str))),
-			(var(RTitle) ; string(RTitle) ; (RTitle = exact(Str), string(Str))),
-			(var(RMon)   ; string(RMon)),
-			(var(RWs)    ; atom(RWs) ; (integer(RWs), 0 < RWs)),
-			(var(RMode)  ; RMode = managed ; RMode = floating ; RMode = fullscreen
-			             ; (is_list(RMode), apply(geometry_spec, RMode)))
-		))
-	) - "invalid value in rule",
-
-	optcnf_then(layout_default_overrides(LDefOverrides),
-		forall(member(LDefOverride, LDefOverrides), (
-			LDefOverride = (MonOR, WsOR -> NmasterOR, MfactOR, LayoutOR),
-			(var(MonOR)     ; string(MonOR)),
-			(var(WsOR)      ; atom(WsOR)),
-			(var(NmasterOR) ; (integer(NmasterOR), 0 =< NmasterOR)),
-			(var(MfactOR)   ; (utils:is_float(MfactOR), 0.05 =< MfactOR, MfactOR =< 0.95)),
-			(var(LayoutOR)  ; layout:is_layout(LayoutOR))
-		))
-	) - "invalid value in layout_default_overrides",
-
-	optcnf_then(hooks(Hooks),
-		forall(member((Event -> Action), Hooks), (
-			member(Event, [
-				start, quit, switch_workspace_pre, switch_workspace_post,
-				switch_monitor_pre, switch_monitor_post, window_create_pre,
-				window_create_post, window_destroy_pre, window_destroy_post
-			]),
-			utils:valid_callable(Action)
-		))
-	) - "invalid value in hooks",
-
-	% settings that can have multiple instances
-	(config_exists(bar_class/2) ->
-		forall(config(bar_class(BarN, BarC)), (string(BarN), string(BarC))) ; true) - "bar_class must take two strings"
-
-	]), check_errmsg(Check, ErrMsg)),
-
-	writeln("Config: OK")
 .
 
 %! init_x() is det
@@ -2173,97 +2105,57 @@ init_x() :-
 	; true)
 .
 
-%! config_exists(:Config:term) is semidet
-%
-%  Checks whether the given configuration is defined.
-%  First, we check under the runtime_config:, then the config: module.
-%
-%  @arg Config predicate to check, must be in predicate indicator format, e.g. foo/2
-config_exists(Config) :- current_predicate(runtime_config:Config), !.
-config_exists(Config) :- current_predicate(config:Config).
-
-%! config(:Query:callable) is nondet
-%
-%  Runs a configuration query without the need to write the config: module prefix.
-%  Fails if the predicate does not exist.
-%
-%  @arg Query predicate that queries a term from config: or runtime_config:
-config(Query) :-
-	functor(Query, Name, Arity),
-	(current_predicate(runtime_config:Name/Arity) -> runtime_config:Query
-	;current_predicate(config:Name/Arity)         -> config:Query)
-.
-
-%! optcnf_then_else(:OptCnf:callable, :Then:callable, :Else:callable) is nondet
-%
-%  Queries the configuration OptCnf (trying from runtime_config:, then config:)
-%  If the query succeeds, Then is called, otherwise Else.
-%
-%  Used to conveniently run logic based on presence of optional settings while
-%  querying the value at the same time.
-%
-%  @arg OptCnf a configuration query without the config: or runtime_config: prefix
-%  @arg Then call to make if the OptCnf query succeeds
-%  @arg Else call to make if the OptCnf query fails
-optcnf_then_else(OptCnf, Then, Else) :- % condition on existence of optional settings
-	(config(OptCnf) -> Then ; Else)
-.
-
-%! optcnf_then(:OptCnf:callable, :Then:callable) is nondet
-%
-%  Like optcnf_then_else/3, but without an Else clause. Else case simply succeeds.
-%
-%  @arg OptCnf a configuration query without the config: or runtime_config: prefix
-%  @arg Then call to make if the OptCnf query succeeds
-optcnf_then(OptCnf, Then) :- optcnf_then_else(OptCnf, Then, true).
-
 %! load_custom_config() is semidet
 %
 %  Attempts to load the configuration module from a custom path provided by the user.
-%  If the use_module/1 call fails, this predicate fails too.
+%  Fails if the file does not exist.
 load_custom_config() :-
 	config_flag(UserC) ->
-		catch(use_module(UserC), Ex, (writeln(Ex), fail))
+		exists_file(UserC) ->
+			consult(UserC)
 .
 
 %! load_xdg_config(++PathSuffix) is semidet
 %
 %  Attempts to load the configuration module from under $XDG_CONFIG_HOME.
-%  If $XDG_CONFIG_HOME is unset or use_module/1 fails, this predicate fails too.
+%  Fails if $XDG_CONFIG_HOME is unset or if the file does not exist.
 %
 %  @arg PathSuffix relative path from $XDG_CONFIG_HOME to the configuration file
 load_xdg_config(PathSuffix) :-
 	getenv('XDG_CONFIG_HOME', XdgConfHome) ->
 		atom_concat(XdgConfHome, PathSuffix, XdgConf),
-		catch(use_module(XdgConf), Ex, (writeln(Ex), fail))
+		exists_file(XdgConf) ->
+			consult(XdgConf)
 .
 
 %! load_home_config(++PathSuffix) is semidet
 %
 %  Attempts to load the configuration module from under $HOME/.config.
-%  If $HOME is unset or use_module/1 fails, this predicate fails too.
+%  Fails if $HOME is unset or if the file does not exist.
 %
 %  @arg PathSuffix relative path from $HOME/.config to the configuration file
 load_home_config(PathSuffix) :-
 	getenv('HOME', Home) ->
 		atom_concat(Home, '/.config', HomeCDir), atom_concat(HomeCDir, PathSuffix, HomeConf),
-		catch(use_module(HomeConf), Ex, (writeln(Ex), fail))
+		exists_file(HomeConf) ->
+			consult(HomeConf)
 .
 
 %! load_etc_config(++PathSuffix) is semidet
 %
 %  Attempts to load the configuration module from under /etc.
-%  If use_module/1 fails, this predicate fails too.
+%  Fails if the file does not exist.
 %
 %  @arg PathSuffix relative path from /etc to the configuration file
 load_etc_config(PathSuffix) :-
 	atom_concat('/etc', PathSuffix, EtcConf),
-	catch(use_module(EtcConf), Ex, (writeln(Ex), fail))
+	exists_file(EtcConf) ->
+		consult(EtcConf)
 .
 
-%! load_runtime_config() is det
+%! load_config() is det
 %
-%  Attempts loading the runtime configuration file.
+%  Attempts loading the configuration file.
 %  The following is tried in this order:
 %    - path set with -c
 %    - $XDG_CONFIG_HOME/plwm/config.pl
@@ -2271,14 +2163,72 @@ load_etc_config(PathSuffix) :-
 %    - /etc/plwm/config.pl
 %
 %  Note: even if none of the above works, the predicate simply succeeds since
-%  the runtime config is optional.
-load_runtime_config() :-
+%  the config is optional.
+load_config() :-
 	PathSuffix = '/plwm/config.pl',
 	(load_custom_config            -> writeln("-c user config loaded")
 	; load_xdg_config(PathSuffix)  -> writeln("xdg config loaded")
 	; load_home_config(PathSuffix) -> writeln("home config loaded")
 	; load_etc_config(PathSuffix)  -> writeln("etc config loaded")
 	; true)
+.
+
+%! reload_config() is det
+%
+%  Reloads the user configuration with the following semantics:
+%  - settings absent from the config will retrain their current values
+%  - settings in the config which are invalid are defaulted with settings:default_set/2
+%  - settings in the config which are valid are applied
+reload_config() :-
+	% Retract all settings after making a snapshot of them
+	empty_assoc(SettigValueMap0),
+	nb_setval(settings_snapshot, SettigValueMap0),
+	forall(setting:setting(Setting), (
+		call(Setting, Value),
+		global_key_newvalue(settings_snapshot, Setting, Value),
+		compound_name_arguments(Config, Setting, [_]),
+		retractall(Config)
+	)),
+
+	% Consult user config
+	load_config,
+
+	% Restore previous values of those settings which were absent from the user config
+	forall(setting:setting(Setting), (
+		(\+ call(Setting, Value) ->
+			global_key_value(settings_snapshot, Setting, Value),
+			compound_name_arguments(Config, Setting, [Value]),
+			assertz(Config)
+		; true)
+	)),
+
+	% Validate settings, assign default values to ill-formed ones loaded from user config
+	setting:init_config(false),
+
+	% init_config assumes it's run during initialization, so it does not trigger
+	% post-set actions (e.g. relayout). Trigger those manually
+	forall(setting:setting(Setting), (
+		call(Setting, Value),
+		set(Setting, Value)
+	)),
+
+	nb_delete(settings_snapshot)
+.
+
+%! dump_settings(++FilePath:string) is det
+%
+%  Dumps all current settings to a file.
+%
+%  @arg FilePath path of file to create
+dump_settings(FilePath) :-
+	open(FilePath, write, DumpFile),
+	forall(setting:setting(Setting), (
+		call(Setting, Value),
+		compound_name_arguments(Config, Setting, [Value]),
+		write_term(DumpFile, Config, [quoted(true), spacing(next_argument)]),
+		writeln(DumpFile, ".")
+	)),
+	close(DumpFile)
 .
 
 %! opts_spec(-OptSpecs:[[term]]) is det
@@ -2311,7 +2261,7 @@ parse_opt(log(Log)) :-
 		set_stream(S, alias(user_output)),
 		set_stream(S, alias(user_error))
 	; true).
-parse_opt(check(true)) :- load_runtime_config, check_config, quit.
+parse_opt(check(true)) :- load_config, setting:init_config(true), quit.
 parse_opt(help(false)). parse_opt(version(false)). parse_opt(check(false)).
 
 %! main() is det
@@ -2327,8 +2277,8 @@ main() :-
 	opt_arguments(OptsSpec, Opts, _),
 	forall(member(Opt, Opts), parse_opt(Opt)),
 
-	load_runtime_config, % (if exists) overrides values from compiled in config
-	check_config,
+	load_config,
+	setting:init_config(false),
 
 	init_x,
 	init_state,

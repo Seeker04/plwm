@@ -181,24 +181,16 @@ then you'll have a triple stack layout where your windows will be evenly spread 
 
 ## Configuration
 
-Configuration is done by modifying [config.pl](src/config.pl) then recompiling with `make && sudo make install`.
+`sudo make install` installs the [default configuration](config/config.pl) to `/etc/plwm/config.pl`. This file can be copied to user config directories.
 
-plwm will also attempt reading configuration when it starts from the first file among
+plwm attempts reading configuration when it starts from the first file among
 - `$XDG_CONFIG_HOME/plwm/config.pl`
 - `$HOME/.config/plwm/config.pl`
 - `/etc/plwm/config.pl`
 
-if any exists, so users don't have to recompile each time if they don't wish to. Any values read from the runtime config will override the compiled in settings.
-
 A custom path can be specified with the `-c` flag.
 
-**Attention:** the module name in the runtime config must be `runtime_config`!
-
-You can run:
-
-`$ make mkconfig`
-
-which takes `src/config.pl` and generates the runtime config from it. Then keep modifying the latter while leaving the former in the default state. Or you can use the source one as a stable config and the runtime one for experimental overrides...
+**Note:** a reinstall will overwrite `/etc/plwm/config.pl`, however a backup is always created if there is any difference.
 
 While cooking your config, you can use the `-C` flag to quickly and easily check its validity.
 
@@ -223,7 +215,7 @@ While cooking your config, you can use the `-C` flag to quickly and easily check
 | `ws_format`                | string with a \~w **or**<br/>string with a \~d followed by a \~w<br>**Default:** "\~w"  | Format of empty workspaces on bars (~d = index, ~w = name) |
 | `ws_format_occupied`       | string with a \~w **or**<br/>string with a \~d followed by a \~w<br>**Default:** "▘\~w" | Format of occupied workspaces on bars |
 | `layout_default_overrides` | list of (Monitor, Workspace -> Nmaster, Mfact, Layout)<br>**Default:** [] | Overrides of the 3 values to specific monitors and/or workspaces (explained [here](#layout-overrides)) |
-| `bar_class`                | the two strings from bar's WM_CLASS,<br/>query with [xprop(1)](https://linux.die.net/man/1/xprop)<br>**Default:** "polybar", "Polybar" | Space will be reserved for matching windows and they cannot be focused, resized, etc. |
+| `bar_classes`              | list of string pairs from bar's WM_CLASS,<br/>query with [xprop(1)](https://linux.die.net/man/1/xprop)<br>**Default:** ["polybar"-"Polybar"] | Space will be reserved for matching windows and they cannot be focused, resized, etc. |
 | `bar_placement`            | follow_focus, static<br>**Default:** follow_focus               | Determines placement of external bars (explained [here](#layout-overrides)) |
 | `fifo_enabled`             | true or false<br>**Default:** false                             | Whether to spawn a command FIFO<br>(explained [here](#scriptability)) |
 | `fifo_path`                | string<br>**Default:** "/tmp/plwm_fifo"                         | Path of command FIFO                            |
@@ -238,13 +230,31 @@ While cooking your config, you can use the `-C` flag to quickly and easily check
 | `rules`                    | list of (Name, Class, Title -> Monitor, Workspace, Mode)<br>**Default:** [] | Auto place and configure matching windows (explained [here](#rules)) |
 | `hooks`                    | list of (Event -> Action)<br>**Default:** `[start -> writeln("plwm starting"), quit -> writeln("plwm quitting")]` | Run custom logic on certain events (explained [here](#hooks)) |
 
-**Notes**
+**Tips**
 
-In `keymaps/1`, the callback predicates can be arbitrary shell commands using `shellcmd/1`, even whole commandlines (some examples are included in the [default config](src/config.pl)).
+* You can safely remove any setting from your config file, plwm will use the default value for those.
+* In `keymaps/1`, the callback predicates can be arbitrary shell commands using `shellcmd/1`, even whole commandlines (some examples are included in the [default config](config/config.pl)).
+* If you wish to stick to default keymaps mostly, with only a few changes and feel redundant to list the whole table in your config, you can simply omit the `keymaps/1` setting and add your changes as a `start` hook like this:
+
+```Prolog
+hooks([
+  start -> (
+    add(keymaps, super + g -> shellcmd("gcolor2")),    % add new
+    add(keymaps, super + l -> switch_workspace(next)), % overwrite existing
+    add(keymaps, super + f -> none)                    % remove existing
+  )
+]).
+```
+
+**Changing settings during runtime**
+
+* `set/2` and `add/2` can be used to overwrite or append to existing settings, respectively. You can invoke them via a keymap, the [command fifo](#scriptability) or the [command menu](#menus).
+* The whole configuration file can be reloaded by calling `reload_config/0`.
+* You can use `dump_settings/1` to dump all current settings to a file.
 
 ## External bars
 
-First, you must specify `bar_class/2` based on the WM_CLASS properties of your bars, which you can find out using [xprop(1)](https://linux.die.net/man/1/xprop). Then you can both:
+First, you must specify `bar_classes/1` based on the WM_CLASS properties of your bars, which you can find out using [xprop(1)](https://linux.die.net/man/1/xprop). Then you can both:
 * manually start/close bars while plwm is already running
 * automatically start bars using `hooks/1` and its `start` event in the config
 
@@ -275,7 +285,7 @@ alt + b         -> shellcmd("pkill -fx 'polybar top' || polybar top"),
 alt + shift + b -> shellcmd("pkill -fx 'polybar bot' || polybar bot")
 ```
 
-**Note:** if you are using polybar, **do not enable** its `override-redirect = true` setting (it can even crash plwm in some cases)! Reasoning: plwm itself handles all bars (anything that matches `bar_class`, not just polybar) the intended way: bars cannot be focused, grabbed, moved or resized; tiling windows will never cover them (but you can drag floating windows above them); fullscreen windows will always cover them.
+**Note:** if you are using polybar, **do not enable** its `override-redirect = true` setting (it can even crash plwm in some cases)! Reasoning: plwm itself handles all bars (anything that matches `bar_classes`, not just polybar) the intended way: bars cannot be focused, grabbed, moved or resized; tiling windows will never cover them (but you can drag floating windows above them); fullscreen windows will always cover them.
 
 ## Multi-monitor
 
@@ -538,9 +548,9 @@ For known problems, see [the Issues with bug labels](https://github.com/Seeker04
 
 First and foremost, if you find any bugs, please [create a GitHub issue](https://github.com/Seeker04/plwm/issues/new), preferably, with all details you can provide. (First, please check if it's not reported already).
 
-If you have a feature request, please do the same.
+If you have a feature request or questions, feel free to [open discussions](https://github.com/Seeker04/plwm/discussions).
 
-Any code contribution is also welcome. Especially if it solves some known issue. For brand new ideas, I recommend creating an issue first, so we can discuss it.
+Any code contribution is also welcome. Especially if it solves some known issue. For brand new ideas, I recommend creating a discussion first.
 
 Please read the [Development Guide](docs/development_guide.md).
 
@@ -570,15 +580,17 @@ export _JAVA_AWT_WM_NONREPARENTING=1
 ```
 to your `.xinitrc` should solve this problem.
 
-**plwm doesn't start! What's going on?**
+**My configuration doesn't work!**
 
-Most likely your configuration is faulty. Run `plwm --check`, then you should see the problem.
+Run `plwm --check`, then you should see the problem. Consult the [table here](#configuration) to see the proper type for each setting. E.g. make sure you use double quotes for _strings_ and single quotes for _atoms_.
 
-If you don't see a config error, then please report it as an issue. Preferably by attaching any message plwm dumps to stderr or to its logfile with `-l`.
+If you don't see any error, then please report it as an issue by attaching your config and any message plwm dumps to stderr or to its logfile with `-l`.
 
 **Something is missing...**
 
-plwm is minimal in the sense that it doesn't try to solve problems outside of a window manager's domain, especially if they are easily served by other programs (see [here](https://en.wikipedia.org/wiki/Unix_philosophy)):
+tl;dr plwm is a window manager, not a full-fledged desktop environment.
+
+plwm is minimal in the sense that it doesn't try to solve problems outside of a wm's domain, especially if they are easily served by other programs (see [here](https://en.wikipedia.org/wiki/Unix_philosophy)):
 
 * Don't want a status bar? You're set. Want one (or more)? Here are a few: [polybar](https://polybar.github.io/), [lemonbar](https://github.com/LemonBoy/bar), [xmobar](https://codeberg.org/xmobar/xmobar)
 * Want transparent windows or other effects? Use a compositor like [picom](https://wiki.archlinux.org/title/Picom)

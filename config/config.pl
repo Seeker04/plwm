@@ -1,9 +1,17 @@
 % MIT License, Copyright (c) 2023-2025 Barnabás Zahorán, see LICENSE
 %
+% This is plwm's default configuration installed under /etc
+%
+% You can revert this file by reinstalling plwm (if it differs, a backup will be kept)
+%
+% Users can create their own configs under
+%     $XDG_CONFIG_HOME/plwm/config.pl
+% or
+%     $HOME/.config/plwm/config.pl
+% to overrule this file
+%
 % Note: there is extensive commenting in this file, as well as arbitrary examples
 % for easier understanding. Feel free to remove them once you're familiar with the settings
-
-:- module(config, []).
 
 %*********************************  Layout  ***********************************
 
@@ -79,10 +87,9 @@ layout_default_overrides([
 %**********************************  Bars  ************************************
 
 % Use xprop(1) or a similar tool to find out the WM_CLASS property of your bar
-% You may specify only the name: ("name", _) or only the class: (_, "class")
-% List multiple bar_class lines below if you use multiple different bars
-% You can delete the line, if you don't use any bar
-bar_class("polybar", "Polybar").
+% You may specify only the name: "name"-_ or only the class: _-"class"
+% List multiple bar_classes if you use multiple different bars
+bar_classes(["polybar"-"Polybar"]).
 
 % Possible values:
 %   follow_focus: space will be reserved for bars on all monitors and bars will
@@ -243,22 +250,22 @@ keymaps([
 
   %%%%% Custom mapping examples %%%%%
 
+  % Launch applications
+  ctrl + shift + space      ->  shellcmd("alacritty")           ,
+  alt + a                   ->  shellcmd("dmenu_run -l 20 -p run")
+
   % Toggle status bar
-  alt + b                   ->  shellcmd("pkill polybar || polybar top") ,
+ %alt + b                   ->  shellcmd("pkill polybar || polybar top") ,
  %alt + b                   ->  shellcmd("pkill polybar || (polybar top & polybar bot)") ,
  %alt + b                   ->  shellcmd("pkill -fx 'polybar top' || polybar top") ,
  %alt + shift + b           ->  shellcmd("pkill -fx 'polybar bot' || polybar bot") ,
 
-  % Launch applications
-  ctrl + shift + space      ->  shellcmd("alacritty")           ,
-  alt + a                   ->  shellcmd("dmenu_run -c -l 20")  ,
-
   % Special keys (see xf86names.pl for all such keys)
-  "AudioRaiseVolume"        ->  shellcmd("pulseaudio-ctl up")   ,
-  "AudioLowerVolume"        ->  shellcmd("pulseaudio-ctl down") ,
-  "AudioMute"               ->  shellcmd("pulseaudio-ctl mute") ,
-  "MonBrightnessUp"         ->  shellcmd("xbacklight -inc 1")   ,
-  "MonBrightnessDown"       ->  shellcmd("xbacklight -dec 1")
+ %"AudioRaiseVolume"        ->  shellcmd("pulseaudio-ctl up")   ,
+ %"AudioLowerVolume"        ->  shellcmd("pulseaudio-ctl down") ,
+ %"AudioMute"               ->  shellcmd("pulseaudio-ctl mute") ,
+ %"MonBrightnessUp"         ->  shellcmd("xbacklight -inc 1")   ,
+ %"MonBrightnessDown"       ->  shellcmd("xbacklight -dec 1")
 ]).
 
 
@@ -288,9 +295,9 @@ keymaps([
 
 rules([
 %  name      class     title                 monitor     wspace    mode
-  (_      ,  _      ,  exact("gcolor2")  ->  _        ,  _      ,  [center, center, 1/3, 1/3]),
-  (_      ,  _      ,  "Firefox"         ->  "eDP-1"  ,  'www'  ,  fullscreen                ),
-  ("Bar"  ,  "Baz"  ,  _                 ->  "HDMI-1" ,  '1'    ,  [700, 250, _, _]          )
+% ( _      ,  _      ,  exact("gcolor2")  ->  _        ,  _      ,  [center, center, 1/3, 1/3] ),
+% ( _      ,  _      ,  "Firefox"         ->  "eDP-1"  ,  'www'  ,  fullscreen                 ),
+% ( "Bar"  ,  "Baz"  ,  _                 ->  "HDMI-1" ,  '1'    ,  [700, 250, _, _]           )
 ]).
 
 % You can find out the name, class and title values of windows using xprop(1):

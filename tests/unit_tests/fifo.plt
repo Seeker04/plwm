@@ -1,8 +1,8 @@
 % MIT License, Copyright (c) 2023-2025 Barnabás Zahorán, see LICENSE
 
 % mocks
-optcnf_then(fifo_enabled(true), Then) :- Then.
-optcnf_then(fifo_path(FifoPath), Then) :- FifoPath = "/tmp/test-fifo", Then.
+fifo_enabled(true).
+fifo_path("/tmp/test-fifo").
 
 :- begin_tests(fifo_tests).
 
@@ -10,7 +10,7 @@ optcnf_then(fifo_path(FifoPath), Then) :- FifoPath = "/tmp/test-fifo", Then.
 
 test("setup_fifo +", [
 	setup(
-		optcnf_then(fifo_path(FifoPath), true)
+		fifo_path(FifoPath)
 	),
 	cleanup(
 		delete_file(FifoPath)
@@ -28,7 +28,7 @@ test("setup_fifo +", [
 
 test("setup_fifo + (already exists)", [
 	setup((
-		optcnf_then(fifo_path(FifoPath), true),
+		fifo_path(FifoPath),
 		open(FifoPath, write, _) % create empty file
 	)),
 	cleanup(
@@ -46,7 +46,7 @@ test("setup_fifo + (already exists)", [
 
 test("process_fifo", [
 	setup((
-		optcnf_then(fifo_path(FifoPath), true),
+		fifo_path(FifoPath),
 		string_concat("mkfifo ", FifoPath, MkFifoCmd),
 		shell(MkFifoCmd)
 	)),

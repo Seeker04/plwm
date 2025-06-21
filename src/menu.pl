@@ -7,16 +7,16 @@
 
 %! spawn_menu(++Prompt:string, ++Entries:[string], :Callback:callable) is det
 %
-%  Creates a menu process defined in config:menucmd/1, writes the list of possible
+%  Creates a menu process defined in menucmd/1, writes the list of possible
 %  selections to its stdin and if a selection happens (to stdout), passes it to
 %  the provided callback function.
 % 
-%  @arg Prompt string appended as final argument to config:menucmd/1
-%  @arg Entries list of single-line strings passed as input to config:menucmd/1
+%  @arg Prompt string appended as final argument to menucmd/1
+%  @arg Entries list of single-line strings passed as input to menucmd/1
 %  @arg Callback predicate that is called on lines selected from Entries
 spawn_menu(_, [], _) :- !.
 spawn_menu(Prompt, Entries, Callback) :-
-	optcnf_then(menucmd([MenuCmd|MenuArgs]), (
+	(menucmd([MenuCmd|MenuArgs]) ->
 		append(MenuArgs, [Prompt], MenuArgsWithPrompt),
 
 		process:process_create(path(MenuCmd), MenuArgsWithPrompt, [stdin(pipe(MenuIn)), stdout(pipe(MenuOut))]),
@@ -30,26 +30,26 @@ spawn_menu(Prompt, Entries, Callback) :-
 			; true)
 			% don't accept arbitrary input from menu prompt, only proper selection
 		; true)
-	))
+	; true)
 .
 
 %! read_from_prompt(++Prompt:string, --Input:string) is semidet
 %
-%  Uses config:menucmd/1 with zero selection to create a graphical prompt and
+%  Uses menucmd/1 with zero selection to create a graphical prompt and
 %  captures the text the user writes into the prompt.
-%  Fails if config:menucmd/1 is not set.
+%  Fails if menucmd/1 is not set.
 %  
-%  @arg Prompt string appended as final argument to config:menucmd/1
+%  @arg Prompt string appended as final argument to menucmd/1
 %  @arg Input string that the user wrote after the prompt
 read_from_prompt(Prompt, Input) :-  % use menucmd as a simple input prompt
-	optcnf_then_else(menucmd([MenuCmd|MenuArgs]),
+	(menucmd([MenuCmd|MenuArgs]) ->
 		(append(MenuArgs, [Prompt], MenuArgsWithPrompt),
 
 		process:process_create(path(MenuCmd), MenuArgsWithPrompt, [stdin(pipe(MenuIn)), stdout(pipe(MenuOut))]),
 		close(MenuIn), % no input for menu
 		read_string(MenuOut, _, InputLine), InputLine \= "", InputLine \= "\n",
 		utils:str_withoutlastch(InputLine, Input))
-	,
+	;
 		fail
 	)
 .
@@ -102,7 +102,7 @@ mon_ws_wint_format(Mon, Ws, WinT, Str) :-
 %  Lists all windows to the user using spawn_menu/3.
 %  If a selection happens, runs the specified callback on it.
 %  
-%  @arg Prompt string appended as final argument to config:menucmd/1
+%  @arg Prompt string appended as final argument to menucmd/1
 %  @arg Callback predicate that is called on the list of selected windows
 spawn_winlist_menu(Prompt, Callback) :-
 	display(Dp), monws_keys(Keys), XA_WM_NAME is 39,
@@ -283,10 +283,10 @@ delete_workspaces() :-
 	nb_getval(workspaces, Wss),
 	(Wss \= [_] ->  % don't even spawn the list if there is only one ws left
 		findall(WsStr, (member(Ws, Wss), atom_string(Ws, WsStr)), Lines),
-		spawn_menu("delete workspace", Lines, menu:delete_workspace_)
+		spawn_menu("delete workspaces", Lines, menu:delete_workspaces_)
 	; true)
 .
-delete_workspace_(Selections) :-
+delete_workspaces_(Selections) :-
 	forall(member(Sel, Selections), (atom_string(Ws, Sel), delete_workspace(Ws)))
 .
 
@@ -369,10 +369,14 @@ cmd_desc(menu:delete_workspaces, "Delete selected workspaces").
 cmd_desc(menu:list_keymaps     , "List all defined keymaps").
 cmd_desc(shellcmd(Cmd), D) :- format(string(D), "Run `~s`", [Cmd]).
 cmd_desc(shellcmd, "Run a shell command").
+cmd_desc(reload_config, "Reload configuration file").
+cmd_desc(dump_settings, "Dump current settings to a file").
+cmd_desc(set(Setting), D) :- string_concat("Change setting ", Setting, D).
+cmd_desc(add(Setting), D) :- string_concat("Add to setting ", Setting, D).
 
 %! keybind_padded(++Keybind:[char], -PaddedKeybind:[char]) is det
 %
-%  Takes a list of characters of a key binding definition (see: config:keymaps/1)
+%  Takes a list of characters of a key binding definition (see: keymaps/1)
 %  and adds a ' ' (space) before and after each '+' in the list.
 %
 %  @arg Keybind original character list of key binding
@@ -410,6 +414,36 @@ shellcmd_prompt() :-
 	; true)
 .
 
+%! change_setting_prompt(++SettingName:string, ++Append:bool) is semidet
+%
+%  Prompts the user for a new setting value and if valid, sets it.
+%  Fails if the input is invalid.
+%  If the Append flag is set, the setting (list) will be appended instead of overwritten.
+%
+%  @arg SettingName name of the setting to change
+%  @arg Append whether it's a setting override or an appending (to a list typed setting)
+change_setting_prompt(SettingName, Append) :-
+	(Append = true -> PromptPrefix = "Add to " ; PromptPrefix = "Set "),
+	string_concat(PromptPrefix, SettingName, PromptStr),
+
+	(read_from_prompt(PromptStr, Input) ->
+		atom_string(Setting, SettingName),
+		ignore((
+			catch(term_string(Value, Input), Ex, (writeln(Ex), fail)),
+			(Append = true -> add(Setting, Value) ; set(Setting, Value))
+		))
+	; true)
+.
+
+%! dump_settings_prompt() is det
+%
+%  Prompts the user for a path to dump settings to. See dump_settings/1 for details.
+dump_settings_prompt() :-
+	(read_from_prompt("Dump settings to", Input) ->
+		dump_settings(Input)
+	; true)
+.
+
 %! run_cmd(++MenuEntries:[Action-Line], --Selection) is semidet
 %
 %  Should be passed as a callback to spawn_menu/3 with only the first argument filled.
@@ -420,21 +454,24 @@ shellcmd_prompt() :-
 %  @arg Selection list of selections - unused, filled be spawn_menu/3
 run_cmd(MenuEntries, [Selection]) :-
 	(member(Cmd-Selection, MenuEntries) ->
-		(Cmd = change_nmaster -> change_nmaster_prompt
+		(Cmd = set(Setting)   -> change_setting_prompt(Setting, false)
+		;Cmd = add(Setting)   -> change_setting_prompt(Setting, true)
+		;Cmd = change_nmaster -> change_nmaster_prompt
 		;Cmd = change_mfact   -> change_mfact_prompt
 		;Cmd = shellcmd       -> shellcmd_prompt
+		;Cmd = dump_settings  -> dump_settings_prompt
 		;call(Cmd))
 	; true)
 .
 
 %! list_keymaps() is det
 %
-%  List all defined key mappings from config:keymaps/1 in the format:
+%  List all defined key mappings from keymaps/1 in the format:
 %    [Mod1 + ... + Modn +] Key      Command      Command description
 %
 %  If a selection happens, the selected mapping's Command is executed.
 list_keymaps() :-
-	config(keymaps(Keymaps)),
+	keymaps(Keymaps),
 	findall(KBStr,
 		(member((KB -> _), Keymaps), format(chars(KBChars), "~p", [KB]),
 		keybind_padded(KBChars, KBCharsPadded), string_chars(KBStr, KBCharsPadded)),
@@ -451,7 +488,7 @@ list_keymaps() :-
 	findall(Action-Line, (   % map key (Action) to lines for later lookup
 		nth1(Idx, Keymaps, (_ -> Action)),
 		nth1(Idx, KBStrs, KBStr),
-		cmd_desc(Action, Desc),
+		once(cmd_desc(Action, Desc) ; Desc = ""),
 		format(string(Line), Fmt, [KBStr, Action, Desc])),
 		MenuEntries),
 	findall(Line, member(_-Line, MenuEntries), Lines),
@@ -551,7 +588,46 @@ list_cmds() :-
 		menu:reindex_workspace,
 		menu:delete_workspaces,
 		menu:list_keymaps,
-		shellcmd
+		shellcmd,
+		reload_config,
+		dump_settings,
+		set(default_nmaster),
+		set(default_mfact),
+		set(default_layout),
+		set(attach_bottom),
+		set(border_width),
+		set(border_width_focused),
+		set(border_color),
+		set(border_color_focused),
+		set(snap_threshold),
+		set(outer_gaps),
+		set(inner_gaps),
+		set(workspaces),
+		%set(starting_workspace), no sense to change, omit from the list
+		set(hide_empty_workspaces),
+		set(ws_format),
+		set(ws_format_occupied),
+		set(layout_default_overrides),
+		set(bar_classes),
+		set(bar_placement),
+		%TODO set(fifo_enabled),
+		%TODO set(fifo_path),
+		set(menucmd),
+		set(animation_enabled),
+		set(animation_time),
+		set(animation_granularity),
+		set(modkey),
+		set(scroll_up_action),
+		set(scroll_down_action),
+		set(keymaps),
+		set(rules),
+		set(hooks),
+		%add(workspaces), we have menu:create_workspace/0 and create_workspace/1 for this
+		add(layout_default_overrides),
+		%add(menucmd), whole menu command should be changed at once from a user perspective
+		add(keymaps),
+		add(rules),
+		add(hooks)
 		]
 	], Cmds),
 

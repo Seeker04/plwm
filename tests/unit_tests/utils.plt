@@ -15,7 +15,7 @@ test("valid_callable +") :-
 	assertion(utils:valid_callable(utils:valid_callable(true)))
 .
 
-test("valid_callable - (non-existing predicate)") :-
+test("valid_callable - (non-existent predicate)") :-
 	assertion(\+ utils:valid_callable(i_dont_exist)),
 	assertion(\+ utils:valid_callable(i_dont_exist(foo))),
 	assertion(\+ utils:valid_callable(i_dont_exist(foo, bar)))
