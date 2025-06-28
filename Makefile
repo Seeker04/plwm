@@ -11,29 +11,34 @@ OFLAGS  = -O2
 CFLAGS  = -std=$(CSTD) $(IFLAGS) $(WFLAGS) $(OFLAGS) -fpic
 LDFLAGS = -shared -lX11 -lXft -lXrandr
 
-SWIFLAGS = -p foreign=$(INSTALLDIR_LIB) \
-           --goal=main --toplevel=halt --stand_alone=true -O -o plwm -c src/plwm.pl
+LIB_PATH = /usr/local/lib
 
-INSTALLDIR_BIN = /usr/local/bin
-INSTALLDIR_LIB = /usr/local/lib
-INSTALLDIR_CNF = /etc/plwm
-INSTALLDIR_MAN = /usr/local/share/man/man1
+BIN_DIR = bin
+PLWM = $(BIN_DIR)/plwm
+PLX_O = $(BIN_DIR)/plx.o
+PLX_SO = $(BIN_DIR)/plx.so
+
+SWIFLAGS = -p foreign=$(LIB_PATH) \
+           --goal=main --toplevel=halt --stand_alone=true -O -o $(PLWM) -c src/plwm.pl
 
 #================================== Build =====================================
 
-plwm: plx.so src/*.pl
+$(PLWM): src/*.pl $(PLX_SO)
 	swipl $(SWIFLAGS)
 
-plx.o: src/plx.c
-	$(CC) -c $(CFLAGS) $< -o $@
-
-plx.so: src/plx.o
+$(PLX_SO): $(PLX_O)
 	$(CC) $< $(LDFLAGS) -o $@
 
-clean:
-	rm -f src/plx.o plx.so plwm
+$(PLX_O): src/plx.c $(BIN_DIR)
+	$(CC) -c $(CFLAGS) $< -o $@
 
-rebuild: clean plwm
+$(BIN_DIR):
+	mkdir $(BIN_DIR)
+
+clean:
+	rm -f $(BIN_DIR)/*
+
+rebuild: clean $(PLWM)
 
 #============================== Static checks =================================
 
@@ -59,19 +64,9 @@ test:
 
 #============================ Install/uninstall ===============================
 
-VERSION = ${shell sed -n 's/^version(\([0-9.]\+\))\.$$/\1/p' src/plwm.pl}
-
-install: plwm
-	install -D --mode=755 plwm $(INSTALLDIR_BIN)/plwm
-	install -D --mode=755 plx.so $(INSTALLDIR_LIB)/plx.so
-	install -D --mode=644 -C --backup=numbered config/config.pl $(INSTALLDIR_CNF)/config.pl
-	mkdir -p $(INSTALLDIR_MAN)
-	sed 's/VERSION/$(VERSION)/' < docs/plwm.1 > $(INSTALLDIR_MAN)/plwm.1
-	chmod 644 $(INSTALLDIR_MAN)/plwm.1
+install:
+	tools/install.sh
 
 uninstall:
-	rm -f $(INSTALLDIR_BIN)/plwm \
-	      $(INSTALLDIR_LIB)/plx.so \
-	      $(INSTALLDIR_MAN)/plwm.1
-	[ -d $(INSTALLDIR_CNF) ] && echo "Note: $(INSTALLDIR_CNF) is kept" || true
+	tools/uninstall.sh
 

@@ -1,7 +1,7 @@
 <!-- MIT License, Copyright (c) 2023-2025 Barnabás Zahorán, see LICENSE -->
 
 <p align="center">
-  <img alt="plwm logo" src="img/logo.png">
+  <img alt="plwm logo" src="../img/logo.png">
 </p>
 
 # plwm - An X11 window manager written in Prolog
@@ -52,20 +52,23 @@ Powered by [SWI-Prolog](https://www.swi-prolog.org/)
 
 # Installation
 
+**From release**
+
+Download the latest version from the [releases](https://github.com/Seeker04/plwm/releases), extract and run `./install.sh`.
+
+**From source**
+
+Run `make && sudo make install`
+
 **Dependencies:**
 
-* `xorg` with `libx11-dev`, `libxft-dev`, `libxrandr-dev` (exact package names may vary)
-* [SWI-Prolog](https://www.swi-prolog.org/Download.html) (downloadable from most distros' package repos)
+* `xorg` with `libx11-dev`, `libxft-dev`, `libxrandr-dev`<br>
+(exact package names may vary, `dev` versions are only needed when building from source)
+* [SWI-Prolog](https://www.swi-prolog.org/Download.html) (most likely also packaged by your distro)
 
-On Ubuntu 22.04, easiest way to install them is:
+E.g. on Ubuntu 22.04, easiest way to install them is:
 
-`$ sudo apt install xorg-dev swi-prolog`
-
-Run:
-
-`$ make && sudo make install`
-
-By default, this will install plwm to `/usr/local/bin/`. The location can be adjusted in the [Makefile](Makefile).
+`sudo apt install xorg-dev swi-prolog`
 
 ## Minimal environment
 
@@ -181,7 +184,7 @@ then you'll have a triple stack layout where your windows will be evenly spread 
 
 ## Configuration
 
-`sudo make install` installs the [default configuration](config/config.pl) to `/etc/plwm/config.pl`. This file can be copied to user config directories.
+`sudo make install` installs the [default configuration](../config/config.pl) to `/etc/plwm/config.pl`. This file can be copied to user config directories.
 
 plwm attempts reading configuration when it starts from the first file among
 - `$XDG_CONFIG_HOME/plwm/config.pl`
@@ -226,14 +229,14 @@ While cooking your config, you can use the `-C` flag to quickly and easily check
 | `modkey`                   | shift, lock, ctrl, alt, mod2, mod3, super, mod5<br>**Default:** super | Key you must hold for mouse operations    |
 | `scroll_up_action`         | callable term or 'none'<br>**Default:** switch_workspace(next)  | Action to perform on modkey + scroll up         |
 | `scroll_down_action`       | callable term or 'none'<br>**Default:** switch_workspace(prev)  | Action to perform on modkey + scroll down       |
-| `keymaps`                  | list of (Modifiers + Key -> Action)<br>**Default:** [see here](#default-keybindings) | Modifiers: see values at `modkey`<br/>Key: keycode, [usual X11 names](http://xahlee.info/linux/linux_show_keycode_keysym.html), or [special key](src/xf86names.pl)<br/>Action: callable term |
+| `keymaps`                  | list of (Modifiers + Key -> Action)<br>**Default:** [see here](#default-keybindings) | Modifiers: see values at `modkey`<br/>Key: keycode, [usual X11 names](http://xahlee.info/linux/linux_show_keycode_keysym.html), or [special key](../src/xf86names.pl)<br/>Action: callable term |
 | `rules`                    | list of (Name, Class, Title -> Monitor, Workspace, Mode)<br>**Default:** [] | Auto place and configure matching windows (explained [here](#rules)) |
 | `hooks`                    | list of (Event -> Action)<br>**Default:** `[start -> writeln("plwm starting"), quit -> writeln("plwm quitting")]` | Run custom logic on certain events (explained [here](#hooks)) |
 
 **Tips**
 
 * You can safely remove any setting from your config file, plwm will use the default value for those.
-* In `keymaps/1`, the callback predicates can be arbitrary shell commands using `shellcmd/1`, even whole commandlines (some examples are included in the [default config](config/config.pl)).
+* In `keymaps/1`, the callback predicates can be arbitrary shell commands using `shellcmd/1`, even whole commandlines (some examples are included in the [default config](../config/config.pl)).
 * If you wish to stick to default keymaps mostly, with only a few changes and feel redundant to list the whole table in your config, you can simply omit the `keymaps/1` setting and add your changes as a `start` hook like this:
 
 ```Prolog
@@ -520,15 +523,15 @@ done > /tmp/plwm_fifo
 
 # Screenshots
 
-| ![Screenshot 1](img/screenshot1.png) |
+| ![Screenshot 1](../img/screenshot1.png) |
 |:--:|
 | *default appearance* |
 
-| ![Screenshot 2](img/screenshot2.png) |
+| ![Screenshot 2](../img/screenshot2.png) |
 |:--:|
 | *lmaster / nmaster=1 / mfact=2/3 / 1px borders / 18px inner & outer gaps / goto window menu / polybar / picom / gruvbox colors* |
 
-| ![Screenshot 3](img/screenshot3.png) |
+| ![Screenshot 3](../img/screenshot3.png) |
 |:--:|
 | *bmaster / nmaster=1 / mfact=2/3 / 3px focused border / 26px inner & outer gaps / polybar / picom /w rounded corners & shadows* |
 
@@ -552,7 +555,7 @@ If you have a feature request or questions, feel free to [open discussions](http
 
 Any code contribution is also welcome. Especially if it solves some known issue. For brand new ideas, I recommend creating a discussion first.
 
-Please read the [Development Guide](docs/development_guide.md).
+Please read the [Development Guide](development_guide.md).
 
 # FAQ
 
@@ -566,7 +569,7 @@ Compared to what? C? Yes. Does it matter? No. I've been using dwm for 6 years, s
 
 **Isn't SWI-Prolog non-ISO compliant?**
 
-Interoperability between different Prolog implementations was never really on the table. Their C FFIs are also different, so [plx.c](plx.c) would also need to be rewritten for each kind of Prolog. SWI-Prolog is arguably one of the most popular free and community-driven Prolog implementations, is easily accessible, has good documentation, some LSP support and a lot of libraries. Though, to be honest, plwm's code mostly sticks to fundamentals, so if someone really wanted to, it shouldn't be too hard to port this to another Prolog system...
+Interoperability between different Prolog implementations was never really on the table. Their C FFIs are also different, so [plx.c](../src/plx.c) would also need to be rewritten for each kind of Prolog. SWI-Prolog is arguably one of the most popular free and community-driven Prolog implementations, is easily accessible, has good documentation, some LSP support and a lot of libraries. Though, to be honest, plwm's code mostly sticks to fundamentals, so if someone really wanted to, it shouldn't be too hard to port this to another Prolog system...
 
 **Why not Wayland?**
 

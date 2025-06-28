@@ -2,7 +2,7 @@
 %
 % plwm - an X11 window manager written in Prolog
 %
-% See README.md for getting started
+% See docs/README.md to get started
 
 version(0.4).
 

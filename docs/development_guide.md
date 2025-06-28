@@ -178,19 +178,19 @@ plwm is currently in a pre-release stage.
 Now we simply increment a `0.x` version every 4-6 months.
 
 Current process:
-* Increment `version/1` in [plwm.pl](../src/plwm.pl).
-* Update [CHANGELOG.md](../CHANGELOG.md) with changes since the latest version based on commit history.
+* Increment `version/1` in [plwm.pl](../src/plwm.pl) and in [plwm.1](plwm.1).
+* Update [CHANGELOG.md](../docs/CHANGELOG.md) with changes since the latest version based on commit history.
 * Create "Version bump to 0.x" commit.
 * Create `v0.x` git tag.
 * Push commit and tag.
 * Create a [new release](https://github.com/Seeker04/plwm/releases/new) from the tag.
   * Name: "plwm v0.x"
-  * Assets: `plwm-v0.x-linux-x86_64.tar.gz` with `bin/plwm` and `lib/plx.so` extracted from a Docker build
+  * Assets: archive created with [generate_release.sh](../tools/generate_release.sh) from the Docker build
   * Description:
 ```
 Version 0.x
 
-See [CHANGELOG.md](CHANGELOG.md)
+See [CHANGELOG.md](link to the new section in docs/CHANGELOG.md)
 
 Note: Experimental release (first stable version will be 1.0.0)
 ```
