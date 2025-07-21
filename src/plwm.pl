@@ -1113,11 +1113,16 @@ delete_monitor(Mon) :-
 	monitors(Mons),
 	(Mons \= [_] ->  % keep logic of final monitor even if it's disconnected
 		(nextto(Mon, NMon, Mons) -> NextMon = NMon ; Mons = [NextMon|_]),
-		nb_getval(workspaces, Wss),
+
+		nb_getval(workspaces, Wss), % move windows to next monitor
 		forall(member(Ws, Wss), (
 			forall(global_key_value(windows, Mon-Ws, Wins), (
 				forall(member(Win, Wins), win_tomon_toworkspace_top(Win, NextMon, Ws, false))
 		)))),
+
+		nb_getval(active_mon, ActMon), % focus next monitor if this was the focused one
+		(ActMon == Mon -> switch_monitor(NextMon) ; true),
+
 		nb_getval(monitor_geom, AMonGeom),  nb_getval(free_win_space, AFreeWinSpace),
 		nb_getval(active_ws,    AActiveWs), nb_getval(prev_ws,        APrevWs),
 		del_assoc(Mon, AMonGeom,  _, NewAMonGeom),  del_assoc(Mon, AFreeWinSpace, _, NewAFreeWinSpace),
@@ -1126,9 +1131,6 @@ delete_monitor(Mon) :-
 		nb_setval(active_ws,    NewAActiveWs), nb_setval(prev_ws,        NewAPrevWs),
 
 		forall(member(Ws, Wss), delete_ws_assocs(Mon, Ws)),
-
-		nb_getval(active_mon, ActMon),
-		(ActMon == Mon -> switch_monitor(NextMon) ; true),
 
 		format(string(Msg), "Monitor \"~s\" unmanaged", [Mon]),
 		writeln(Msg)
