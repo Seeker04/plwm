@@ -355,7 +355,7 @@ x_grab_pointer(term_t display, term_t grab_window, term_t owner_events, term_t e
 	PL_TRY(PL_get_uint64_ex(cursor, &csr));
 	PL_TRY(PL_get_uint64_ex(time, &t));
 
-	XGrabPointer(dp, gwin, oevents, (unsigned)event_mask, ptrmode, kbmode, confto, csr, t);
+	XGrabPointer(dp, gwin, oevents, (unsigned)emask, ptrmode, kbmode, confto, csr, t);
 	return TRUE;
 }
 
