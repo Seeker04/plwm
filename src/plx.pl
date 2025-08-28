@@ -106,7 +106,7 @@
 ])).
 
 % bind to x11plwm wrapper shared library
-:- initialization(use_foreign_module("bin/x11plwm.so", [
+:- initialization(use_foreign_module("x11plwm.so", [
     'x11plwm_DefaultRootWindow'([ptr], u64),
     'x11plwm_DefaultScreen'([ptr], i32),
     'x11plwm_DefaultColormap'([ptr, i32], u64),
