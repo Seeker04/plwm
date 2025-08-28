@@ -23,6 +23,9 @@ X11PLWM_SO = $(BIN_DIR)/x11plwm.so
 run: src/*.pl $(X11PLWM_SO)
 	src/plwm
 
+deb: src/* $(X11PLWM_SO)
+	cargo deb --no-build
+
 $(X11PLWM_SO): $(X11PLWM_O)
 	$(CC) $< $(LDFLAGS) -o $@
 

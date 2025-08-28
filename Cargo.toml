@@ -1,0 +1,59 @@
+[package]
+name = "plwm"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+path = "/dev/null"
+
+[dependencies]
+
+[package.metadata.deb]
+depends = [
+    "$auto",
+    "libx11-dev",
+    "libxft-dev",
+    "libxrandr-dev",
+    "scryer-prolog",
+]
+section = "x11"
+priority = "optional"
+preserve-symlinks = true
+assets = [
+    [
+        "img/logo.png",
+        "usr/share/pixmaps/",
+        "644",
+    ],
+    [
+        "plwm.desktop",
+        "usr/share/xsessions/",
+        "644",
+    ],
+    [
+        "config/config.pl",
+        "etc/plwm/",
+        "644",
+    ],
+    [
+        "src/*.pl",
+        "usr/share/plwm/",
+        "644",
+    ],
+    [
+        "src/plwm",
+        "usr/share/plwm/",
+        "755",
+    ],
+    [
+        "bin/x11plwm.so",
+        "usr/lib/",
+        "644",
+    ],
+    [
+        "symlinks/plwm",
+        "usr/bin/",
+        "755",
+    ],
+]

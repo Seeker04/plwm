@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=plwm
+Comment=This session logs you into plwm
+Exec=plwm
+Icon=plwm-logo
+Type=Application
