@@ -5,6 +5,7 @@
 # executable
 plwm
 !src/plwm
+!symlinks/plwm
 
 # tag file
 tags
