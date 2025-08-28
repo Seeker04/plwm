@@ -13,7 +13,7 @@
 % Note: there is extensive commenting in this file, as well as arbitrary examples
 % for easier understanding. Feel free to remove them once you're familiar with the settings
 
-:- use_module('../src/stubs').
+:- use_module(library(format)).
 
 %*********************************  Layout  ***********************************
 
@@ -327,10 +327,10 @@ rules([
 % Tip: you can run multiple predicates as Action by writing a comma separated list in parentheses
 hooks([
   (start -> (
-    writeln("plwm starting")
+    format("plwm starting~n", [])
   )),
 
   (quit -> (
-    writeln("plwm quitting")
+    format("plwm quitting~n", [])
   ))
 ]).

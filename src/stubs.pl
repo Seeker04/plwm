@@ -16,6 +16,7 @@
     selectchk/3
 ]).
 
+:- use_module(library(format)).
 :- use_module(library(files)).
 :- use_module(library(error)).
 :- use_module(library(si)).
