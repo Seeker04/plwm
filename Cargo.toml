@@ -10,6 +10,7 @@ path = "/dev/null"
 [dependencies]
 
 [package.metadata.deb]
+maintainer = "plwm Maintainers"
 depends = [
     "$auto",
     "libx11-dev",
@@ -20,6 +21,7 @@ depends = [
 section = "x11"
 priority = "optional"
 preserve-symlinks = true
+maintainer-scripts = "debian/"
 assets = [
     [
         "img/logo.png",
