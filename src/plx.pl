@@ -14,6 +14,7 @@
 :- use_module(library(error)).
 :- use_module(library(si)).
 :- use_module(library(charsio)).
+:- use_module(library(debug)).
 
 % Note: assumes
 %    char           = u8
@@ -350,8 +351,8 @@ x_next_event_(Dp, EventReturn) :-
     ],(
        ffi:'XNextEvent'(Dp, EventPtr, _),
        ffi:read_ptr('XAnyEvent', EventPtr, ['XAnyEvent' , EventId | _]),
-       event_type_id_atom(EventId, EventAtom),
-       decode_event(EventAtom, EventPtr, EventReturn)
+       $event_type_id_atom(EventId, EventAtom),
+       $decode_event(EventAtom, EventPtr, EventReturn)
     )).
 
 event_type_id_atom(2, keypress) :- !.
