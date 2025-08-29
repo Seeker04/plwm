@@ -339,7 +339,9 @@ x_utf8_text_list_to_text_property_(Dp, List, Count, Style, TextPropReturn) :-
 x_set_text_property(Dp, Win, TextProp, Property) :- 
     ffi:'XSetTextProperty'(Dp, Win, TextProp, Property).
 
-x_next_event(Dp, EventReturn) :-
+x_next_event(Dp, EventReturn) :- call_with_error_context(x_next_event_(Dp, EventReturn), predicate-x_next_event/2).
+
+x_next_event_(Dp, EventReturn) :-
     ffi:array_type(i64, 24, Pad),
     length(L, 24),
     maplist(call(=, 0), L),
@@ -347,7 +349,7 @@ x_next_event(Dp, EventReturn) :-
         let(EventPtr, 'XEvent', ['XEvent', [Pad | L]])
     ],(
        ffi:'XNextEvent'(Dp, EventPtr, _),
-       ffi:read_ptr(EventPtr, 'XAnyEvent', ['XAnyEvent' , EventId | _]),
+       ffi:read_ptr('XAnyEvent', EventPtr, ['XAnyEvent' , EventId | _]),
        event_type_id_atom(EventId, EventAtom),
        decode_event(EventAtom, EventPtr, EventReturn)
     )).
