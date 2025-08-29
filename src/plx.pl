@@ -257,14 +257,14 @@ x_change_property(Dp, Win, Prop, Atom, Format, Mode, Data, NElements) :-
     ; throw(error(assert(Len = NElements), x_change_property/8))
     ),
     ffi:array_type(ElemType, Len, ArrayType),
-    ffi:with_locals([
+    with_locals([
         let(ArrayPtr, ArrayType, [ArrayType | ArrayValues])
     ],
         ffi:'XChangeProperty'(Dp, Win, Prop, Atom, Format, Mode, ArrayPtr, Len, _)
     ).
 
 x_change_window_attributes(Dp, Win, ValueMask, EventMask) :-
-    ffi:with_locals([
+    with_locals([
         let(WinAttributesPtr, 'XSetWindowAttributes', ['XSetWindowAttributes', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, EventMask, 0, 0, 0, 0])
     ],
         ffi:'XChangeWindowAttributes'(Dp, Win, ValueMask, WinAttributesPtr, _)
@@ -324,9 +324,9 @@ x_utf8_text_list_to_text_property_(Dp, List, Count, Style, TextPropReturn) :-
     ),
     maplist(arg(1), Locals, Ptrs),
     ffi:array_type(ptr, Count, PointerList),
-    ffi:with_locals(
+    with_locals(
         Locals,
-        ffi:with_locals([
+        with_locals([
             let(Strs, PointerList, [PointerList | Ptrs])
         ],(
             ffi:allocate(c, 'XTextProperty', ['XTextProperty' , 0, 0, 0, 0], TProp),
@@ -345,7 +345,7 @@ x_next_event_(Dp, EventReturn) :-
     ffi:array_type(i64, 24, Pad),
     length(L, 24),
     maplist(call(=, 0), L),
-    ffi:with_locals([
+    with_locals([
         let(EventPtr, 'XEvent', ['XEvent', [Pad | L]])
     ],(
        ffi:'XNextEvent'(Dp, EventPtr, _),
@@ -440,7 +440,7 @@ movement_common(EventPtr, Value, [Serial, SendEvent, Display, Window, Root, SubW
 :- dynamic(rr_event_base/1).
 
 xrr_query_extension(Dp, Event, Error) :-
-    ffi:with_locals([
+    with_locals([
         let(EventPtr, i32, 0),
         let(ErrorPtr, i32, 0)
     ],
@@ -505,7 +505,7 @@ xrr_get_output_info(Dp, ScreenResources, OutIdx,OutInfo) :-
 xrr_free_screen_resources(Sr) :- ffi:'XRRFreeScreenResources'(Sr).
 
 xft_color_alloc_name(Dp, Vis, ColorMap, Name, Res) :-
-    ffi:with_locals([
+    with_locals([
         let(ResPtr, 'XftColor', ['XftColor', 0, ['XRenderColor', 0,0,0,0]])
     ],
     (
