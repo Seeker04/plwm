@@ -375,57 +375,57 @@ rr_event_type_id_atom(0, rrscreenchangenotify).
 
 % TODO SendEvent needs to be converted from int to bool bool_int
 
-decode_event(maprequest, EventPtr, ["maprequest", Type, Serial, SendEvent, Display, Parent, Window]) :- !,
+decode_event(maprequest, EventPtr, [maprequest, Type, Serial, SendEvent, Display, Parent, Window]) :- !,
     ffi:read_ptr('XMapRequestEvent', EventPtr, ['XMapRequestEvent', Type, Serial, Se, Display, Parent, Window]),
     bool_int(SendEvent, Se).
 
-decode_event(unmapnotify, EventPtr, ["unmapnotify", Type, Serial, SendEvent, Display, Event, Window, FromConfigure]) :- !,
+decode_event(unmapnotify, EventPtr, [unmapnotify, Type, Serial, SendEvent, Display, Event, Window, FromConfigure]) :- !,
     ffi:read_ptr('XUnmapEvent', EventPtr, [ 'XUnmapEvent' , Type, Serial, Se, Display, Event, Window, Fc ]),
     bool_int(SendEvent, Se),
     bool_int(FromConfigure, Fc).
     
-decode_event(destroynotify, EventPtr, ["destroynotify", Type, Serial, SendEvent, Display, Event, Window]) :- !,
+decode_event(destroynotify, EventPtr, [destroynotify, Type, Serial, SendEvent, Display, Event, Window]) :- !,
     ffi:read_ptr('XDestroyWindowEvent ', EventPtr, [ 'XDestroyWindowEvent ', Type, Serial, Se, Display, Event, Window ]),
     bool_int(SendEvent, Se).
 
-decode_event(enternotify, EventPtr, ["enternotify", Type, Serial, SendEvent, Display, Window, Root, SubWindow, Time, X, Y, XRoot, YRoot, Mode, Detail, SameScreen, Focus, State]) :- !,
+decode_event(enternotify, EventPtr, [enternotify, Type, Serial, SendEvent, Display, Window, Root, SubWindow, Time, X, Y, XRoot, YRoot, Mode, Detail, SameScreen, Focus, State]) :- !,
     ffi:read_ptr('XCrossingEvent', EventPtr, [ 'XCrossingEvent' , Type, Serial, Se, Display, Window, Root, SubWindow, Time, X, Y, XRoot, YRoot, Mode, Detail, Sc, F, State ]),
     bool_int(SendEvent, Se),
     bool_int(SameScreen, Sc),
     bool_int(Focus, F).
 
-decode_event(propertynotify, EventPtr, ["propertynotify", Serial, SendEvent, Display, Window, Atom, Time, State]) :- !,
+decode_event(propertynotify, EventPtr, [propertynotify, Serial, SendEvent, Display, Window, Atom, Time, State]) :- !,
     ffi:read_ptr('XPropertyEvent', EventPtr, [ 'XPropertyEvent' , _Type, Serial, Se, Display, Window, Atom, Time, State ]),
     bool_int(SendEvent, Se).
 
-decode_event(clientmessage, EventPtr, ["clientmessage", Type, Serial, SendEvent, Display, Window, MessageType, Format, L0, L1, L2]) :- !,
+decode_event(clientmessage, EventPtr, [clientmessage, Type, Serial, SendEvent, Display, Window, MessageType, Format, L0, L1, L2]) :- !,
     ffi:read_ptr('XClientMessageEvent ', EventPtr, [ 'XClientMessageEvent ', Type, Serial, Se, Display, Window, MessageType, Format, ['ClientMessageData', L0, L1, L2, _, _]]),
     bool_int(SendEvent, Se).
     
-decode_event(configurenotify, EventPtr, ["configurenotify", Type, Serial, SendEvent, Display, Event, Window, X, Y, Width, Height, BorderWidth, Above, OverrideRedirect]) :- !,
+decode_event(configurenotify, EventPtr, [configurenotify, Type, Serial, SendEvent, Display, Event, Window, X, Y, Width, Height, BorderWidth, Above, OverrideRedirect]) :- !,
     ffi:read_ptr('XConfigureEvent', EventPtr, [ 'XConfigureEvent', Type, Serial, Se, Display, Event, Window, X, Y, Width, Height, BorderWidth, Above, Or ]),
     bool_int(SendEvent, Se),
     bool_int(OverrideRedirect, Or).
     
-decode_event(rrscreenchangenotify, _EventPtr, ["rrscreenchangenotify"]) :- !.
+decode_event(rrscreenchangenotify, _EventPtr, [rrscreenchangenotify]) :- !.
     
-decode_event(keypress, EventPtr, ["keypress" | EventData ]) :- !,
+decode_event(keypress, EventPtr, [keypress | EventData ]) :- !,
     ffi:read_ptr('XKeyEvent', EventPtr, [ 'XKeyEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,_,KeyCode,_]), 
     movement_common(EventPtr, KeyCode, EventData).
 
-decode_event(keyrelease, EventPtr, ["keyrelease" | EventData ]) :- !,
+decode_event(keyrelease, EventPtr, [keyrelease | EventData ]) :- !,
     ffi:read_ptr('XKeyEvent', EventPtr, [ 'XKeyEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,_,KeyCode,_]), 
     movement_common(EventPtr, KeyCode, EventData).
 
-decode_event(buttonpress, EventPtr, ["buttonpress" | EventData]) :- !,
+decode_event(buttonpress, EventPtr, [buttonpress | EventData]) :- !,
     ffi:read_ptr('XButtonEvent', EventPtr, [ 'XButtonEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,_,Button,_]), 
     movement_common(EventPtr, Button, EventData).
     
-decode_event(buttonrelease, EventPtr, ["buttonrelease" | EventData ]) :- !,
+decode_event(buttonrelease, EventPtr, [buttonrelease | EventData ]) :- !,
     ffi:read_ptr('XButtonEvent', EventPtr, [ 'XButtonEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,_,Button,_]), 
     movement_common(EventPtr, Button, EventData).
     
-decode_event(motionnotify, EventPtr, [ "motionnotify" | EventData]) :- !,
+decode_event(motionnotify, EventPtr, [ motionnotify | EventData]) :- !,
     ffi:read_ptr('XMotionEvent ', EventPtr, [ 'XMotionEvent ',_,_,_,_,_,_,_,_,_,_,_,_,_,_,IsHint,_]), 
     movement_common(EventPtr, IsHint, EventData).
 
