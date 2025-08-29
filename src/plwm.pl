@@ -14,6 +14,7 @@ version(0.5).
 :- use_module(library(dcgs)).
 :- use_module(library(format)).
 :- use_module(library(error)).
+:- use_module(library(debug)).
 
 :- use_module(fifo).
 :- use_module(layout).
@@ -1749,9 +1750,9 @@ win_newproperties(Win, Properties) :- term_to_atom(Win, WinAtom), nb_setval(WinA
 eventloop :-
 	display(Dp),
 
-	plx:x_next_event(Dp, Event),
+	$plx:x_next_event(Dp, Event),
 	(Event = [EventType|EventArgs] ->
-		handle_event(EventType, EventArgs)
+		$handle_event(EventType, EventArgs)
 	; true),  % simply ignore "unsupported_event" cases
 
 	eventloop
