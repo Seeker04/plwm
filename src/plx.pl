@@ -367,7 +367,7 @@ event_type_id_atom(22, configurenotify) :- !.
 event_type_id_atom(28, propertynotify) :- !.
 event_type_id_atom(33, clientmessage) :- !.
 
-event_type_id_atom(EventId, EventAtom) :- rr_event_base(RrEventBase),  RrEventId is EventId - RrEventBase, rr_event_type(RrEventId, EventAtom), !.
+event_type_id_atom(EventId, EventAtom) :- rr_event_base(RrEventBase),  RrEventId is EventId - RrEventBase, rr_event_type_id_atom(RrEventId, EventAtom), !.
 
 event_type_id_atom(_, unsupported_event).
 
