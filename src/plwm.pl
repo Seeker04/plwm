@@ -2293,5 +2293,5 @@ main :-
 	setup_hooks,
 	run_hook(start),
 
-	eventloop
+	catch(eventloop, E, format("eventloop crashed: ~q~n", [E]))
 .
