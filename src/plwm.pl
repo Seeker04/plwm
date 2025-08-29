@@ -13,6 +13,7 @@ version(0.5).
 :- use_module(library(si)).
 :- use_module(library(dcgs)).
 :- use_module(library(format)).
+:- use_module(library(error)).
 
 :- use_module(fifo).
 :- use_module(layout).
@@ -1389,13 +1390,15 @@ unmanage(Win) :-
 %
 %  @arg EventType type of the X11 event (e.g. keypress, enternotify, propertynotify)
 %  @arg EventArgs arguments from the X11 event, different for each event type
-handle_event(keypress, [_, _, _, _, _, _, _, _, _, _, _, State, Keycode, _]) :-
+handle_event(EventType, EventArgs) :- call_with_error_context(handle_event_(EventType, EventArgs), predicate-handle_event/2).
+
+handle_event_(keypress, [_, _, _, _, _, _, _, _, _, _, _, State, Keycode, _]) :-
 	(keymap_internal(Keycode, State, Action) ->
 		catch(ignore(Action), Ex, (writeln(Ex), true))
 	; true)
 .
 
-handle_event(buttonpress, [_, _, Dp, _, _, Subwin, _, _, _, Xroot, Yroot, _, Button, _]) :-
+handle_event_(buttonpress, [_, _, Dp, _, _, Subwin, _, _, _, Xroot, Yroot, _, Button, _]) :-
 	Button1 is 1, Button3 is 3, Button4 is 4, Button5 is 5,
 
 	% scrolled up
@@ -1425,16 +1428,16 @@ handle_event(buttonpress, [_, _, Dp, _, _, Subwin, _, _, _, Xroot, Yroot, _, But
 	; true)
 .
 
-handle_event(buttonrelease, _) :-
+handle_event_(buttonrelease, _) :-
 	nb_setval(dragged, none)
 .
 
-handle_event(enternotify, [_, _, _, _, Win, _, _, _, _, _, _, _, _, _, _, _, _]) :-
+handle_event_(enternotify, [_, _, _, _, Win, _, _, _, _, _, _, _, _, _, _, _, _]) :-
 	rootwin(Rootwin),
 	(Win =\= Rootwin -> focus(Win) ; true)
 .
 
-handle_event(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
+handle_event_(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
 	(nb_getval(dragged, [Win, SXroot, SYroot, SButton]), Win =\= 0,
 	plx:x_get_window_attributes(Dp, Win, WinGeom, Status), Status =\= 0 ->
 		rect_inmon(WinGeom, Mon),
@@ -1493,9 +1496,9 @@ handle_event(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
 	)
 .
 
-handle_event(keyrelease, _).
+handle_event_(keyrelease, _).
 
-handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
+handle_event_(maprequest, [_, _, _, Dp, _, Win]) :-
 	active_mon_ws(ActMon, ActWs),
 	(plx:x_get_window_attributes(Dp, Win, Geom, Status), Status =\= 0 ->
 	(plx:x_get_class_hint(Dp, Win, Name, Class),
@@ -1560,7 +1563,7 @@ handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
 	; true)
 .
 
-handle_event(unmapnotify, [_, _, SendEvent, Dp, _, Win, _]) :-
+handle_event_(unmapnotify, [_, _, SendEvent, Dp, _, Win, _]) :-
 	% Set withdrawn state
 	wmatom(wmstate, WMState), PropModeReplace is 0, WithdrawnState is 0, None is 0,
 	plx:x_change_property(Dp, Win, WMState, WMState, 32, PropModeReplace, [WithdrawnState, None], 2),
@@ -1571,7 +1574,7 @@ handle_event(unmapnotify, [_, _, SendEvent, Dp, _, Win, _]) :-
 	; true)
 .
 
-handle_event(destroynotify, [_, _, _, _, _, Win]) :-
+handle_event_(destroynotify, [_, _, _, _, _, Win]) :-
 	nb_getval(bars, Bars),
 	(selectchk(Win, Bars, RemainingBars) ->  % bar is removed, get back its space
 		nb_setval(bars, RemainingBars),
@@ -1583,7 +1586,7 @@ handle_event(destroynotify, [_, _, _, _, _, Win]) :-
 	)
 .
 
-handle_event(propertynotify, [_, _, _, Win, Atom, _, _]) :-
+handle_event_(propertynotify, [_, _, _, Win, Atom, _, _]) :-
 	XA_WM_TRANSIENT_FOR is 86,
 	netatom(wmwindowtype, NetWMWindowType), netatom(wmstate, NetWMState),
 
@@ -1596,7 +1599,7 @@ handle_event(propertynotify, [_, _, _, Win, Atom, _, _]) :-
 	; true)
 .
 
-handle_event(clientmessage, [_, _, _, _, Win, MessageType, _, DataL0, DataL1, DataL2]) :-
+handle_event_(clientmessage, [_, _, _, _, Win, MessageType, _, DataL0, DataL1, DataL2]) :-
 	netatom(currentdesktop, NetCurrentDesktop),
 	netatom(wmstate, NetWMState),
 	netatom(wmstatefullscreen, NetWMStateFullscreen),
@@ -1614,7 +1617,7 @@ handle_event(clientmessage, [_, _, _, _, Win, MessageType, _, DataL0, DataL1, Da
 	; true)
 .
 
-handle_event(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
+handle_event_(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
 	rootwin(Rootwin),
 	(Win == Rootwin ->
 		% Notice of pending jobs is implemented with a ConfigureNotify
@@ -1627,7 +1630,7 @@ handle_event(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
 	; true)
 .
 
-handle_event(rrscreenchangenotify, _) :-
+handle_event_(rrscreenchangenotify, _) :-
 	monitors(Mons),
 	query_outputs(OutputInfos),
 	forall(member(Output-Geom, OutputInfos), (
