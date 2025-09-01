@@ -1,0 +1,93 @@
+diff --git a/config/config.pl b/config/config.pl
+index 1ab0ea5..6b2d098 100644
+--- a/config/config.pl
++++ b/config/config.pl
+@@ -14,8 +14,8 @@
+ % for easier understanding. Feel free to remove them once you're familiar with the settings
+ 
+ 
+-% :- use_module(swi/compat).
+-:- use_module(library(format)).
++:- use_module(swi/compat).
++% :- use_module(library(format)).
+ 
+ %*********************************  Layout  ***********************************
+ 
+diff --git a/src/animation.pl b/src/animation.pl
+index a306f80..c5cf589 100644
+--- a/src/animation.pl
++++ b/src/animation.pl
+@@ -2,7 +2,7 @@
+ 
+ :- module(animation, []).
+ 
+-:- use_module(scryer/compat).
++:- use_module(swi/compat).
+ :- use_module(utils).
+ 
+ %! from_to_in_steps(++From:integer, ++To:integer, ++StepCnt:integer, -Steps:[integer]) is det
+diff --git a/src/layout.pl b/src/layout.pl
+index e10e8a1..830f1de 100644
+--- a/src/layout.pl
++++ b/src/layout.pl
+@@ -2,7 +2,7 @@
+ 
+ :- module(layout, []).
+ 
+-:- use_module(scryer/compat).
++:- use_module(swi/compat).
+ :- use_module(animation).
+ :- use_module(utils).
+ 
+diff --git a/src/menu.pl b/src/menu.pl
+index 96d72da..aab10c8 100644
+--- a/src/menu.pl
++++ b/src/menu.pl
+@@ -3,7 +3,7 @@
+ :- module(menu, []).
+ 
+ 
+-:- use_module(scryer/compat).
++:- use_module(swi/compat).
+ :- use_module(layout).
+ :- use_module(utils).
+ 
+diff --git a/src/plwm.pl b/src/plwm.pl
+index 752e119..99df271 100644
+--- a/src/plwm.pl
++++ b/src/plwm.pl
+@@ -6,7 +6,7 @@
+ 
+ version(0.5).
+ 
+-:- use_module(scryer/compat).
++:- use_module(swi/compat).
+ 
+ :- use_module(fifo).
+ :- use_module(layout).
+diff --git a/src/setting.pl b/src/setting.pl
+index 8bf5af7..2bba3b4 100644
+--- a/src/setting.pl
++++ b/src/setting.pl
+@@ -10,7 +10,7 @@
+ 
+ :- module(setting, [set/2, add/2]).
+ 
+-:- use_module(scryer/compat).
++:- use_module(swi/compat).
+ 
+ :- use_module(utils).
+ 
+diff --git a/src/utils.pl b/src/utils.pl
+index ba78184..035273a 100644
+--- a/src/utils.pl
++++ b/src/utils.pl
+@@ -6,7 +6,7 @@
+ %                 ^ these are used quite often, so it's worth exporting them
+ 
+ 
+-:- use_module(scryer/compat).
++:- use_module(swi/compat).
+ 
+ :- use_module(library(assoc)).
+ 
