@@ -78,7 +78,7 @@ merge-assets.append = [
     ],
     [
         "bin/plx.so",
-        "usr/lib/",
+        "usr/local/lib/",
         "644",
     ],
     [
