@@ -48,6 +48,8 @@
     use_foreign_library/1
 ]).
 
+:- use_module(library(dif), [dif/2]).
+
 load_plx.
 
 on_signal(_,_,_).
@@ -65,7 +67,7 @@ append(Xxs, Xs) :- lists:append(Xxs, Xs).
 append(Xs0, Xs1, Xs2) :- lists:append(Xs0, Xs1, Xs2).
 
 is_set([]).
-is_set([X | Xs]) :- \+ member(X, Xs) , is_set(Xs).
+is_set([X | Xs]) :- lists:maplist(dif:dif(X), Xs) , is_set(Xs).
 
 empty_assoc(E) :- assoc:empty_assoc(E).
 
