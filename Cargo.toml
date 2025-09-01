@@ -11,7 +11,7 @@ path = "/dev/null"
 
 [package.metadata.deb]
 maintainer = "plwm Maintainers"
-depends = ["$auto", "libx11", "libxft", "libxrandr"]
+depends = []
 section = "x11"
 priority = "optional"
 assets = []
@@ -26,11 +26,6 @@ merge-assets.append = [
     [
         "config/config.pl",
         "etc/plwm/",
-        "644",
-    ],
-    [
-        "src/*.pl",
-        "usr/share/plwm/",
         "644",
     ],
 ]
@@ -55,6 +50,11 @@ merge-assets.append = [
         "755",
     ],
     [
+        "src/*.pl",
+        "usr/share/plwm/",
+        "644",
+    ],
+    [
         "src/scryer/*.pl",
         "usr/share/plwm/scryer",
         "644",
@@ -68,7 +68,7 @@ merge-assets.append = [
 
 
 [package.metadata.deb.variants.swi]
-depends = ["$auto", "plwm-core", "swi-prolog"]
+depends = ["$auto", "plwm-core"]
 preserve-symlinks = true
 merge-assets.append = [
     [
