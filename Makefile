@@ -20,7 +20,7 @@ PLX_O = $(BIN_DIR)/plx.o
 PLX_SO = $(BIN_DIR)/plx.so
 
 SWIFLAGS = -p foreign=$(LIB_PATH) \
-           --goal=main --toplevel=halt --stand_alone=true -O -o $(PLWM_SWI) -i src/swi/init.pl -c src/plwm.pl
+           --goal=main --toplevel=halt --stand_alone=true -O -o $(PLWM_SWI) -f src/swi/init.pl -c src/plwm.pl
 
 PLWM_SCRYER = src/plwm-scryer
 X11PLWM_O = $(BIN_DIR)/x11plwm.o
