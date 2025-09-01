@@ -28,14 +28,20 @@ X11PLWM_SO = $(BIN_DIR)/x11plwm.so
 
 #================================== Build =====================================
 
-run-scryer: src/*.pl $(X11PLWM_SO)
+run-scryer: $(X11PLWM_SO)
 	$(PLWM_SCRYER)
 
 run-swi: $(PLWM_SWI)
 	$(PLWM_SWI) -c config/config.pl
 
-deb: src/* src/scryer/* $(X11PLWM_SO)
-	cargo deb --no-build
+deb-core: src/*
+	cargo deb --variant=core --no-build
+
+deb-scryer: src/scryer/* $(X11PLWM_SO)
+	cargo deb --variant=scryer --no-build
+
+deb-swi: src/scryer/* $(PLWM_SWI)
+	cargo deb --variant=swi --no-build
 
 $(X11PLWM_SO): $(X11PLWM_O)
 	$(CC) $< $(LDFLAGS) -o $@

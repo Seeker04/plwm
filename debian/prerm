@@ -1,5 +1,0 @@
-#!/usr/bin/bash
-
-set -e
-
-update-alternatives --remove x-session-manager /usr/bin/plwm

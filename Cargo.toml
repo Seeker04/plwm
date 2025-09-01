@@ -11,26 +11,16 @@ path = "/dev/null"
 
 [package.metadata.deb]
 maintainer = "plwm Maintainers"
-depends = [
-    "$auto",
-    "libx11-dev",
-    "libxft-dev",
-    "libxrandr-dev",
-    "scryer-prolog",
-]
+depends = ["$auto", "libx11", "libxft", "libxrandr"]
 section = "x11"
 priority = "optional"
-preserve-symlinks = true
-maintainer-scripts = "debian/"
-assets = [
+assets = []
+
+[package.metadata.deb.variants.core]
+merge-assets.append = [
     [
         "img/logo.png",
         "usr/share/pixmaps/",
-        "644",
-    ],
-    [
-        "plwm.desktop",
-        "usr/share/xsessions/",
         "644",
     ],
     [
@@ -43,6 +33,12 @@ assets = [
         "usr/share/plwm/",
         "644",
     ],
+]
+
+[package.metadata.deb.variants.scryer]
+depends = ["$auto", "plwm-core", "scryer-prolog"]
+preserve-symlinks = true
+merge-assets.append = [
     [
         "src/plwm-scryer",
         "usr/share/plwm/",
@@ -57,5 +53,37 @@ assets = [
         "symlinks/plwm-scryer",
         "usr/bin/",
         "755",
+    ],
+    [
+        "src/scryer/*.pl",
+        "usr/share/plwm/scryer",
+        "644",
+    ],
+    [
+        "plwm-scryer.desktop",
+        "usr/share/xsessions/",
+        "644",
+    ],
+]
+
+
+[package.metadata.deb.variants.swi]
+depends = ["$auto", "plwm-core", "swi-prolog"]
+preserve-symlinks = true
+merge-assets.append = [
+    [
+        "bin/plwm-swi",
+        "usr/bin/",
+        "755",
+    ],
+    [
+        "bin/plx.so",
+        "usr/lib/",
+        "644",
+    ],
+    [
+        "plwm-swi.desktop",
+        "usr/share/xsessions/",
+        "644",
     ],
 ]
