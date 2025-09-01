@@ -2,7 +2,7 @@
 
 :- module(fifo, []).
 
-:- use_module(stubs).
+
 
 %! setup_fifo is det
 %

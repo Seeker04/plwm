@@ -13,6 +13,8 @@
 % Note: there is extensive commenting in this file, as well as arbitrary examples
 % for easier understanding. Feel free to remove them once you're familiar with the settings
 
+
+% :- use_module(swi/compat).
 :- use_module(library(format)).
 
 %*********************************  Layout  ***********************************

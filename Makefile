@@ -4,32 +4,52 @@
 
 CC     ?= cc
 CSTD    = c99
-IFLAGS  = -I/usr/include/freetype2
+IFLAGS  = -I/usr/lib/swipl/include -I/usr/lib/swi-prolog/include -I/usr/include/freetype2
 WFLAGS  = -Wall -Wextra -Wconversion -Wshadow -pedantic -pedantic-errors
 OFLAGS  = -O2
 
 CFLAGS  = -std=$(CSTD) $(IFLAGS) $(WFLAGS) $(OFLAGS) -fpic
 LDFLAGS = -shared -lX11 -lXft -lXrandr
 
-LIB_PATH = /usr/local/lib
+LIB_PATH = /usr/local/lib:$(BIN_DIR)
 
 BIN_DIR = bin
-PLWM = $(BIN_DIR)/plwm
+
+PLWM_SWI = $(BIN_DIR)/plwm-swi
+PLX_O = $(BIN_DIR)/plx.o
+PLX_SO = $(BIN_DIR)/plx.so
+
+SWIFLAGS = -p foreign=$(LIB_PATH) \
+           --goal=main --toplevel=halt --stand_alone=true -O -o $(PLWM_SWI) -i src/swi/init.pl -c src/plwm.pl
+
+PLWM_SCRYER = src/plwm-scryer
 X11PLWM_O = $(BIN_DIR)/x11plwm.o
 X11PLWM_SO = $(BIN_DIR)/x11plwm.so
 
 #================================== Build =====================================
 
-run: src/*.pl $(X11PLWM_SO)
-	src/plwm
+run-scryer: src/*.pl $(X11PLWM_SO)
+	$(PLWM_SCRYER)
 
-deb: src/* $(X11PLWM_SO)
+run-swi: $(PLWM_SWI)
+	$(PLWM_SWI) -c config/config.pl
+
+deb: src/* src/scryer/* $(X11PLWM_SO)
 	cargo deb --no-build
 
 $(X11PLWM_SO): $(X11PLWM_O)
 	$(CC) $< $(LDFLAGS) -o $@
 
-$(X11PLWM_O): src/x11plwm.c $(BIN_DIR)
+$(X11PLWM_O): src/scryer/x11plwm.c $(BIN_DIR)
+	$(CC) -c $(CFLAGS) $< -o $@
+
+$(PLWM_SWI): src/*.pl $(PLX_SO)
+	swipl $(SWIFLAGS)
+
+$(PLX_SO): $(PLX_O)
+	$(CC) $< $(LDFLAGS) -o $@
+
+$(PLX_O): src/swi/plx.c $(BIN_DIR)
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BIN_DIR):
@@ -38,7 +58,7 @@ $(BIN_DIR):
 clean:
 	rm -f $(BIN_DIR)/*
 
-rebuild: clean $(PLWM)
+rebuild: clean $(PLWM_SWI)
 
 #============================== Static checks =================================
 
@@ -47,13 +67,17 @@ cppcheck:
 	--suppress=missingIncludeSystem --inline-suppr \
 	--check-level=exhaustive --inconclusive \
 	--error-exitcode=1 \
-	src/x11plwm.c
+	src/swi/plx.c \
+	src/scryer/x11plwm.c
 
 clang-tidy:
 	clang-tidy --checks='clang-analyzer-*' --extra-arg="-std=$(CSTD)" \
-	--extra-arg="-I/usr/include/freetype2" \
+	--extra-arg="-I/usr/include/freetype2" \	
+	--extra-arg="-I/usr/lib/swipl/include" \
+	--extra-arg="-I/usr/lib/swi-prolog/include" \
 	--warnings-as-errors='*' \
-	src/x11plwm.c --
+	src/swi/plx.c \
+	src/scryer/x11plwm.c --
 
 #=============================== Unit tests ===================================
 

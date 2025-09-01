@@ -6,6 +6,7 @@
 plwm
 !src/plwm
 !symlinks/plwm
+bin/plwm-swi
 
 # tag file
 tags

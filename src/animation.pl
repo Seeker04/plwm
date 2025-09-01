@@ -2,11 +2,8 @@
 
 :- module(animation, []).
 
-:- use_module(library(iso_ext)).
-:- use_module(library(lists)).
-
+:- use_module(scryer/compat).
 :- use_module(utils).
-:- use_module(stubs).
 
 %! from_to_in_steps(++From:integer, ++To:integer, ++StepCnt:integer, -Steps:[integer]) is det
 %

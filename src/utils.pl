@@ -6,9 +6,10 @@
 %                 ^ these are used quite often, so it's worth exporting them
 
 
+:- use_module(scryer/compat).
+
 :- use_module(library(assoc)).
 
-:- use_module(stubs).
 
 %! valid_callable(++Callable:callable) is det
 %

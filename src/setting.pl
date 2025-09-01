@@ -10,10 +10,8 @@
 
 :- module(setting, [set/2, add/2]).
 
-:- use_module(library(iso_ext)).
-:- use_module(library(lists)).
+:- use_module(scryer/compat).
 
-:- use_module(stubs).
 :- use_module(utils).
 
 %! setting(+Setting:atom) is semidet
@@ -92,7 +90,7 @@ valid_set_(border_color_focused,     Value) :- string(Value).
 valid_set_(snap_threshold,           Value) :- integer(Value), 0 =< Value.
 valid_set_(outer_gaps,               Value) :- integer(Value), 0 =< Value.
 valid_set_(inner_gaps,               Value) :- integer(Value), 0 =< Value.
-valid_set_(workspaces,               Value) :- Value \= [], stubs:is_set(Value), forall(member(Ws, Value), atom(Ws)).
+valid_set_(workspaces,               Value) :- Value \= [], is_set(Value), forall(member(Ws, Value), atom(Ws)).
 valid_set_(starting_workspace,       Value) :- atom(Value).
 valid_set_(hide_empty_workspaces,    Value) :- Value = true ; Value = false.
 valid_set_(ws_format,                Value) :- catch(user:format_ws_name(Value, [1, a], _), E, (format("error: ~q", E), fail)).

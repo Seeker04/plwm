@@ -6,15 +6,7 @@
 
 version(0.5).
 
-:- use_module(library(assoc)).
-:- use_module(library(iso_ext)).
-:- use_module(library(lists)).
-:- use_module(library(os)).
-:- use_module(library(si)).
-:- use_module(library(dcgs)).
-:- use_module(library(format)).
-:- use_module(library(error)).
-:- use_module(library(debug)).
+:- use_module(scryer/compat).
 
 :- use_module(fifo).
 :- use_module(layout).
@@ -22,8 +14,6 @@ version(0.5).
 :- use_module(setting).
 :- use_module(utils).
 :- use_module(xf86names).
-:- use_module(plx).
-:- use_module(stubs).
 
 :- dynamic(display/1).          % Stores Display pointer returned by XOpenDisplay(3)
 :- dynamic(screen/1).           % Stores Screen returned by DefaultScreen(3)
@@ -293,7 +283,7 @@ translate_keymap(Key, Mods, Action) :-
 %
 %  @arg Keybind compound term representing list of keys in forms A, A+B, A+B+C,...
 %  @arg KeyList list of keys
-keybind_to_keylist(A, [A]) :- atom(A) ; chars_si(A) ; integer(A).
+keybind_to_keylist(A, [A]) :- atom(A) ; string(A) ; integer(A).
 keybind_to_keylist(L + R, List) :-
 	keybind_to_keylist(L, LL),
 	keybind_to_keylist(R, RL),
@@ -1137,8 +1127,8 @@ delete_monitor(Mon) :-
 %  @arg Formatted formatted output
 format_ws_name(Fmt, [Idx, Ws], Formatted) :-
 	(sub_string(Fmt, _, _, _, "~d") ->
-			phrase(format_(Fmt, [Idx, Ws]), F)
-		;	phrase(format_(Fmt, [Ws]     ), F)
+			format_string(Fmt, [Idx,  Ws], F)
+		;	format_string(Fmt,  [Ws]     , F)
 	),
 	atom_chars(Formatted, F)
 .
@@ -1259,7 +1249,7 @@ update_wintype(Win) :-
 %  @arg Test to check Str against, must be a string or exact(S) where S is a string
 %  @arg Str string or var to check if it passes Test
 ruletest_on(Test, _) :- var(Test).
-ruletest_on(Test, Str) :- chars_si(Test), sub_string(Str, _, _, _, Test).
+ruletest_on(Test, Str) :- string(Test), sub_string(Str, _, _, _, Test).
 ruletest_on(exact(Str), Str).
 
 %! apply_rules(++Win:integer) is det
@@ -2105,7 +2095,7 @@ init_x :-
 load_custom_config :-
 	config_flag(UserC) ->
 		exists_file(UserC) ->
-			atom_chars(Atom, UserC),
+			(string(UserC) -> atom_chars(Atom, UserC) ; Atom = UserC),
 			consult(Atom)
 .
 
@@ -2167,8 +2157,7 @@ load_config :-
 	; load_xdg_config(PathSuffix)  -> writeln("xdg config loaded")
 	; load_home_config(PathSuffix) -> writeln("home config loaded")
 	; load_etc_config(PathSuffix)  -> writeln("etc config loaded")
-	; load_etc_config(PathSuffix)  -> writeln("etc config loaded")
-	; error(existens_error(config), load_config/1)
+	; error(existence_error(config, "config.pl"), load_config/1)
 	)
 .
 
@@ -2271,6 +2260,8 @@ parse_opt(help(false)). parse_opt(version(false)). parse_opt(check(false)).
 %  Entry point of plwm.
 main :-
 	on_signal(term, _, quit),
+
+	catch(use_foreign_library(foreign(plx)),_,use_foreign_library(plx)),
 
 	opts_spec(OptsSpec),
 	opt_arguments(OptsSpec, Opts, _),

@@ -44,7 +44,7 @@ assets = [
         "644",
     ],
     [
-        "src/plwm",
+        "src/plwm-scryer",
         "usr/share/plwm/",
         "755",
     ],
@@ -54,7 +54,7 @@ assets = [
         "644",
     ],
     [
-        "symlinks/plwm",
+        "symlinks/plwm-scryer",
         "usr/bin/",
         "755",
     ],
