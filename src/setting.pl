@@ -10,7 +10,7 @@
 
 :- module(setting, [set/2, add/2]).
 
-:- use_module(scryer/compat).
+:- use_module(compat).
 
 :- use_module(utils).
 
@@ -39,7 +39,8 @@ setting(Setting) :- member(Setting, [
 %
 %  @arg Dryrun if true, only the validation is executed
 init_config(Dryrun) :-
-	forall(setting(Setting), (
+	compat_forall(setting(Setting), (
+		
 		(call(user:Setting, Value) ->
 			(\+ valid_set(Setting, Value) ->
 				(Dryrun = false ->
@@ -85,22 +86,22 @@ valid_set_(default_layout,           Value) :- layout:is_layout(Value).
 valid_set_(attach_bottom,            Value) :- Value = true ; Value = false.
 valid_set_(border_width,             Value) :- integer(Value), 0 =< Value.
 valid_set_(border_width_focused,     Value) :- integer(Value), 0 =< Value.
-valid_set_(border_color,             Value) :- string(Value).
-valid_set_(border_color_focused,     Value) :- string(Value).
+valid_set_(border_color,             Value) :- double_quotes(Value).
+valid_set_(border_color_focused,     Value) :- double_quotes(Value).
 valid_set_(snap_threshold,           Value) :- integer(Value), 0 =< Value.
 valid_set_(outer_gaps,               Value) :- integer(Value), 0 =< Value.
 valid_set_(inner_gaps,               Value) :- integer(Value), 0 =< Value.
-valid_set_(workspaces,               Value) :- Value \= [], is_set(Value), forall(member(Ws, Value), atom(Ws)).
+valid_set_(workspaces,               Value) :- Value \= [], is_set(Value), compat_forall(member(Ws, Value), atom(Ws)).
 valid_set_(starting_workspace,       Value) :- atom(Value).
 valid_set_(hide_empty_workspaces,    Value) :- Value = true ; Value = false.
 valid_set_(ws_format,                Value) :- catch(user:format_ws_name(Value, [1, a], _), E, (format("error: ~q", E), fail)).
 valid_set_(ws_format_occupied,       Value) :- catch(user:format_ws_name(Value, [1, a], _), _, fail).
-valid_set_(bar_classes,              Value) :- is_list(Value), forall(member(Pair, Value),
-                                               (Pair = N-C, (string(N) ; var(N)), (string(C) ; var(C)))).
+valid_set_(bar_classes,              Value) :- compat_is_list(Value), compat_forall(member(Pair, Value),
+                                               (Pair = N-C, (double_quotes(N) ; var(N)), (double_quotes(C) ; var(C)))).
 valid_set_(bar_placement,            Value) :- Value = follow_focus ; Value = static.
 valid_set_(fifo_enabled,             Value) :- Value = true ; Value = false.
-valid_set_(fifo_path,                Value) :- string(Value).
-valid_set_(menucmd,                  Value) :- is_list(Value), forall(member(Arg, Value), string(Arg)).
+valid_set_(fifo_path,                Value) :- double_quotes(Value).
+valid_set_(menucmd,                  Value) :- compat_is_list(Value), compat_forall(member(Arg, Value), double_quotes(Arg)).
 valid_set_(animation_enabled,        Value) :- Value = true ; Value = false.
 valid_set_(animation_time,           Value) :- utils:is_float(Value), 0.0 < Value.
 valid_set_(animation_granularity,    Value) :- integer(Value), 1 =< Value.
@@ -108,10 +109,10 @@ valid_set_(modkey,                   Value) :- user:modifier(Value).
 valid_set_(scroll_up_action,         Value) :- utils:valid_callable(Value) ; Value = none.
 valid_set_(scroll_down_action,       Value) :- utils:valid_callable(Value) ; Value = none.
 valid_set_(layout_default_overrides, Value) :-
-	is_list(Value),
-	forall(member(Override, Value), (
+	compat_is_list(Value),
+	compat_forall(member(Override, Value), (
 		Override = (MonOR, WsOR -> NmasterOR, MfactOR, LayoutOR),
-		(var(MonOR)     ; string(MonOR)),
+		(var(MonOR)     ; double_quotes(MonOR)),
 		(var(WsOR)      ; atom(WsOR)),
 		(var(NmasterOR) ; integer(NmasterOR), 0 =< NmasterOR),
 		(var(MfactOR)   ; utils:is_float(MfactOR), 0.05 =< MfactOR, MfactOR =< 0.95),
@@ -119,21 +120,21 @@ valid_set_(layout_default_overrides, Value) :-
 	))
 .
 valid_set_(rules, Value) :-
-	is_list(Value),
-	forall(member(Rule, Value), (
+	compat_is_list(Value),
+	compat_forall(member(Rule, Value), (
 		Rule = (RName, RClass, RTitle -> RMon, RWs, RMode),
-		(var(RName)  ; string(RName)  ; (RName  = exact(Str), string(Str))),
-		(var(RClass) ; string(RClass) ; (RClass = exact(Str), string(Str))),
-		(var(RTitle) ; string(RTitle) ; (RTitle = exact(Str), string(Str))),
-		(var(RMon)   ; string(RMon)),
+		(var(RName)  ; double_quotes(RName)  ; (RName  = exact(Str), double_quotes(Str))),
+		(var(RClass) ; double_quotes(RClass) ; (RClass = exact(Str), double_quotes(Str))),
+		(var(RTitle) ; double_quotes(RTitle) ; (RTitle = exact(Str), double_quotes(Str))),
+		(var(RMon)   ; double_quotes(RMon)),
 		(var(RWs)    ; atom(RWs) ; (integer(RWs), 0 < RWs)),
 		(var(RMode)  ; RMode = managed ; RMode = floating ; RMode = fullscreen
-			     ; (is_list(RMode), apply(geometry_spec, RMode)))
+			     ; (compat_is_list(RMode), apply(geometry_spec, RMode)))
 	))
 .
 valid_set_(hooks, Value) :-
-	is_list(Value),
-	forall(member(Hook, Value), (
+	compat_is_list(Value),
+	compat_forall(member(Hook, Value), (
 		Hook = (Event -> Action),
 		member(Event, [
 			start, quit, switch_workspace_pre, switch_workspace_post,
@@ -143,11 +144,11 @@ valid_set_(hooks, Value) :-
 	))
 .
 valid_set_(keymaps, Value) :-
-	is_list(Value),
-	forall(member(Keymap, Value), (
+	compat_is_list(Value),
+	compat_forall(member(Keymap, Value), (
 		Keymap = (Keybind -> Action),
 		user:keybind_to_keylist(Keybind, KeyList),
-		forall(member(Key, KeyList), (user:modifier(Key) ; last(KeyList, Key))),
+		compat_forall(member(Key, KeyList), (user:modifier(Key) ; last(KeyList, Key))),
 		(utils:valid_callable(Action) ; Action = none)
 	))
 .
@@ -369,9 +370,9 @@ geometry_spec(X, Y, W, H) :-
 %  Also redraws layout to make changes immediately visible.
 update_all_borders :-
 	monws_keys(Keys),
-	forall(member(Mon-Ws, Keys), (
+	compat_forall(member(Mon-Ws, Keys), (
 		global_key_value(windows, Mon-Ws, Wins),
-		forall(member(Win, Wins), (
+		compat_forall(member(Win, Wins), (
 			set_border(Win)
 		))
 	)),
@@ -388,12 +389,12 @@ update_all_borders :-
 %        otherwise the usual semantics will "shift windows to the right",
 %        [a, b, c] -> [x, y, z] will result in all windows being on x.
 set_workspaces :-
-	user:workspaces(NewWss), nb_getval(workspaces, OldWss),
+	user:workspaces(NewWss), compat_nb_getval(workspaces, OldWss),
 
 	subtract(OldWss, NewWss, ToDelete), % delete workspaces no longer in workspaces/1
-	forall(member(Ws, ToDelete), delete_workspace(Ws)),
+	compat_forall(member(Ws, ToDelete), delete_workspace(Ws)),
 
-	forall(member(Ws, NewWss), create_workspace(Ws)),
+	compat_forall(member(Ws, NewWss), create_workspace(Ws)),
 
 	(OldWss = ToDelete ->               % cleanup last survivor if all old wss were to be deleted
 		last(ToDelete, SurvivorWs), % (because we refuse to remove the final ws if only 1 is left)

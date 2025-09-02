@@ -6,7 +6,7 @@
 
 version(0.5).
 
-:- use_module(scryer/compat).
+:- use_module(compat).
 
 :- use_module(fifo).
 :- use_module(layout).
@@ -122,8 +122,8 @@ alloc_colors :-
 	plx:xft_color_alloc_name(Dp, Visual, Colormap, BorderColor,        BorderPixel),
 	plx:xft_color_alloc_name(Dp, Visual, Colormap, BorderColorFocused, BorderPixelF),
 
-	nb_setval(border_pixel,         BorderPixel),
-	nb_setval(border_pixel_focused, BorderPixelF)
+	compat_nb_setval(border_pixel,         BorderPixel),
+	compat_nb_setval(border_pixel_focused, BorderPixelF)
 .
 
 %! setup_wmatoms() is det
@@ -177,8 +177,8 @@ setup_netatoms :-
 	NetAtoms = [NetSupported, NetClientList, NetNumberOfDesktops, NetDesktopGeometry,
 	            NetDesktopViewport, NetCurrentDesktop, NetDesktopNames, NetActiveWindow,
 	            NetWorkArea, NetSupportingWMCheck, NetWMName],
-	nb_getval(workspaces, Wss),
-	nb_getval(active_mon, ActMon), global_key_value(monitor_geom, ActMon, [MX, MY, MW, MH]),
+	compat_nb_getval(workspaces, Wss),
+	compat_nb_getval(active_mon, ActMon), global_key_value(monitor_geom, ActMon, [MX, MY, MW, MH]),
 	global_key_value(active_ws, ActMon, ActWs), nth0(ActWsIdx, Wss, ActWs),
 
 	plx:x_change_property(Dp, Rootwin, NetSupported       , XA_ATOM    , 32, PropModeReplace, NetAtoms,   11),
@@ -283,7 +283,7 @@ translate_keymap(Key, Mods, Action) :-
 %
 %  @arg Keybind compound term representing list of keys in forms A, A+B, A+B+C,...
 %  @arg KeyList list of keys
-keybind_to_keylist(A, [A]) :- atom(A) ; string(A) ; integer(A).
+keybind_to_keylist(A, [A]) :- atom(A) ; double_quotes(A) ; integer(A).
 keybind_to_keylist(L + R, List) :-
 	keybind_to_keylist(L, LL),
 	keybind_to_keylist(R, RL),
@@ -304,15 +304,15 @@ grab_keys :-
 	plx:x_ungrab_key(Dp, AnyKey, AnyModifier, Rootwin),
 
 	keymaps(Keymaps),
-	forall(member((Keybind -> Action), Keymaps), (
-		keybind_to_keylist(Keybind, KeyList), length(KeyList, N), Nm1 is N - 1,
+	compat_forall(member((Keybind -> Action), Keymaps), (
+		keybind_to_keylist(Keybind, KeyList), compat_length(KeyList, N), Nm1 is N - 1,
 			utils:split_at(Nm1, KeyList, Mods, [Key]),
 		atom_string(Key, KeyStr), maplist(atom_string, ModAtoms, Mods),
 			(\+ translate_keymap(KeyStr, ModAtoms, Action) ->
 				format(user_error, "warning: invalid key: ~q in keymap, ignored~n", [Key])
 		; true)
 	)),
-	forall(keymap_internal(Kcode, ModMask, _),
+	compat_forall(keymap_internal(Kcode, ModMask, _),
 		plx:x_grab_key(Dp, Kcode, ModMask, Rootwin, true, GrabModeAsync, GrabModeAsync)
 	)
 .
@@ -388,10 +388,10 @@ set_border(Win) :-
 	display(Dp), CWBorderWidth is 1 << 4,
 
 	(global_value(focused, Win) ->
-		nb_getval(border_pixel_focused, BorderPixel),
+		compat_nb_getval(border_pixel_focused, BorderPixel),
 		border_width_focused(BorderW), CWBorderWidth is 1 << 4
 	;
-		nb_getval(border_pixel, BorderPixel),
+		compat_nb_getval(border_pixel, BorderPixel),
 		border_width(BorderW), CWBorderWidth is 1 << 4
 	),
 	% is in fullscreen?
@@ -474,7 +474,7 @@ unfocus_at_onlyvisual(Mon-Ws, OnlyVisual) :-
 %  @arg Direction down or up indicating which direction to shift the focus in
 shift_focus(Direction) :-
 	global_value(windows, Wins), global_value(focused, FocusedWin),
-	length(Wins, WinCnt),
+	compat_length(Wins, WinCnt),
 	(1 < WinCnt, FocusedWin =\= 0 -> (
 		(Direction = down ->
 			(nextto(FocusedWin, NextWin, Wins) -> focus(NextWin), raise(NextWin)
@@ -603,7 +603,7 @@ toggle_fullscreen :-
 %
 %  Switches between the current and the previously active (if any) workspace.
 toggle_workspace :-
-	nb_getval(active_mon, ActMon), global_key_value(prev_ws, ActMon, PrevWs),
+	compat_nb_getval(active_mon, ActMon), global_key_value(prev_ws, ActMon, PrevWs),
 	switch_workspace(PrevWs)
 .
 
@@ -619,12 +619,12 @@ toggle_hide_empty_workspaces :-
 %! active_mon_ws(-ActMon:string, -ActWs:atom) is det
 %
 %  Returns the active monitor and workspace name.
-active_mon_ws(ActMon, ActWs) :- nb_getval(active_mon, ActMon), global_key_value(active_ws, ActMon, ActWs).
+active_mon_ws(ActMon, ActWs) :- compat_nb_getval(active_mon, ActMon), global_key_value(active_ws, ActMon, ActWs).
 
 %! monitors(-Mons:[string]) is det
 %
 %  Returns the list of output names of the monitors plwm manages.
-monitors(Mons) :- nb_getval(active_ws, Assoc), assoc_to_keys(Assoc, Mons).
+monitors(Mons) :- compat_nb_getval(active_ws, Assoc), assoc_to_keys(Assoc, Mons).
 
 %! monws_keys(-MonWsKeys:[string-atom]) is det
 %
@@ -633,7 +633,7 @@ monitors(Mons) :- nb_getval(active_ws, Assoc), assoc_to_keys(Assoc, Mons).
 %  Note: we could query this from an assoc indexed by Mon-Ws, but since the introduction of
 %  dynamic workspaces, the ordering gets inconsistent in the assoces, that's why we need this.
 monws_keys(MonWsKeys) :-
-	monitors(Mons), nb_getval(workspaces, Wss),
+	monitors(Mons), compat_nb_getval(workspaces, Wss),
 	findall(Mon-Ws, (member(Mon, Mons), member(Ws, Wss)), MonWsKeys)
 .
 
@@ -647,9 +647,9 @@ monws_keys(MonWsKeys) :-
 %
 %  @arg Selector can be workspace name (atom), an index, prev, next, prev_nonempty, next_nonempty
 %  @arg Ws workspace name (atom) the Selector points to
-selector_workspace(Ws, Ws) :- nb_getval(workspaces, Wss), member(Ws, Wss), !.
+selector_workspace(Ws, Ws) :- compat_nb_getval(workspaces, Wss), member(Ws, Wss), !.
 selector_workspace(Selector, Ws) :-
-	nb_getval(workspaces, Wss), length(Wss, WsCnt), active_mon_ws(_, ActWs),
+	compat_nb_getval(workspaces, Wss), compat_length(Wss, WsCnt), active_mon_ws(_, ActWs),
 	(integer(Selector) ->  % lookup by ws index, or fallback to active one if index is invalid
 		(between(1, WsCnt, Selector) -> nth1(Selector, Wss, Ws) ; Ws = ActWs)
 	;
@@ -687,13 +687,13 @@ compare_mongeom(y, Order, _-[_,Y1|_], _-[_,Y2|_]) :- compare(Order, Y1, Y2).
 %  @arg Selector a monitor name (string) or index, left, right, up, down, prev, next, prev_nonempty, next_nonempty
 %  @arg Mon monitor name the Selector points to
 selector_monitor(Selector, Mon) :-
-	monitors(Mons), nb_getval(active_mon, ActMon),
+	monitors(Mons), compat_nb_getval(active_mon, ActMon),
 	(member(Selector, Mons) ->  % we may pass the Mon name itself
 		Mon = Selector
 	; integer(Selector) ->
 		nth1(Selector, Mons, Mon)
 	; member(Selector, [left, right, up, down]) ->  % lookup by direction from active mon
-		nb_getval(monitor_geom, AMonGeom), assoc_to_list(AMonGeom, MonGeomPairs),
+		compat_nb_getval(monitor_geom, AMonGeom), assoc_to_list(AMonGeom, MonGeomPairs),
 		((Selector = left ; Selector = right) -> predsort(compare_mongeom(x), MonGeomPairs, SortedPairs)
 		;                                        predsort(compare_mongeom(y), MonGeomPairs, SortedPairs)),
 		pairs_keys(SortedPairs, SortedKeys),
@@ -735,8 +735,8 @@ switch_workspace(Mon, Selector) :-
 			global_key_value(windows, Mon-NewWs, NewWins),
 			global_key_value(windows, Mon-OldWs, OldWins),
 
-			forall(member(Win, OldWins), hide(Win)),
-			forall(member(Win, NewWins), show(Win)),
+			compat_forall(member(Win, OldWins), hide(Win)),
+			compat_forall(member(Win, NewWins), show(Win)),
 			layout:relayout,
 
 			% focused window was remembered, restore it (if any)
@@ -764,7 +764,7 @@ switch_workspace(Mon, Selector) :-
 %  @arg ToMon target monitor of the window
 shiftcoord_win_from_to(Win, FromMon, ToMon) :-
 	(FromMon \= ToMon ->
-		(nb_getval(bars, Bars), \+ member(Win, Bars) -> show(Win) ; true),
+		(compat_nb_getval(bars, Bars), \+ member(Win, Bars) -> show(Win) ; true),
 		display(Dp),
 		global_key_value(monitor_geom, FromMon, [FromMonX, FromMonY|_]),
 		global_key_value(monitor_geom, ToMon,   [ToMonX,   ToMonY  |_]),
@@ -772,7 +772,7 @@ shiftcoord_win_from_to(Win, FromMon, ToMon) :-
 			MonDiffX is FromMonX - ToMonX, NewX is X - MonDiffX,
 			MonDiffY is FromMonY - ToMonY, NewY is Y - MonDiffY,
 			plx:x_move_resize_window(Dp, Win, NewX, NewY, W, H),
-			(nb_getval(bars, Bars), \+ member(Win, Bars) ->
+			(compat_nb_getval(bars, Bars), \+ member(Win, Bars) ->
 				win_properties(Win, [State, Fullscr, _]),
 				win_newproperties(Win, [State, Fullscr, [NewX, NewY, W, H]]),
 
@@ -797,12 +797,12 @@ switch_monitor(To) :-
 			run_hook(switch_monitor_pre),
 
 			unfocus_at_onlyvisual(ActMon-ActWs, true), % switch focus
-			nb_setval(active_mon, ToMon), active_mon_ws(ToMon, NewActWs),
+			compat_nb_setval(active_mon, ToMon), active_mon_ws(ToMon, NewActWs),
 			global_key_value(focused, ToMon-NewActWs, FocusedWin), focus(FocusedWin),
 
 			(bar_placement(follow_focus) ->
-				nb_getval(bars, Bars),
-				forall(member(Bar, Bars), shiftcoord_win_from_to(Bar, ActMon, ToMon))
+				compat_nb_getval(bars, Bars),
+				compat_forall(member(Bar, Bars), shiftcoord_win_from_to(Bar, ActMon, ToMon))
 				% move the bar(s) to the newly active monitor
 			; true),
 			update_ws_atoms,
@@ -867,7 +867,7 @@ win_tomon_toworkspace_top(Win, ToMon, ToWs, Top) :-
 %  @arg Selector can be workspace name (atom), an index, prev, next, prev_nonempty, next_nonempty
 %       See selector_workspace/2 for more information about the values
 move_focused_to_workspace(Selector) :-
-	global_value(focused, FocusedWin), nb_getval(active_mon, ActMon),
+	global_value(focused, FocusedWin), compat_nb_getval(active_mon, ActMon),
 	(selector_workspace(Selector, ToWs) ->
 		win_tomon_toworkspace_top(FocusedWin, ActMon, ToWs, false)
 	; utils:warn_invalid_arg("move_focused_to_workspace", Selector))
@@ -905,7 +905,7 @@ nonempty_workspaces_and_act(NonEmptyWss) :- nonempty_workspaces(NonEmptyWss, tru
 %  @arg NonEmptyWss list of non-empty workspaces
 nonempty_workspaces(NonEmptyWss) :- nonempty_workspaces(NonEmptyWss, false).
 nonempty_workspaces(NonEmptyWss, IncludeAct) :-
-	nb_getval(workspaces, Wss), active_mon_ws(ActMon, ActWs),
+	compat_nb_getval(workspaces, Wss), active_mon_ws(ActMon, ActWs),
 	findall(Ws,
 	        (member(Ws, Wss),
 		once(((IncludeAct = true, Ws = ActWs) ; (global_key_value(windows, ActMon-Ws, [_|_]))))),
@@ -933,30 +933,30 @@ nonempty_monitors(NonEmptyMons) :- % also includes the active one, even if it's 
 %
 %  @arg Ws atom name of to be created workspace, must be unique
 create_workspace(Ws) :-
-	nb_getval(workspaces, Wss),
+	compat_nb_getval(workspaces, Wss),
 	(\+ member(Ws, Wss) -> % ws with this name must not already exist
 		monitors(Mons),
-		forall(member(Mon, Mons), (
+		compat_forall(member(Mon, Mons), (
 			default_nmaster(Nmaster), default_mfact(Mfact), default_layout(Layout),
-			nb_getval(nmaster, ANmaster), nb_getval(mfact, AMfact), nb_getval(layout, ALayout),
-			nb_getval(focused, AFocused), nb_getval(windows, AWins),
+			compat_nb_getval(nmaster, ANmaster), compat_nb_getval(mfact, AMfact), compat_nb_getval(layout, ALayout),
+			compat_nb_getval(focused, AFocused), compat_nb_getval(windows, AWins),
 			put_assoc(Mon-Ws, ANmaster, Nmaster, NewANmaster),
 			put_assoc(Mon-Ws, AMfact,   Mfact,   NewAMfact),
 			put_assoc(Mon-Ws, ALayout,  Layout,  NewALayout),
 			put_assoc(Mon-Ws, AFocused, 0,       NewAFocused),
 			put_assoc(Mon-Ws, AWins,    [],      NewAWins),
-			nb_setval(nmaster, NewANmaster), nb_setval(mfact, NewAMfact), nb_setval(layout, NewALayout),
-			nb_setval(focused, NewAFocused), nb_setval(windows, NewAWins),
+			compat_nb_setval(nmaster, NewANmaster), compat_nb_setval(mfact, NewAMfact), compat_nb_setval(layout, NewALayout),
+			compat_nb_setval(focused, NewAFocused), compat_nb_setval(windows, NewAWins),
 
 			layout_default_overrides(LDefOverrides),
-			forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
+			compat_forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
 				(ground(NmasterOR) -> global_key_newvalue(nmaster, Mon-Ws, NmasterOR) ; true),
 				(ground(MfactOR)   -> global_key_newvalue(mfact,   Mon-Ws, MfactOR)   ; true),
 				(ground(LayoutOR)  -> global_key_newvalue(layout,  Mon-Ws, LayoutOR)  ; true)
 			))
 		)),
 		append(Wss, [Ws], NewWss),
-		nb_setval(workspaces, NewWss),
+		compat_nb_setval(workspaces, NewWss),
 		update_ws_atoms
 	; true)
 .
@@ -992,26 +992,26 @@ replace_key(Assoc, OldK, NewK, NewAssoc) :-
 %  @arg OldName name of the workspace to be renamed
 %  @arg NewName new name for the workspace
 rename_workspace(OldName, NewName) :-
-	nb_getval(workspaces, Wss),
+	compat_nb_getval(workspaces, Wss),
 	(\+ member(NewName, Wss) -> % names should be kept unique
-		nb_getval(active_ws, AActiveWs), nb_getval(prev_ws, APrevWs),
+		compat_nb_getval(active_ws, AActiveWs), compat_nb_getval(prev_ws, APrevWs),
 		map_assoc(replace_value(OldName, NewName), AActiveWs, NewAActiveWs),
 		map_assoc(replace_value(OldName, NewName), APrevWs,   NewAPrevWs),
 		monitors(Mons),
-		forall(member(Mon, Mons), (
-			nb_getval(nmaster, ANmaster), nb_getval(mfact, AMfact), nb_getval(layout, ALayout),
-			nb_getval(focused, AFocused), nb_getval(windows, AWins),
+		compat_forall(member(Mon, Mons), (
+			compat_nb_getval(nmaster, ANmaster), compat_nb_getval(mfact, AMfact), compat_nb_getval(layout, ALayout),
+			compat_nb_getval(focused, AFocused), compat_nb_getval(windows, AWins),
 			replace_key(ANmaster, Mon-OldName, Mon-NewName, NewANmaster),
 			replace_key(AMfact,   Mon-OldName, Mon-NewName, NewAMfact),
 			replace_key(ALayout,  Mon-OldName, Mon-NewName, NewALayout),
 			replace_key(AFocused, Mon-OldName, Mon-NewName, NewAFocused),
 			replace_key(AWins,    Mon-OldName, Mon-NewName, NewAWins),
-			nb_setval(nmaster, NewANmaster), nb_setval(mfact, NewAMfact), nb_setval(layout, NewALayout),
-			nb_setval(focused, NewAFocused), nb_setval(windows, NewAWins)
+			compat_nb_setval(nmaster, NewANmaster), compat_nb_setval(mfact, NewAMfact), compat_nb_setval(layout, NewALayout),
+			compat_nb_setval(focused, NewAFocused), compat_nb_setval(windows, NewAWins)
 		)),
-		nb_setval(active_ws, NewAActiveWs), nb_setval(prev_ws, NewAPrevWs),
+		compat_nb_setval(active_ws, NewAActiveWs), compat_nb_setval(prev_ws, NewAPrevWs),
 		select(OldName, Wss, NewName, NewWss),
-		nb_setval(workspaces, NewWss),
+		compat_nb_setval(workspaces, NewWss),
 		update_ws_atoms
 	; true)
 .
@@ -1023,13 +1023,13 @@ rename_workspace(OldName, NewName) :-
 %  @arg Ws workspace to be reindexed
 %  @arg NewIdx new index for the workspace
 reindex_workspace(Ws, NewIdx) :-
-	nb_getval(workspaces, Wss),
+	compat_nb_getval(workspaces, Wss),
 	selectchk(Ws, Wss, WssStripped),
 	N is NewIdx - 1,
 	utils:split_at(N, WssStripped, Prefix, Suffix),
 	append(Prefix, [Ws], Prefix2),
 	append(Prefix2, Suffix, NewWss),
-	nb_setval(workspaces, NewWss),
+	compat_nb_setval(workspaces, NewWss),
 	update_ws_atoms
 .
 
@@ -1040,15 +1040,15 @@ reindex_workspace(Ws, NewIdx) :-
 %  @arg Mon monitor to delete the workspace associations from
 %  @arg Ws workspace to delete the associations of
 delete_ws_assocs(Mon, Ws) :-
-	nb_getval(nmaster, ANmaster), nb_getval(mfact, AMfact), nb_getval(layout, ALayout),
-	nb_getval(focused, AFocused), nb_getval(windows, AWins),
+	compat_nb_getval(nmaster, ANmaster), compat_nb_getval(mfact, AMfact), compat_nb_getval(layout, ALayout),
+	compat_nb_getval(focused, AFocused), compat_nb_getval(windows, AWins),
 	del_assoc(Mon-Ws, ANmaster, _, NewANmaster),
 	del_assoc(Mon-Ws, AMfact  , _, NewAMfact),
 	del_assoc(Mon-Ws, ALayout , _, NewALayout),
 	del_assoc(Mon-Ws, AFocused, _, NewAFocused),
 	del_assoc(Mon-Ws, AWins   , _, NewAWins),
-	nb_setval(nmaster, NewANmaster), nb_setval(mfact, NewAMfact), nb_setval(layout, NewALayout),
-	nb_setval(focused, NewAFocused), nb_setval(windows, NewAWins)
+	compat_nb_setval(nmaster, NewANmaster), compat_nb_setval(mfact, NewAMfact), compat_nb_setval(layout, NewALayout),
+	compat_nb_setval(focused, NewAFocused), compat_nb_setval(windows, NewAWins)
 .
 
 %! delete_workspace(++Ws:atom) is det
@@ -1059,22 +1059,22 @@ delete_ws_assocs(Mon, Ws) :-
 %
 %  @arg Ws workspace to delete
 delete_workspace(Ws) :-
-	monitors(Mons), nb_getval(workspaces, Wss),
+	monitors(Mons), compat_nb_getval(workspaces, Wss),
 	(Wss \= [_] ->  % don't allow deleting if there is only one ws left
 		(nextto(Ws, NWs, Wss) -> NextWs = NWs ; Wss = [NextWs|_]),
-		forall(member(Mon, Mons), (
+		compat_forall(member(Mon, Mons), (
 			global_key_value(active_ws, Mon, ActWs),
 			global_key_value(prev_ws, Mon, PrevWs),
 			(Ws = ActWs -> switch_workspace(Mon, NextWs) ; true),
 			(Ws = PrevWs -> global_key_newvalue(prev_ws, Mon, ActWs) ; true),
 
 			global_key_value(windows, Mon-Ws, Wins),
-			forall(member(Win, Wins), win_tomon_toworkspace_top(Win, Mon, NextWs, false)),
+			compat_forall(member(Win, Wins), win_tomon_toworkspace_top(Win, Mon, NextWs, false)),
 
 			delete_ws_assocs(Mon, Ws)
 		)),
 		selectchk(Ws, Wss, NewWss),
-		nb_setval(workspaces, NewWss),
+		compat_nb_setval(workspaces, NewWss),
 		update_ws_atoms
 	; true)
 .
@@ -1094,23 +1094,23 @@ delete_monitor(Mon) :-
 	(Mons \= [_] ->  % keep logic of final monitor even if it's disconnected
 		(nextto(Mon, NMon, Mons) -> NextMon = NMon ; Mons = [NextMon|_]),
 
-		nb_getval(workspaces, Wss), % move windows to next monitor
-		forall(member(Ws, Wss), (
-			forall(global_key_value(windows, Mon-Ws, Wins), (
-				forall(member(Win, Wins), win_tomon_toworkspace_top(Win, NextMon, Ws, false))
+		compat_nb_getval(workspaces, Wss), % move windows to next monitor
+		compat_forall(member(Ws, Wss), (
+			compat_forall(global_key_value(windows, Mon-Ws, Wins), (
+				compat_forall(member(Win, Wins), win_tomon_toworkspace_top(Win, NextMon, Ws, false))
 		)))),
 
-		nb_getval(active_mon, ActMon), % focus next monitor if this was the focused one
+		compat_nb_getval(active_mon, ActMon), % focus next monitor if this was the focused one
 		(ActMon == Mon -> switch_monitor(NextMon) ; true),
 
-		nb_getval(monitor_geom, AMonGeom),  nb_getval(free_win_space, AFreeWinSpace),
-		nb_getval(active_ws,    AActiveWs), nb_getval(prev_ws,        APrevWs),
+		compat_nb_getval(monitor_geom, AMonGeom),  compat_nb_getval(free_win_space, AFreeWinSpace),
+		compat_nb_getval(active_ws,    AActiveWs), compat_nb_getval(prev_ws,        APrevWs),
 		del_assoc(Mon, AMonGeom,  _, NewAMonGeom),  del_assoc(Mon, AFreeWinSpace, _, NewAFreeWinSpace),
 		del_assoc(Mon, AActiveWs, _, NewAActiveWs), del_assoc(Mon, APrevWs,       _, NewAPrevWs),
-		nb_setval(monitor_geom, NewAMonGeom),  nb_setval(free_win_space, NewAFreeWinSpace),
-		nb_setval(active_ws,    NewAActiveWs), nb_setval(prev_ws,        NewAPrevWs),
+		compat_nb_setval(monitor_geom, NewAMonGeom),  compat_nb_setval(free_win_space, NewAFreeWinSpace),
+		compat_nb_setval(active_ws,    NewAActiveWs), compat_nb_setval(prev_ws,        NewAPrevWs),
 
-		forall(member(Ws, Wss), delete_ws_assocs(Mon, Ws)),
+		compat_forall(member(Ws, Wss), delete_ws_assocs(Mon, Ws)),
 
 		format("Monitor \"~s\" unmanaged~n", [Mon])
 	; true)
@@ -1128,7 +1128,7 @@ delete_monitor(Mon) :-
 format_ws_name(Fmt, [Idx, Ws], Formatted) :-
 	(sub_string(Fmt, _, _, _, "~d") ->
 			format_string(Fmt, [Idx,  Ws], F)
-		;	format_string(Fmt,  [Ws]     , F)
+		;	format_string(Fmt, 		 [Ws], F)
 	),
 	atom_chars(Formatted, F)
 .
@@ -1138,7 +1138,7 @@ format_ws_name(Fmt, [Idx, Ws], Formatted) :-
 %  Updates the workspace related netatoms (e.g. _NET_CURRENT_DESKTOP).
 %    see: https://specifications.freedesktop.org/wm-spec/latest/
 update_ws_atoms :-
-	display(Dp), rootwin(Rootwin), active_mon_ws(_, ActWs), nb_getval(workspaces, Wss),
+	display(Dp), rootwin(Rootwin), active_mon_ws(_, ActWs), compat_nb_getval(workspaces, Wss),
 	netatom(numberofdesktops, NetNumberOfDesktops),
 	netatom(desktopnames,     NetDesktopNames),
 	netatom(currentdesktop,   NetCurrentDesktop),
@@ -1148,7 +1148,7 @@ update_ws_atoms :-
 	nonempty_workspaces(NonEmptyWss),
 	(hide_empty_workspaces(true) -> WssToUse = RelevantWss ; WssToUse = Wss),
 
-	length(WssToUse, WsCnt),
+	compat_length(WssToUse, WsCnt),
 	findall(DisplayedName,
 		(nth1(Idx, Wss, Ws), selectchk(Ws, WssToUse, _),
 		(selectchk(Ws, NonEmptyWss, _) ->
@@ -1174,9 +1174,9 @@ update_ws_atoms :-
 %  Updates the _NET_WORKAREA netatom.
 %    see: https://specifications.freedesktop.org/wm-spec/latest/
 update_workarea :-
-	display(Dp), rootwin(Rootwin), nb_getval(active_mon, ActMon),
+	display(Dp), rootwin(Rootwin), compat_nb_getval(active_mon, ActMon),
 	global_key_value(free_win_space, ActMon, Geom),
-	nb_getval(workspaces, Wss), length(Wss, WsCnt),
+	compat_nb_getval(workspaces, Wss), compat_length(Wss, WsCnt),
 
 	utils:n_item_clones(WsCnt, Geom, Geoms), append(Geoms, Geoms1D),
 
@@ -1249,7 +1249,7 @@ update_wintype(Win) :-
 %  @arg Test to check Str against, must be a string or exact(S) where S is a string
 %  @arg Str string or var to check if it passes Test
 ruletest_on(Test, _) :- var(Test).
-ruletest_on(Test, Str) :- string(Test), sub_string(Str, _, _, _, Test).
+ruletest_on(Test, Str) :- double_quotes(Test), sub_string(Str, _, _, _, Test).
 ruletest_on(exact(Str), Str).
 
 %! apply_rules(++Win:integer) is det
@@ -1275,7 +1275,7 @@ apply_rules(Win) :-
 			(ground(Mon), monitors(Mons), member(Mon, Mons) -> ToMon = Mon ; ToMon = ActMon),
 
 			global_key_value(active_ws, ToMon, ActWsOnToMon),
-			(ground(Ws), nb_getval(workspaces, Wss),
+			(ground(Ws), compat_nb_getval(workspaces, Wss),
 			(atom(Ws) -> member(Ws, Wss), ToWs = Ws ; nth1(Ws, Wss, ToWs, _)) -> true ; ToWs = ActWsOnToMon),
 
 			global_key_value(free_win_space, ActMon, [MX, MY, MW, MH]),
@@ -1406,21 +1406,21 @@ handle_event_(buttonpress, [_, _, Dp, _, _, Subwin, _, _, _, Xroot, Yroot, _, Bu
 
 	% left or right mouse clicked
 	;(Button = Button1 ; Button = Button3) ->
-		nb_getval(bars, Bars),
+		compat_nb_getval(bars, Bars),
 		(Subwin =\= 0, \+ member(Subwin, Bars) ->
 			focus(Subwin),
 			raise(Subwin),
 			(plx:x_get_window_attributes(Dp, Subwin, [X, Y, W, H], Status), Status =\= 0,
 			win_properties(Subwin, [_, false|_]) ->  % don't allow dragging fullscreen wins
-				nb_setval(drag_initial_winattr, [X, Y, W, H]),
-				nb_setval(dragged, [Subwin, Xroot, Yroot, Button])
+				compat_nb_setval(drag_initial_winattr, [X, Y, W, H]),
+				compat_nb_setval(dragged, [Subwin, Xroot, Yroot, Button])
 			; true)
 		; true)
 	; true)
 .
 
 handle_event_(buttonrelease, _) :-
-	nb_setval(dragged, none)
+	compat_nb_setval(dragged, none)
 .
 
 handle_event_(enternotify, [_, _, _, _, Win, _, _, _, _, _, _, _, _, _, _, _, _]) :-
@@ -1429,14 +1429,14 @@ handle_event_(enternotify, [_, _, _, _, Win, _, _, _, _, _, _, _, _, _, _, _, _]
 .
 
 handle_event_(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
-	(nb_getval(dragged, [Win, SXroot, SYroot, SButton]), Win =\= 0,
+	(compat_nb_getval(dragged, [Win, SXroot, SYroot, SButton]), Win =\= 0,
 	plx:x_get_window_attributes(Dp, Win, WinGeom, Status), Status =\= 0 ->
 		rect_inmon(WinGeom, Mon),
 		switch_monitor(Mon),
 		active_mon_ws(Mon, ActWs),
 		win_tomon_toworkspace_top(Win, Mon, ActWs, false), % dragged to other monitor
 
-		nb_getval(drag_initial_winattr, [AX, AY, AW, AH]),
+		compat_nb_getval(drag_initial_winattr, [AX, AY, AW, AH]),
 		border_width(BorderW),
 		Xdiff is Xroot - SXroot,
 		Ydiff is Yroot - SYroot,
@@ -1494,9 +1494,9 @@ handle_event_(maprequest, [_, _, _, Dp, _, Win]) :-
 	(plx:x_get_window_attributes(Dp, Win, Geom, Status), Status =\= 0 ->
 	(plx:x_get_class_hint(Dp, Win, Name, Class),
 	bar_classes(BarClasses), member(Name-Class, BarClasses) ->
-		nb_getval(bars, Bars),
+		compat_nb_getval(bars, Bars),
 		(\+ memberchk(Win, Bars) ->
-			nb_setval(bars, [Win|Bars]),
+			compat_nb_setval(bars, [Win|Bars]),
 			plx:x_map_window(Dp, Win),
 			(bar_placement(follow_focus) ->
 				rect_inmon(Geom, InMon),
@@ -1516,7 +1516,7 @@ handle_event_(maprequest, [_, _, _, Dp, _, Win]) :-
 
 			CWBorderWidth is 1 << 4,
 			border_width(BorderW),
-			nb_getval(border_pixel, BorderPixel),
+			compat_nb_getval(border_pixel, BorderPixel),
 			plx:x_configure_window(Dp, Win, CWBorderWidth, 0, 0, 0, 0, BorderW, 0, 0),
 			plx:x_set_window_border(Dp, Win, BorderPixel),
 
@@ -1566,9 +1566,9 @@ handle_event_(unmapnotify, [_, _, SendEvent, Dp, _, Win, _]) :-
 .
 
 handle_event_(destroynotify, [_, _, _, _, _, Win]) :-
-	nb_getval(bars, Bars),
+	compat_nb_getval(bars, Bars),
 	(selectchk(Win, Bars, RemainingBars) ->  % bar is removed, get back its space
-		nb_setval(bars, RemainingBars),
+		compat_nb_setval(bars, RemainingBars),
 		update_free_win_space
 	;
 		run_hook(window_destroy_pre),
@@ -1613,7 +1613,7 @@ handle_event_(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
 	(Win == Rootwin ->
 		% Notice of pending jobs is implemented with a ConfigureNotify
 		(utils:jobs(Jobs) ->
-			forall(member(Job, Jobs),
+			compat_forall(member(Job, Jobs),
 				ignore(catch(call(Job), Ex, (writeln(Ex), true)))
 			),
 			retract(utils:jobs(_))
@@ -1624,7 +1624,7 @@ handle_event_(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
 handle_event_(rrscreenchangenotify, _) :-
 	monitors(Mons),
 	query_outputs(OutputInfos),
-	forall(member(Output-Geom, OutputInfos), (
+	compat_forall(member(Output-Geom, OutputInfos), (
 
 		% Monitor already managed
 		(member(Output, Mons) ->
@@ -1643,7 +1643,7 @@ handle_event_(rrscreenchangenotify, _) :-
 	)),
 
 	% Remove no longer connected monitors
-	forall((member(Mon, Mons), \+ member(Mon-_, OutputInfos)), (
+	compat_forall((member(Mon, Mons), \+ member(Mon-_, OutputInfos)), (
 		delete_monitor(Mon)
 	)),
 
@@ -1704,7 +1704,7 @@ jobs_notify(Jobs) :-
 %  @arg Mon containing monitor of Win
 %  @arg Ws containing workspace of Win
 win_mon_ws(Win, Mon, Ws) :-
-	nb_getval(windows, AWins), assoc_to_keys(AWins, Keys),
+	compat_nb_getval(windows, AWins), assoc_to_keys(AWins, Keys),
 	once((member(Mon-Ws, Keys), global_key_value(windows, Mon-Ws, Wins), member(Win, Wins)))
 .
 
@@ -1728,7 +1728,7 @@ win_properties(Win, Properties) :- term_to_atom(Win, WinAtom), nb_current(WinAto
 %
 %  @arg Win XID of window to set the properties for
 %  @arg Properties new property list for Win
-win_newproperties(Win, Properties) :- term_to_atom(Win, WinAtom), nb_setval(WinAtom, Properties).
+win_newproperties(Win, Properties) :- term_to_atom(Win, WinAtom), compat_nb_setval(WinAtom, Properties).
 
 %! eventloop() is det
 %
@@ -1806,7 +1806,7 @@ focused_to_top :-
 %  @arg Direction can be up or down
 move_focused(Direction) :-
 	global_value(windows, Wins), global_value(focused, FocusedWin),
-	length(Wins, WinCnt),
+	compat_length(Wins, WinCnt),
 	(1 < WinCnt, FocusedWin =\= 0 ->
 		(Direction = down ->
 			(utils:swap_with_next(Wins, FocusedWin, SwapResult) ->
@@ -1870,12 +1870,12 @@ trim_bar_space(Mon, [BarX, BarY, BarW, BarH]) :-
 %    monitor resolution - outer gaps - space reserved for status bars
 update_free_win_space :-
 	display(Dp), monitors(Mons),
-	forall(member(Mon, Mons), (
+	compat_forall(member(Mon, Mons), (
 		global_key_value(monitor_geom, Mon, MonGeom),
 		global_key_newvalue(free_win_space, Mon, MonGeom),
 
-		nb_getval(bars, Bars),
-		forall(member(Bar, Bars), (
+		compat_nb_getval(bars, Bars),
+		compat_forall(member(Bar, Bars), (
 			(plx:x_get_window_attributes(Dp, Bar, BarGeom, Status), Status =\= 0 ->
 				rect_inmon(BarGeom, InMon),
 				(bar_placement(static) ->
@@ -1913,7 +1913,7 @@ update_clientlist :-
 	PropModeAppend is 2, XA_WINDOW is 33,
 
 	plx:x_delete_property(Dp, Rootwin, NetClientList),
-	forall((global_key_value(windows, _, Wins), member(Win, Wins)), (
+	compat_forall((global_key_value(windows, _, Wins), member(Win, Wins)), (
 		plx:x_change_property(Dp, Rootwin, NetClientList, XA_WINDOW, 32, PropModeAppend, [Win], 1)
 	))
 .
@@ -1924,7 +1924,7 @@ update_clientlist :-
 setup_hooks :-
 	retractall(hook(_, _)),
 	hooks(Hooks),
-	forall(member((Event -> Action), Hooks), (
+	compat_forall(member((Event -> Action), Hooks), (
 		assertz(hook(Event, Action))
 	))
 .
@@ -1948,16 +1948,16 @@ run_hook(Event) :-
 init_state :-
 	workspaces(Wss),
 
-	empty_assoc(EmptyAMonGeom),      nb_setval(monitor_geom,   EmptyAMonGeom),
-	empty_assoc(EmptyAFreeWinSpace), nb_setval(free_win_space, EmptyAFreeWinSpace),
-	empty_assoc(EmptyAActiveWs),     nb_setval(active_ws,      EmptyAActiveWs),
-	empty_assoc(EmptyAPrevWs),       nb_setval(prev_ws,        EmptyAPrevWs),
+	empty_assoc(EmptyAMonGeom),      compat_nb_setval(monitor_geom,   EmptyAMonGeom),
+	empty_assoc(EmptyAFreeWinSpace), compat_nb_setval(free_win_space, EmptyAFreeWinSpace),
+	empty_assoc(EmptyAActiveWs),     compat_nb_setval(active_ws,      EmptyAActiveWs),
+	empty_assoc(EmptyAPrevWs),       compat_nb_setval(prev_ws,        EmptyAPrevWs),
 
-	empty_assoc(EmptyANmaster), nb_setval(nmaster, EmptyANmaster),
-	empty_assoc(EmptyAMfact),   nb_setval(mfact,   EmptyAMfact),
-	empty_assoc(EmptyALayout),  nb_setval(layout,  EmptyALayout),
-	empty_assoc(EmptyAFocused), nb_setval(focused, EmptyAFocused),
-	empty_assoc(EmptyAWins),    nb_setval(windows, EmptyAWins),
+	empty_assoc(EmptyANmaster), compat_nb_setval(nmaster, EmptyANmaster),
+	empty_assoc(EmptyAMfact),   compat_nb_setval(mfact,   EmptyAMfact),
+	empty_assoc(EmptyALayout),  compat_nb_setval(layout,  EmptyALayout),
+	empty_assoc(EmptyAFocused), compat_nb_setval(focused, EmptyAFocused),
+	empty_assoc(EmptyAWins),    compat_nb_setval(windows, EmptyAWins),
 
 	(query_outputs(OutputInfos), OutputInfos \= [] ->
 		init_monitors(OutputInfos),
@@ -1966,11 +1966,11 @@ init_state :-
 		FstMon = "default"
 	),
 
-	nb_setval(active_mon, FstMon),
-	nb_setval(workspaces, Wss),
-	nb_setval(bars, []),
-	nb_setval(dragged, none),
-	nb_setval(drag_initial_winattr, none)
+	compat_nb_setval(active_mon, FstMon),
+	compat_nb_setval(workspaces, Wss),
+	compat_nb_setval(bars, []),
+	compat_nb_setval(dragged, none),
+	compat_nb_setval(drag_initial_winattr, none)
 .
 
 %! query_outputs(-OutputInfos:[string-[int,int,int,int]]) is semidet
@@ -2022,7 +2022,7 @@ init_monitors([Mon-[X, Y, W, H]|Rest]) :-
 %  @arg Geom geometry of Mon
 init_monitor(Mon, Geom) :-
 	% A monitor with this geometry is already managed, don't register mirror
-	nb_getval(monitor_geom, AMonGeom), gen_assoc(OldMon, AMonGeom, Geom) ->
+	compat_nb_getval(monitor_geom, AMonGeom), gen_assoc(OldMon, AMonGeom, Geom) ->
 		format("Monitor \"~s\" has same geometry as \"~s\", ignoring it~n", [Mon, OldMon])
 	;
 
@@ -2031,9 +2031,9 @@ init_monitor(Mon, Geom) :-
 
 	global_key_newvalue(monitor_geom, Mon, Geom),
 
-	nb_getval(active_ws, AActiveWs), nb_getval(prev_ws, APrevWs), nb_getval(free_win_space, AFreeWinSpace),
-	nb_getval(nmaster,   ANmaster),  nb_getval(mfact,   AMfact),  nb_getval(layout, ALayout),
-	nb_getval(focused,   AFocused),  nb_getval(windows, AWins),
+	compat_nb_getval(active_ws, AActiveWs), compat_nb_getval(prev_ws, APrevWs), compat_nb_getval(free_win_space, AFreeWinSpace),
+	compat_nb_getval(nmaster,   ANmaster),  compat_nb_getval(mfact,   AMfact),  compat_nb_getval(layout, ALayout),
+	compat_nb_getval(focused,   AFocused),  compat_nb_getval(windows, AWins),
 
 	put_assoc(Mon, AActiveWs,     StartWs, NewAActiveWs),
 	put_assoc(Mon, APrevWs,       StartWs, NewAPrevWs),
@@ -2052,16 +2052,16 @@ init_monitor(Mon, Geom) :-
 	utils:list_to_oldassoc(PFocused, AFocused, NewAFocused),
 	utils:list_to_oldassoc(PWins,    AWins,    NewAWins),
 
-	nb_setval(active_ws, NewAActiveWs), nb_setval(prev_ws, NewAPrevWs),
-	nb_setval(free_win_space, NewAFreeWinSpace),
-	nb_setval(nmaster,   NewANmaster),  nb_setval(mfact,   NewAMfact), nb_setval(layout, NewALayout),
-	nb_setval(focused,   NewAFocused),  nb_setval(windows, NewAWins),
+	compat_nb_setval(active_ws, NewAActiveWs), compat_nb_setval(prev_ws, NewAPrevWs),
+	compat_nb_setval(free_win_space, NewAFreeWinSpace),
+	compat_nb_setval(nmaster,   NewANmaster),  compat_nb_setval(mfact,   NewAMfact), compat_nb_setval(layout, NewALayout),
+	compat_nb_setval(focused,   NewAFocused),  compat_nb_setval(windows, NewAWins),
 
 	% Apply per-monitor, per-workspace overrides
 	layout_default_overrides(LDefOverrides),
-	forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
+	compat_forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
 		(ground(Ws) -> ForWss = [Ws] ; ForWss = Wss),
-		forall(member(ForWs, ForWss), (
+		compat_forall(member(ForWs, ForWss), (
 			(ground(NmasterOR) -> global_key_newvalue(nmaster, Mon-ForWs, NmasterOR) ; true),
 			(ground(MfactOR)   -> global_key_newvalue(mfact,   Mon-ForWs, MfactOR)   ; true),
 			(ground(LayoutOR)  -> global_key_newvalue(layout,  Mon-ForWs, LayoutOR)  ; true)
@@ -2095,7 +2095,7 @@ init_x :-
 load_custom_config :-
 	config_flag(UserC) ->
 		exists_file(UserC) ->
-			(string(UserC) -> atom_chars(Atom, UserC) ; Atom = UserC),
+			(double_quotes(UserC) -> atom_chars(Atom, UserC) ; Atom = UserC),
 			consult(Atom)
 .
 
@@ -2170,8 +2170,8 @@ load_config :-
 reload_config :-
 	% Retract all settings after making a snapshot of them
 	empty_assoc(SettigValueMap0),
-	nb_setval(settings_snapshot, SettigValueMap0),
-	forall(setting:setting(Setting), (
+	compat_nb_setval(settings_snapshot, SettigValueMap0),
+	compat_forall(setting:setting(Setting), (
 		call(user:Setting, Value),
 		global_key_newvalue(settings_snapshot, Setting, Value),
 		compound_name_arguments(Config, Setting, [_]),
@@ -2182,7 +2182,7 @@ reload_config :-
 	load_config,
 
 	% Restore previous values of those settings which were absent from the user config
-	forall(setting:setting(Setting), (
+	compat_forall(setting:setting(Setting), (
 		(\+ call(Setting, Value) ->
 			global_key_value(settings_snapshot, Setting, Value),
 			compound_name_arguments(Config, Setting, [Value]),
@@ -2195,7 +2195,7 @@ reload_config :-
 
 	% init_config assumes it's run during initialization, so it does not trigger
 	% post-set actions (e.g. relayout). Trigger those manually
-	forall(setting:setting(Setting), (
+	compat_forall(setting:setting(Setting), (
 		call(Setting, Value),
 		set(Setting, Value)
 	)),
@@ -2211,7 +2211,7 @@ reload_config :-
 %  @arg OnlyChanged whether to only dump settings that differ from their default values
 dump_settings(FilePath, OnlyChanged) :-
 	open(FilePath, write, DumpFile),
-	forall(setting:setting(Setting), (
+	compat_forall(setting:setting(Setting), (
 		call(Setting, Value),
 		((OnlyChanged = false ; \+ setting:default_set(Setting, Value)) ->
 			compound_name_arguments(Config, Setting, [Value]),
@@ -2261,15 +2261,15 @@ parse_opt(help(false)). parse_opt(version(false)). parse_opt(check(false)).
 main :-
 	on_signal(term, _, quit),
 
-	catch(use_foreign_library(foreign(plx)),_,use_foreign_library(plx)),
+	catch(use_foreign_library(foreign(plx)), _, use_foreign_library(plx)),
 
 	opts_spec(OptsSpec),
 	opt_arguments(OptsSpec, Opts, _),
-	forall(member(Opt, Opts), parse_opt(Opt)),
+	compat_forall(member(Opt, Opts), parse_opt(Opt)),
 
 	load_config,
 	setting:init_config(false),
-
+	
 	init_x,
 	init_state,
 	alloc_colors,

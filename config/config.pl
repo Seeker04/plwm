@@ -13,10 +13,6 @@
 % Note: there is extensive commenting in this file, as well as arbitrary examples
 % for easier understanding. Feel free to remove them once you're familiar with the settings
 
-
-% :- use_module(swi/compat).
-:- use_module(library(format)).
-
 %*********************************  Layout  ***********************************
 
 default_nmaster(1).      % initial number of master windows for master-stack layouts
@@ -329,10 +325,9 @@ rules([
 % Tip: you can run multiple predicates as Action by writing a comma separated list in parentheses
 hooks([
   (start -> (
-    format("plwm starting~n", [])
+    compat:writeln("plwm starting")
   )),
-
   (quit -> (
-    format("plwm quitting~n", [])
+    compat:writeln("plwm quitting")
   ))
 ]).

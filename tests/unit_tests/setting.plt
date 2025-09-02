@@ -55,7 +55,7 @@ test("setting + (elements)") :-
 .
 
 test("setting + (all atoms)") :-
-	assertion(forall(setting:setting(Setting), atom(Setting)))
+	assertion(compat_forall(setting:setting(Setting), atom(Setting)))
 .
 
 test("setting - (no compound)") :-
@@ -63,7 +63,7 @@ test("setting - (no compound)") :-
 .
 
 test("valid_set + (defaults are valid)") :-
-	assertion(forall(setting:setting(Setting), (
+	assertion(compat_forall(setting:setting(Setting), (
 		setting:default_set(Setting, DefValue),
 		setting:valid_set(Setting, DefValue)
 	)))
@@ -88,21 +88,21 @@ test("default_set - (non-existent setting)") :-
 
 test("set + (defaults can be set)", [
 	setup(
-		nb_setval(workspaces, [ws1, ws2])
+		compat_nb_setval(workspaces, [ws1, ws2])
 	),
 	cleanup((
 		nb_delete(workspaces),
-		forall(setting:setting(Setting), (
+		compat_forall(setting:setting(Setting), (
 			compound_name_arguments(Config, Setting, [_]),
 			retractall(Config)
 		))
 	))
 ]) :-
 	% set succeeds for all defaults
-	assertion(forall(setting:default_set(Setting, DefValue), set(Setting, DefValue))),
+	assertion(compat_forall(setting:default_set(Setting, DefValue), set(Setting, DefValue))),
 
 	% they were indeed set and nothing else was
-	assertion(forall(setting:setting(Setting), (
+	assertion(compat_forall(setting:setting(Setting), (
 		setting:default_set(Setting, DefValue),
 		findall(Value, call(Setting, Value), [DefValue])
 	)))
@@ -131,11 +131,11 @@ test("set - (incorrect value)") :-
 
 test("add +", [
 	setup(
-		nb_setval(workspaces, [ws1, ws2])
+		compat_nb_setval(workspaces, [ws1, ws2])
 	),
 	cleanup((
 		nb_delete(workspaces),
-		forall(setting:setting(Setting), (
+		compat_forall(setting:setting(Setting), (
 			compound_name_arguments(Config, Setting, [_]),
 			retractall(Config)
 		))
@@ -217,7 +217,7 @@ test("add - (non-existent setting)") :-
 .
 
 test("add - (non-list settings)") :-
-	assertion(forall(setting:setting(Setting), (
+	assertion(compat_forall(setting:setting(Setting), (
 		(\+ member(Setting, [workspaces, layout_default_overrides, menucmd, keymaps, rules, hooks])) ->
 			\+ setting:add(Setting, _)
 		; true)
@@ -234,7 +234,7 @@ test("add - (invalid values)") :-
 .
 
 test("warn_invalid_setting +") :-
-	assertion(forall(setting:setting(Setting), (
+	assertion(compat_forall(setting:setting(Setting), (
 		assertion(setting:warn_invalid_setting(Setting, foo))
 	)))
 .
@@ -245,17 +245,17 @@ test("warn_invalid_setting - (var setting)", [error(format_argument_type(_, _), 
 
 test("store_setting + (defaults can be stored)", [
 	cleanup(
-		forall(setting:setting(Setting), (
+		compat_forall(setting:setting(Setting), (
 			compound_name_arguments(Config, Setting, [_]),
 			retractall(Config)
 		))
 	)
 ]) :-
 	% store_setting succeeds for all defaults
-	assertion(forall(setting:default_set(Setting, DefValue), setting:store_setting(Setting, DefValue))),
+	assertion(compat_forall(setting:default_set(Setting, DefValue), setting:store_setting(Setting, DefValue))),
 
 	% they were indeed stored and nothing else was
-	assertion(forall(setting:setting(Setting), (
+	assertion(compat_forall(setting:setting(Setting), (
 		setting:default_set(Setting, DefValue),
 		findall(Value, call(setting:Setting, Value), [DefValue])
 	)))
@@ -346,7 +346,7 @@ test("update_all_borders", [
 
 test("set_workspaces", [
 	setup(
-		nb_setval(workspaces, [ws1, ws2])
+		compat_nb_setval(workspaces, [ws1, ws2])
 	),
 	cleanup((
 		nb_delete(workspaces),
@@ -362,14 +362,14 @@ test("init_config (dry run on empty config)") :-
 .
 
 test("init_config (dry run on default config)") :-
-	assertion(forall(setting:default_set(Setting, DefValue), setting:store_setting(Setting, DefValue))),
+	assertion(compat_forall(setting:default_set(Setting, DefValue), setting:store_setting(Setting, DefValue))),
 	assertion(setting:init_config(true))
 .
 
 test("init_config (normal run)") :-
 	assertion(setting:init_config(false)),
 
-	assertion(forall(setting:setting(Setting), (
+	assertion(compat_forall(setting:setting(Setting), (
 		setting:default_set(Setting, DefValue),
 		findall(Value, call(setting:Setting, Value), [DefValue])
 	)))

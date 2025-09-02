@@ -6,7 +6,7 @@
 %                 ^ these are used quite often, so it's worth exporting them
 
 
-:- use_module(scryer/compat).
+:- use_module(compat).
 
 :- use_module(library(assoc)).
 
@@ -164,7 +164,7 @@ list_to_oldassoc([K-V|Rest], OldAssoc, NewAssoc) :-
 %  @arg Key key in the global association to query
 %  @arg Value stored at the given key in the global association
 global_key_value(Global, Key, Value) :-
-	nb_getval(Global, Assoc),
+	compat_nb_getval(Global, Assoc),
 	get_assoc(Key, Assoc, Value)
 .
 
@@ -177,9 +177,9 @@ global_key_value(Global, Key, Value) :-
 %  @arg Key key in the global association to modify at
 %  @arg Value to store at the given key in the global association
 global_key_newvalue(Global, Key, Value) :-
-	nb_getval(Global, Assoc),
+	compat_nb_getval(Global, Assoc),
 	put_assoc(Key, Assoc, Value, NewAssoc),
-	nb_setval(Global, NewAssoc)
+	compat_nb_setval(Global, NewAssoc)
 .
 
 %! global_value(++Global:term, -Value:term) is semidet
@@ -189,7 +189,7 @@ global_key_newvalue(Global, Key, Value) :-
 %  @arg Global name of global variable that stores the association
 %  @arg Value stored at the active monitor-workspace in the global association
 global_value(Global, Value) :-
-	nb_getval(active_mon, ActMon), global_key_value(active_ws, ActMon, ActWs),
+	compat_nb_getval(active_mon, ActMon), global_key_value(active_ws, ActMon, ActWs),
 	global_key_value(Global, ActMon-ActWs, Value)
 .
 
@@ -200,7 +200,7 @@ global_value(Global, Value) :-
 %  @arg Global name of global variable that stores the association
 %  @arg Value to store at the active monitor-workspace in the global association
 global_newvalue(Global, Value) :-
-	nb_getval(active_mon, ActMon), global_key_value(active_ws, ActMon, ActWs),
+	compat_nb_getval(active_mon, ActMon), global_key_value(active_ws, ActMon, ActWs),
 	global_key_newvalue(Global, ActMon-ActWs, Value)
 .
 

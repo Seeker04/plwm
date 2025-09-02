@@ -41,7 +41,7 @@ test("read_from_prompt", [
 test("mon_ws_format + (1 mon, 1 ws)", [
 	setup((
 		assertz(menu:monitors(["eDP-1"])),
-		nb_setval(workspaces, [foo])
+		compat_nb_setval(workspaces, [foo])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -54,7 +54,7 @@ test("mon_ws_format + (1 mon, 1 ws)", [
 test("mon_ws_format + (1 mon, 1< ws)", [
 	setup((
 		assertz(menu:monitors(["eDP-1"])),
-		nb_setval(workspaces, [foo, bar, baz])
+		compat_nb_setval(workspaces, [foo, bar, baz])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -69,7 +69,7 @@ test("mon_ws_format + (1 mon, 1< ws)", [
 test("mon_ws_format + (1< mon, 1 ws)", [
 	setup((
 		assertz(menu:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
-		nb_setval(workspaces, [foo])
+		compat_nb_setval(workspaces, [foo])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -84,7 +84,7 @@ test("mon_ws_format + (1< mon, 1 ws)", [
 test("mon_ws_format + (1< mon, 1< ws)", [
 	setup((
 		assertz(menu:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
-		nb_setval(workspaces, [foo, bar, baz])
+		compat_nb_setval(workspaces, [foo, bar, baz])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -105,7 +105,7 @@ test("mon_ws_format + (1< mon, 1< ws)", [
 test("mon_ws_format - (empty monitors)", [
 	setup((
 		assertz(menu:monitors([])),
-		nb_setval(workspaces, [foo])
+		compat_nb_setval(workspaces, [foo])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -118,7 +118,7 @@ test("mon_ws_format - (empty monitors)", [
 test("mon_ws_format - (empty workspaces)", [
 	setup((
 		assertz(menu:monitors(["eDP-1"])),
-		nb_setval(workspaces, [])
+		compat_nb_setval(workspaces, [])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -131,7 +131,7 @@ test("mon_ws_format - (empty workspaces)", [
 test("mon_ws_format - (empty monitors & empty workspaces)", [
 	setup((
 		assertz(menu:monitors([])),
-		nb_setval(workspaces, [])
+		compat_nb_setval(workspaces, [])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -143,7 +143,7 @@ test("mon_ws_format - (empty monitors & empty workspaces)", [
 
 test("mon_ws_format - (monitors undefined)", [
 	setup((
-		nb_setval(workspaces, [foo])
+		compat_nb_setval(workspaces, [foo])
 	)),
 	cleanup((
 		nb_delete(workspaces)
@@ -171,7 +171,7 @@ test("mon_ws_format - (monitors & workspaces undefined)") :-
 test("mon_ws_wint_format + (1 mon, 1 ws)", [
 	setup((
 		assertz(menu:monitors(["eDP-1"])),
-		nb_setval(workspaces, [foo])
+		compat_nb_setval(workspaces, [foo])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -184,7 +184,7 @@ test("mon_ws_wint_format + (1 mon, 1 ws)", [
 test("mon_ws_wint_format + (1 mon, 1< ws)", [
 	setup((
 		assertz(menu:monitors(["eDP-1"])),
-		nb_setval(workspaces, [foo, bar, baz])
+		compat_nb_setval(workspaces, [foo, bar, baz])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -199,7 +199,7 @@ test("mon_ws_wint_format + (1 mon, 1< ws)", [
 test("mon_ws_wint_format + (1< mon, 1 ws)", [
 	setup((
 		assertz(menu:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
-		nb_setval(workspaces, [foo])
+		compat_nb_setval(workspaces, [foo])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -214,7 +214,7 @@ test("mon_ws_wint_format + (1< mon, 1 ws)", [
 test("mon_ws_wint_format + (1< mon, 1< ws)", [
 	setup((
 		assertz(menu:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
-		nb_setval(workspaces, [foo, bar, baz])
+		compat_nb_setval(workspaces, [foo, bar, baz])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -235,7 +235,7 @@ test("mon_ws_wint_format + (1< mon, 1< ws)", [
 test("mon_ws_wint_format - (empty monitors)", [
 	setup((
 		assertz(menu:monitors([])),
-		nb_setval(workspaces, [foo])
+		compat_nb_setval(workspaces, [foo])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -248,7 +248,7 @@ test("mon_ws_wint_format - (empty monitors)", [
 test("mon_ws_wint_format - (empty workspaces)", [
 	setup((
 		assertz(menu:monitors(["eDP-1"])),
-		nb_setval(workspaces, [])
+		compat_nb_setval(workspaces, [])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -261,7 +261,7 @@ test("mon_ws_wint_format - (empty workspaces)", [
 test("mon_ws_wint_format - (empty monitors & empty workspaces)", [
 	setup((
 		assertz(menu:monitors([])),
-		nb_setval(workspaces, [])
+		compat_nb_setval(workspaces, [])
 	)),
 	cleanup((
 		retract(menu:monitors(_)),
@@ -273,7 +273,7 @@ test("mon_ws_wint_format - (empty monitors & empty workspaces)", [
 
 test("mon_ws_wint_format - (monitors undefined)", [
 	setup((
-		nb_setval(workspaces, [foo])
+		compat_nb_setval(workspaces, [foo])
 	)),
 	cleanup((
 		nb_delete(workspaces)
@@ -312,8 +312,8 @@ test("spawn_winlist_menu", [
 		assertz(plx:x_get_text_property(0x7fffffffe2ec, 11, "win2", XA_WM_NAME, 1)),
 		assertz(plx:x_get_text_property(0x7fffffffe2ec, 12, "win3", XA_WM_NAME, 1)),
 		list_to_assoc(["eDP-1"-foo-[10, 11, 12]], Assoc),
-		nb_setval(workspaces, [foo, bar, baz]),
-		nb_setval(windows, Assoc)
+		compat_nb_setval(workspaces, [foo, bar, baz]),
+		compat_nb_setval(windows, Assoc)
 	)),
 	cleanup((
 		retract(menu:menucmd(_)),
@@ -336,7 +336,7 @@ test("spawn_winlist_menu", [
 
 test("goto_workspace", [
 	setup((
-		nb_setval(workspaces, [foo, bar]),
+		compat_nb_setval(workspaces, [foo, bar]),
 		assertz(menu:monitors(["eDP-1", "HDMI-1"])),
 		assertz(menu:monws_keys(["eDP-1"-foo, "eDP-1"-bar, "HDMI-1"-foo, "HDMI-1"-bar])),
 		assertz(menu:active_mon_ws("eDP-1", foo)),
@@ -728,7 +728,7 @@ test("list_cmds", [
 		assertz(menu:shift_focus(down) :- dump_to_file("focus down called")),
 		assertz(menu:shift_focus(up) :- dump_to_file("focus up called")),
 		assertz(menu:monitors([])),
-		nb_setval(workspaces, [])
+		compat_nb_setval(workspaces, [])
 	)),
 	cleanup((
 		retractall(menu:shift_focus(_)),

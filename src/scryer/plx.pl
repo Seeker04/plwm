@@ -8,7 +8,6 @@
     xrr_get_screen_resources/4
 ]).
 
-:- use_module(compat).
 :- use_module(library(ffi)).
 :- use_module(library(lists)).
 :- use_module(library(format)).

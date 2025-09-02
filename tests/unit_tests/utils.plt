@@ -188,7 +188,7 @@ test("list_to_oldassoc +") :-
 
 test("global_key_value +", [
 	setup((
-		list_to_assoc([k1-v1, k2-v2], A), nb_setval(g, A)
+		list_to_assoc([k1-v1, k2-v2], A), compat_nb_setval(g, A)
 	)),
 	cleanup(
 		nb_delete(g)
@@ -200,8 +200,8 @@ test("global_key_value +", [
 
 test("global_key_value -", [
 	setup((
-		empty_assoc(A), nb_setval(g1, A),
-		list_to_assoc([k1-v1], B), nb_setval(g2, B)
+		empty_assoc(A), compat_nb_setval(g1, A),
+		list_to_assoc([k1-v1], B), compat_nb_setval(g2, B)
 	)),
 	cleanup((
 		nb_delete(g1), nb_delete(g2)
@@ -214,30 +214,30 @@ test("global_key_value -", [
 
 test("global_key_newvalue +", [
 	setup((
-		empty_assoc(EA), nb_setval(g1, EA),
-		list_to_assoc([k1-v1, k2-v2], A), nb_setval(g2, A)
+		empty_assoc(EA), compat_nb_setval(g1, EA),
+		list_to_assoc([k1-v1, k2-v2], A), compat_nb_setval(g2, A)
 	)),
 	cleanup((
 		nb_delete(g1), nb_delete(g2)
 	))
 ]) :-
 	assertion(utils:global_key_newvalue(g1, k1, v1)),
-	nb_getval(g1, A1),
+	compat_nb_getval(g1, A1),
 	assertion(is_assoc(A1)),
 	assertion(assoc_to_list(A1, [k1-v1])),
 
 	assertion(utils:global_key_newvalue(g2, k1, v1new)),
-	nb_getval(g2, A2),
+	compat_nb_getval(g2, A2),
 	assertion(is_assoc(A2)),
 	assertion(assoc_to_list(A2, [k1-v1new, k2-v2])),
 
 	assertion(utils:global_key_newvalue(g2, k2, v2new)),
-	nb_getval(g2, A3),
+	compat_nb_getval(g2, A3),
 	assertion(is_assoc(A3)),
 	assertion(assoc_to_list(A3, [k1-v1new, k2-v2new])),
 
 	assertion(utils:global_key_newvalue(g2, k3, v3)),
-	nb_getval(g2, A4),
+	compat_nb_getval(g2, A4),
 	assertion(is_assoc(A4)),
 	assertion(assoc_to_list(A4, [k1-v1new, k2-v2new, k3-v3]))
 .
@@ -248,7 +248,7 @@ test("global_key_newvalue - (nonexistent_g)", [throws(_)]) :-
 
 test("global_key_newvalue - (nonassoc_g)", [
 	setup(
-		nb_setval(nonassoc_g, 42)
+		compat_nb_setval(nonassoc_g, 42)
 	),
 	cleanup(
 		nb_delete(nonassoc_g)
@@ -262,9 +262,9 @@ test("global_value +", [
 	setup((
 		empty_assoc(EA),
 		put_assoc(amon, EA, aws, WsA),
-		nb_setval(active_mon, amon),
-		nb_setval(active_ws, WsA),
-		list_to_assoc([amon-aws-v], A), nb_setval(g, A)
+		compat_nb_setval(active_mon, amon),
+		compat_nb_setval(active_ws, WsA),
+		list_to_assoc([amon-aws-v], A), compat_nb_setval(g, A)
 	)),
 	cleanup((
 		nb_delete(active_mon), nb_delete(active_ws), nb_delete(g)
@@ -277,8 +277,8 @@ test("global_value - (no active_mon)", [
 	setup((
 		empty_assoc(EA),
 		put_assoc(amon, EA, aws, WsA),
-		nb_setval(active_ws, WsA),
-		list_to_assoc([amon-aws-v], A), nb_setval(g, A)
+		compat_nb_setval(active_ws, WsA),
+		list_to_assoc([amon-aws-v], A), compat_nb_setval(g, A)
 	)),
 	cleanup((
 		nb_delete(active_ws), nb_delete(g)
@@ -292,8 +292,8 @@ test("global_value - (no active_ws)", [
 	setup((
 		empty_assoc(EA),
 		put_assoc(amon, EA, aws, _),
-		nb_setval(active_mon, amon),
-		list_to_assoc([amon-aws-v], A), nb_setval(g, A)
+		compat_nb_setval(active_mon, amon),
+		list_to_assoc([amon-aws-v], A), compat_nb_setval(g, A)
 	)),
 	cleanup((
 		nb_delete(active_mon), nb_delete(g)
@@ -307,9 +307,9 @@ test("global_value - (nonexistent_g)", [
 	setup((
 		empty_assoc(EA),
 		put_assoc(amon, EA, aws, WsA),
-		nb_setval(active_mon, amon),
-		nb_setval(active_ws, WsA),
-		list_to_assoc([amon-aws-v], A), nb_setval(g, A)
+		compat_nb_setval(active_mon, amon),
+		compat_nb_setval(active_ws, WsA),
+		list_to_assoc([amon-aws-v], A), compat_nb_setval(g, A)
 	)),
 	cleanup((
 		nb_delete(active_mon), nb_delete(active_ws), nb_delete(g)
@@ -323,9 +323,9 @@ test("global_value - (wrong value)", [
 	setup((
 		empty_assoc(EA),
 		put_assoc(amon, EA, aws, WsA),
-		nb_setval(active_mon, amon),
-		nb_setval(active_ws, WsA),
-		list_to_assoc([amon-aws-v], A), nb_setval(g, A)
+		compat_nb_setval(active_mon, amon),
+		compat_nb_setval(active_ws, WsA),
+		list_to_assoc([amon-aws-v], A), compat_nb_setval(g, A)
 	)),
 	cleanup((
 		nb_delete(active_mon), nb_delete(active_ws), nb_delete(g)
@@ -338,21 +338,21 @@ test("global_newvalue +", [
 	setup((
 		empty_assoc(EA),
 		put_assoc(amon, EA, aws, WsA),
-		nb_setval(active_mon, amon),
-		nb_setval(active_ws, WsA),
-		list_to_assoc([amon-aws-v1], A), nb_setval(g, A)
+		compat_nb_setval(active_mon, amon),
+		compat_nb_setval(active_ws, WsA),
+		list_to_assoc([amon-aws-v1], A), compat_nb_setval(g, A)
 	)),
 	cleanup((
 		nb_delete(active_mon), nb_delete(active_ws), nb_delete(g)
 	))
 ]) :-
 	assertion(utils:global_newvalue(g, v2)),
-	nb_getval(g, G1),
+	compat_nb_getval(g, G1),
 	assertion(is_assoc(G1)),
 	assertion(assoc_to_list(G1, [amon-aws-v2])),
 
 	assertion(utils:global_newvalue(g, v3)),
-	nb_getval(g, G2),
+	compat_nb_getval(g, G2),
 	assertion(is_assoc(G2)),
 	assertion(assoc_to_list(G2, [amon-aws-v3]))
 .
@@ -361,9 +361,9 @@ test("global_newvalue - (nonexistent_g)", [
 	setup((
 		empty_assoc(EA),
 		put_assoc(amon, EA, aws, WsA),
-		nb_setval(active_mon, amon),
-		nb_setval(active_ws, WsA),
-		list_to_assoc([amon-aws-v1], A), nb_setval(g, A)
+		compat_nb_setval(active_mon, amon),
+		compat_nb_setval(active_ws, WsA),
+		list_to_assoc([amon-aws-v1], A), compat_nb_setval(g, A)
 	)),
 	cleanup((
 		nb_delete(active_mon), nb_delete(active_ws), nb_delete(g)
@@ -377,9 +377,9 @@ test("global_newvalue - (nonassoc_g)", [
 	setup((
 		empty_assoc(EA),
 		put_assoc(amon, EA, aws, WsA),
-		nb_setval(active_mon, amon),
-		nb_setval(active_ws, WsA),
-		nb_setval(g, 42)
+		compat_nb_setval(active_mon, amon),
+		compat_nb_setval(active_ws, WsA),
+		compat_nb_setval(g, 42)
 	)),
 	cleanup((
 		nb_delete(active_mon), nb_delete(active_ws), nb_delete(g)
