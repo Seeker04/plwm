@@ -26,22 +26,29 @@ goal_expansion(exists_file(Path), files:file_exists(Path)).
 
 % format 
 goal_expansion(writeln(String), sys:writeln(String)).
-goal_expansion(format_string(Fmt, Args, Str), sys:format_string(Fmt, Args, Str)).
-
+goal_expansion(writeln(Stream, String), sys:writeln(Stream, String)).
+goal_expansion(compat_format(Stream, Fmt, Args), sys:format_helper(Stream, Fmt, Args)).
 
 %iso_ext
 goal_expansion(forall(Goal, Test), iso_ext:forall(Goal, Test)).
 goal_expansion(nb_getval(Var, Val), iso_ext:bb_get(Var, Val)).
+goal_expansion(nb_setval(Var, Val), iso_ext:bb_put(Var, Val)).
 
 % lists
 goal_expansion(string(Term), si:chars_si(Term)).
 
 goal_expansion(is_list(Xs), si:list_si(Xs)).
 
-goal_expansion(is_set(Xs), sys:is_set(Xs)).
+goal_expansion(is_set(Xs), sys:is_set_helper(Xs)).
 
 goal_expansion(last(List, Last), lists:append(_, [Last], List)).
 
 goal_expansion(selectchk(Elem, List, Rest), once(select(Elem, List, Rest))).
 
-goal_expansion(atom_string(Atom, Chars), sys:atom_string(Atom, Chars)).
+goal_expansion(atom_string(Atom, Chars), sys:atom_string_helper(Atom, Chars)).
+
+% 
+:- initialization((
+   compat_format(string(Str), "scryer/init.pl initialized", []),
+    writeln(Str)
+)).

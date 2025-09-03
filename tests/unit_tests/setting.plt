@@ -5,8 +5,8 @@ is_float(X) :- float(X), ! ; (X = N/D, integer(N), integer(D)).
 is_layout(L) :- member(L, [floating, monocle, stack, hstack, nrows(N), ncols(N),
                            grid, lmaster, rmaster, tmaster, bmaster, cmaster]).
 format_ws_name(Fmt, [Idx, Ws], Formatted) :-
-	(sub_string(Fmt, _, _, _, "~d") -> format(atom(Formatted), Fmt, [Idx, Ws]) ;
-	                                   format(atom(Formatted), Fmt, [Ws]))
+	(sub_string(Fmt, _, _, _, "~d") ->compat_format(atom(Formatted), Fmt, [Idx, Ws]) ;
+	                                  compat_format(atom(Formatted), Fmt, [Ws]))
 .
 modifier(Mod) :- member(Mod, [shift, lock, ctrl, alt, mod2, mod3, super, mod5]).
 valid_callable(Pred) :- callable(Pred).

@@ -5,11 +5,7 @@
 :- module(utils, [global_key_value/3, global_key_newvalue/3, global_value/2, global_newvalue/2, shellcmd/1, reassert/1]).
 %                 ^ these are used quite often, so it's worth exporting them
 
-
-
-
 :- use_module(library(assoc)).
-
 
 %! valid_callable(++Callable:callable) is det
 %
@@ -95,7 +91,8 @@ shellcmd(Cmd) :- catch(ignore((ensure_ampersand(Cmd, CmdBg), shell(CmdBg))), Ex,
 %  @arg Pred predicate that was called
 %  @arg Arg invalid argument that was supplied to Pred
 warn_invalid_arg(Pred, Arg) :-
-	format(user_error, "warning: invalid argument to ~s: ~p, ignored~n", [Pred, Arg])
+compat_format(string(Msg), "warning: invalid argument to ~s: ~p, ignored", [Pred, Arg]),
+	writeln(user_error, Msg)
 .
 
 %! split_at(++Index:integer, ++L:[term], -Left:[term], -Right:[term]) is semidet

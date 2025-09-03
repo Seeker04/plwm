@@ -2,7 +2,6 @@
 
 :- module(layout, []).
 
-
 :- use_module(animation).
 :- use_module(utils).
 

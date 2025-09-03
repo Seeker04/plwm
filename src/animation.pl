@@ -2,7 +2,6 @@
 
 :- module(animation, []).
 
-
 :- use_module(utils).
 
 %! from_to_in_steps(++From:integer, ++To:integer, ++StepCnt:integer, -Steps:[integer]) is det

@@ -10,8 +10,6 @@
 
 :- module(setting, [set/2, add/2]).
 
-
-
 :- use_module(utils).
 
 %! setting(+Setting:atom) is semidet
@@ -40,7 +38,6 @@ setting(Setting) :- member(Setting, [
 %  @arg Dryrun if true, only the validation is executed
 init_config(Dryrun) :-
 	forall(setting(Setting), (
-		
 		(call(user:Setting, Value) ->
 			(\+ valid_set(Setting, Value) ->
 				(Dryrun = false ->
@@ -58,8 +55,9 @@ init_config(Dryrun) :-
 
 	% Check some cross-setting validity, e.g. that starting_workspace/1 is contained in workspaces/1
 	(user:starting_workspace(StartingWs), user:workspaces([WssHead|WssTail]), \+ member(StartingWs, [WssHead|WssTail]) ->
-		format(user_error, "warning: starting_workspace: ~a is not a workspace, defaulting to ~a~n",
+	compat_format(string(Msg), "warning: starting_workspace: ~a is not a workspace, defaulting to ~a",
 		[StartingWs, WssHead]),
+		writeln(user_error, Msg),
 		(Dryrun = false ->
 			store_setting(starting_workspace, WssHead)
 		; true)
@@ -94,7 +92,7 @@ valid_set_(inner_gaps,               Value) :- integer(Value), 0 =< Value.
 valid_set_(workspaces,               Value) :- Value \= [], is_set(Value), forall(member(Ws, Value), atom(Ws)).
 valid_set_(starting_workspace,       Value) :- atom(Value).
 valid_set_(hide_empty_workspaces,    Value) :- Value = true ; Value = false.
-valid_set_(ws_format,                Value) :- catch(user:format_ws_name(Value, [1, a], _), E, (format("error: ~q", E), fail)).
+valid_set_(ws_format,                Value) :- catch(user:format_ws_name(Value, [1, a], _), _, fail).
 valid_set_(ws_format_occupied,       Value) :- catch(user:format_ws_name(Value, [1, a], _), _, fail).
 valid_set_(bar_classes,              Value) :- is_list(Value), forall(member(Pair, Value),
                                                (Pair = N-C, (string(N) ; var(N)), (string(C) ; var(C)))).
@@ -332,7 +330,8 @@ add(Setting, Value) :-
 %  @arg Setting setting that got invalid value
 %  @arg Value invalid value
 warn_invalid_setting(Setting, Value) :-
-	format(user_error, "warning: invalid value: ~w for setting: ~a, ignored~n", [Value, Setting])
+compat_format(string(Msg), "warning: invalid value: ~w for setting: ~a, ignored", [Value, Setting]),
+	writeln(user_error, Msg)
 .
 
 %! store_setting(++Setting:atom, ++Value:term) is det

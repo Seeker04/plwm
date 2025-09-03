@@ -6,7 +6,7 @@
 
 version(0.5).
 
-
+:- use_module(library(assoc)).
 
 :- use_module(fifo).
 :- use_module(layout).
@@ -309,7 +309,8 @@ grab_keys :-
 			utils:split_at(Nm1, KeyList, Mods, [Key]),
 		atom_string(Key, KeyStr), maplist(atom_string, ModAtoms, Mods),
 			(\+ translate_keymap(KeyStr, ModAtoms, Action) ->
-				format(user_error, "warning: invalid key: ~q in keymap, ignored~n", [Key])
+		compat_format(string(Msg), "warning: invalid key: ~q in keymap, ignored", [Key]),
+			writeln(user_error, Msg)
 		; true)
 	)),
 	forall(keymap_internal(Kcode, ModMask, _),
@@ -1112,7 +1113,8 @@ delete_monitor(Mon) :-
 
 		forall(member(Ws, Wss), delete_ws_assocs(Mon, Ws)),
 
-		format("Monitor \"~s\" unmanaged~n", [Mon])
+	compat_format(string(Msg), "Monitor \"~s\" unmanaged", [Mon]),
+		writeln(Msg)
 	; true)
 .
 
@@ -1126,11 +1128,8 @@ delete_monitor(Mon) :-
 %  @arg Ws workspace name (atom)
 %  @arg Formatted formatted output
 format_ws_name(Fmt, [Idx, Ws], Formatted) :-
-	(sub_string(Fmt, _, _, _, "~d") ->
-			format_string(Fmt, [Idx,  Ws], F)
-		;	format_string(Fmt, 		 [Ws], F)
-	),
-	atom_chars(Formatted, F)
+	(sub_string(Fmt, _, _, _, "~d") ->compat_format(atom(Formatted), Fmt, [Idx, Ws]) ;	
+	                                  compat_format(atom(Formatted), Fmt, [Ws]))
 .
 
 %! update_ws_atoms() is det
@@ -1633,7 +1632,7 @@ handle_event_(rrscreenchangenotify, _) :-
 			global_key_value(monitor_geom, Output, PrevGeom),
 			(PrevGeom \= Geom ->
 				global_key_newvalue(monitor_geom, Output, Geom),
-				format("Monitor \"~s\" geometry reconfigured~n", [Output])
+			compat_format("Monitor \"~s\" geometry reconfigured~n", [Output])
 			; true)
 
 		% Add new monitor
@@ -2023,7 +2022,7 @@ init_monitors([Mon-[X, Y, W, H]|Rest]) :-
 init_monitor(Mon, Geom) :-
 	% A monitor with this geometry is already managed, don't register mirror
 	nb_getval(monitor_geom, AMonGeom), gen_assoc(OldMon, AMonGeom, Geom) ->
-		format("Monitor \"~s\" has same geometry as \"~s\", ignoring it~n", [Mon, OldMon])
+	compat_format("Monitor \"~s\" has same geometry as \"~s\", ignoring it~n", [Mon, OldMon])
 	;
 
 	default_nmaster(Nmaster), default_mfact(Mfact), default_layout(Layout),
@@ -2067,7 +2066,7 @@ init_monitor(Mon, Geom) :-
 			(ground(LayoutOR)  -> global_key_newvalue(layout,  Mon-ForWs, LayoutOR)  ; true)
 		))
 	)),
-	format("Monitor \"~s\" managed~n", [Mon])
+compat_format("Monitor \"~s\" managed~n", [Mon])
 .
 
 %! init_x() is det
@@ -2259,8 +2258,12 @@ parse_opt(help(false)). parse_opt(version(false)). parse_opt(check(false)).
 %
 %  Entry point of plwm.
 main :-
+
+	writeln("Main"),
+
 	on_signal(term, _, quit),
 
+	% plx.so is only available locally when compiling before the first installation
 	catch(use_foreign_library(foreign(plx)), _, use_foreign_library(plx)),
 
 	opts_spec(OptsSpec),
@@ -2282,8 +2285,9 @@ main :-
 	update_ws_atoms,
 
 	fifo:setup_fifo,
+
 	setup_hooks,
 	run_hook(start),
 
-	catch(eventloop, E, format("eventloop crashed: ~q~n", [E]))
+	catch(eventloop, E,compat_format("eventloop crashed: ~q~n", [E]))
 .

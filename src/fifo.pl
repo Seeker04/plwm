@@ -2,8 +2,6 @@
 
 :- module(fifo, []).
 
-
-
 %! setup_fifo is det
 %
 %  If fifo_enabled/1 and fifo_path/1 are set, attempts to create
