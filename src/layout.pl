@@ -2,7 +2,7 @@
 
 :- module(layout, []).
 
-:- use_module(compat).
+
 :- use_module(animation).
 :- use_module(utils).
 
@@ -49,14 +49,14 @@ set_layout(Mon-Ws, Layout) :-
 			findall(Win,               % skip unmanaged and fullscreen windows
 			       (member(Win, Wins), win_properties(Win, [managed, false|_])),
 			       ManagedWins),
-			compat_length(ManagedWins, WinCnt),
+			length(ManagedWins, WinCnt),
 			calculate_layout(Layout, Mon, WinCnt, Bounds, Geoms),
 			apply_geoms(ManagedWins, Geoms)
 		; true),
 		global_key_newvalue(layout, Mon-Ws, Layout),
 
 		% This is needed for restoring sizes of floating wins that exited fullscreen
-		compat_forall((member(Win, Wins), win_properties(Win, [State, false, [X, Y, W, H]])), (
+		forall((member(Win, Wins), win_properties(Win, [State, false, [X, Y, W, H]])), (
 			((Layout = floating ; State = floating) ->
 				plx:x_move_resize_window(Dp, Win, X, Y, W, H)
 			; true)
@@ -64,7 +64,7 @@ set_layout(Mon-Ws, Layout) :-
 
 		% Make fullscreen windows max size (covering bars too) and also raise them
 		global_key_value(monitor_geom, Mon, [MX, MY, MW, MH]),
-		compat_forall((member(Win, Wins), win_properties(Win, [_, true|_])), (
+		forall((member(Win, Wins), win_properties(Win, [_, true|_])), (
 			plx:x_move_resize_window(Dp, Win, MX, MY, MW, MH),
 			CWStackMode is 1 << 6, Above is 0,
 			plx:x_configure_window(Dp, Win, CWStackMode, 0, 0, 0, 0, 0, 0, Above)
@@ -437,9 +437,9 @@ apply_geoms(Wins, Geoms) :-
 			, ThreadId),
 			win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])
 		), ThreadIds),
-		compat_forall(member(ThreadId, ThreadIds), thread_join(ThreadId))
+		forall(member(ThreadId, ThreadIds), thread_join(ThreadId))
 	;
-		compat_forall(member(Win-[NewX, NewY, NewW, NewH], WinGeomMap), (
+		forall(member(Win-[NewX, NewY, NewW, NewH], WinGeomMap), (
 			user:display(Dp),
 			plx:x_move_resize_window(Dp, Win, NewX, NewY, NewW, NewH),
 			win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])

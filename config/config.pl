@@ -325,9 +325,9 @@ rules([
 % Tip: you can run multiple predicates as Action by writing a comma separated list in parentheses
 hooks([
   (start -> (
-    compat:writeln("plwm starting")
+    writeln("plwm starting")
   )),
   (quit -> (
-    compat:writeln("plwm quitting")
+    writeln("plwm quitting")
   ))
 ]).

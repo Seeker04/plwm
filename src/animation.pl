@@ -2,7 +2,7 @@
 
 :- module(animation, []).
 
-:- use_module(compat).
+
 :- use_module(utils).
 
 %! from_to_in_steps(++From:integer, ++To:integer, ++StepCnt:integer, -Steps:[integer]) is det
@@ -65,7 +65,7 @@ interpolate_geom(Win, X, Y, W, H, NewX, NewY, NewW, NewH, StepCnt, Time) :-
 	merge_geom_lists(StepsX, StepsY, StepsW, StepsH, Steps),
 	Delay is Time / StepCnt,
 
-	compat_forall(member([ToX, ToY, ToW, ToH], Steps), (
+	forall(member([ToX, ToY, ToW, ToH], Steps), (
 		plx:x_move_resize_window(Dp, Win, ToX, ToY, ToW, ToH),
 		plx:x_sync(Dp, false), % flush the event queue
 		sleep(Delay)

@@ -3,7 +3,7 @@
 :- module(menu, []).
 
 
-:- use_module(compat).
+
 :- use_module(layout).
 :- use_module(utils).
 
@@ -23,11 +23,11 @@ spawn_menu(Prompt, Entries, Callback) :-
 
 		process:process_create(path(MenuCmd), MenuArgsWithPrompt, [stdin(pipe(MenuIn)), stdout(pipe(MenuOut))]),
 
-		compat_forall(member(Entry, Entries), writeln(MenuIn, Entry)), close(MenuIn),
+		forall(member(Entry, Entries), writeln(MenuIn, Entry)), close(MenuIn),
 		read_string(MenuOut, Len, MenuOutStr),
 		(1 < Len ->
 			split_string(MenuOutStr, "\n", "\n", SelectedLines),
-			(compat_forall(member(Line, SelectedLines), member(Line, Entries)) ->
+			(forall(member(Line, SelectedLines), member(Line, Entries)) ->
 				ignore(call(Callback, SelectedLines))
 			; true)
 			% don't accept arbitrary input from menu prompt, only proper selection
@@ -68,7 +68,7 @@ read_from_prompt(Prompt, Input) :-  % use menucmd as a simple input prompt
 %  @arg Ws workspace name
 %  @arg string output of the formatting
 mon_ws_format(Mon, Ws, Str) :-
-	monitors(Mons), compat_nb_getval(workspaces, Wss), compat_length(Mons, MonCnt), compat_length(Wss, WsCnt),
+	monitors(Mons), nb_getval(workspaces, Wss), length(Mons, MonCnt), length(Wss, WsCnt),
 	(1 == MonCnt, 1 == WsCnt -> Str = ""
 	;1 == MonCnt, 1 <  WsCnt -> format_string(     "~a", [     Ws], Str)
 	;1 <  MonCnt, 1 == WsCnt -> format_string("~s"     , [Mon    ], Str)
@@ -89,7 +89,7 @@ mon_ws_format(Mon, Ws, Str) :-
 %  @arg WinT window title string
 %  @arg string output of the formatting
 mon_ws_wint_format(Mon, Ws, WinT, Str) :-
-	monitors(Mons), compat_nb_getval(workspaces, Wss), compat_length(Mons, MonCnt), compat_length(Wss, WsCnt),
+	monitors(Mons), nb_getval(workspaces, Wss), length(Mons, MonCnt), length(Wss, WsCnt),
 	maplist(atom_length, Wss, WsWidths),
 	max_list(WsWidths, WsMaxWidth),
 	(1 == MonCnt, 1 == WsCnt -> format_string(                   "~s", [WinT], Str)
@@ -183,7 +183,7 @@ pull_from :-
 	spawn_menu("pull from", Lines, menu:pull_from_(MenuInput))
 .
 pull_from_(MenuInput, Selections) :-
-	compat_forall((member(Sel, Selections), member(Win-Sel, MenuInput)), (
+	forall((member(Sel, Selections), member(Win-Sel, MenuInput)), (
 		active_mon_ws(ActMon, ActWs),
 		win_tomon_toworkspace_top(Win, ActMon, ActWs, true),
 		focus(Win), raise(Win)
@@ -224,7 +224,7 @@ close_windows :-
 	spawn_winlist_menu("close windows", menu:close_windows_)
 .
 close_windows_(MenuInput, Selections) :-
-	compat_forall((member(Sel, Selections), member(Win-Sel, MenuInput)), close_window(Win))
+	forall((member(Sel, Selections), member(Win-Sel, MenuInput)), close_window(Win))
 .
 
 %! keep_windows() is det
@@ -235,7 +235,7 @@ keep_windows :-
 	spawn_winlist_menu("keep windows", menu:keep_windows_)
 .
 keep_windows_(MenuInput, Selections) :-
-	compat_forall((member(Win-Line, MenuInput), \+ member(Line, Selections)), close_window(Win))
+	forall((member(Win-Line, MenuInput), \+ member(Line, Selections)), close_window(Win))
 .
 
 %*********************  "Dynamic workspaces" operations  **********************
@@ -268,8 +268,8 @@ rename_workspace :- % will rename the active one
 %  Lists the possible new workspace indices for the active one.
 %  If a selection happens, the active workspace is re-indexed to the new position.
 reindex_workspace :- % will reindex the active one
-	active_mon_ws(_, ActWs), compat_nb_getval(workspaces, Wss), nth1(ActIdx, Wss, ActWs),
-	compat_length(Wss, WsCnt),
+	active_mon_ws(_, ActWs), nb_getval(workspaces, Wss), nth1(ActIdx, Wss, ActWs),
+	length(Wss, WsCnt),
 	(1 < WsCnt ->
 		findall(IStr, (between(1, WsCnt, I), I =\= ActIdx, number_string(I, IStr)), Lines),
 		spawn_menu("reindex workspace to", Lines, menu:reindex_workspace_(ActWs))
@@ -284,14 +284,14 @@ reindex_workspace_(Ws, [Selection]) :- number_string(Idx, Selection), reindex_wo
 %  Note: owned windows of deleted workspaces are moved to the next free workspace in the list.
 %  Note: the last workspace is never removed (e.g. if all of them are selected).
 delete_workspaces :-
-	compat_nb_getval(workspaces, Wss),
+	nb_getval(workspaces, Wss),
 	(Wss \= [_] ->  % don't even spawn the list if there is only one ws left
 		findall(WsStr, (member(Ws, Wss), atom_string(Ws, WsStr)), Lines),
 		spawn_menu("delete workspaces", Lines, menu:delete_workspaces_)
 	; true)
 .
 delete_workspaces_(Selections) :-
-	compat_forall(member(Sel, Selections), (atom_string(Ws, Sel), delete_workspace(Ws)))
+	forall(member(Sel, Selections), (atom_string(Ws, Sel), delete_workspace(Ws)))
 .
 
 
@@ -348,7 +348,7 @@ cmd_desc(switch_monitor(left) , "Switch monitor in left direction").
 cmd_desc(switch_monitor(right), "Switch monitor in right direction").
 cmd_desc(switch_monitor(up)   , "Switch monitor in up direction").
 cmd_desc(switch_monitor(down) , "Switch monitor in down direction").
-cmd_desc(switch_monitor(Mon) , D) :- double_quotes(Mon), format_string("Switch to monitor ~s",  [Mon], D).
+cmd_desc(switch_monitor(Mon) , D) :- string(Mon), format_string("Switch to monitor ~s",  [Mon], D).
 cmd_desc(switch_monitor(Idx) , D) :- integer(Idx), format_string("Switch to monitor at index ~d",  [Idx], D).
 cmd_desc(move_focused_to_monitor(prev) , "Move focused window to previous monitor").
 cmd_desc(move_focused_to_monitor(next) , "Move focused window to next monitor").
@@ -358,7 +358,7 @@ cmd_desc(move_focused_to_monitor(left) , "Move focused window to monitor in left
 cmd_desc(move_focused_to_monitor(right), "Move focused window to monitor in right direction").
 cmd_desc(move_focused_to_monitor(up)   , "Move focused window to monitor in up direction").
 cmd_desc(move_focused_to_monitor(down) , "Move focused window to monitor in down direction").
-cmd_desc(move_focused_to_monitor(Mon) , D) :- double_quotes(Mon), format_string("Move focused window to monitor ~s",  [Mon], D).
+cmd_desc(move_focused_to_monitor(Mon) , D) :- string(Mon), format_string("Move focused window to monitor ~s",  [Mon], D).
 cmd_desc(move_focused_to_monitor(Idx) , D) :- integer(Idx), format_string("Move focused window to monitor at index ~d",  [Idx], D).
 cmd_desc(menu:goto_window      , "Go to selected window, raise and focus it").
 cmd_desc(menu:goto_workspace   , "Go to selected workspace").
@@ -488,11 +488,11 @@ run_cmd(MenuEntries, [Selection]) :-
 list_keymaps :-
 	keymaps(Keymaps),
 	findall(KBStr,
-		(member((KB -> _), Keymaps), format(double_quotes(KBChars), "~p", [KB]),
+		(member((KB -> _), Keymaps), format(string(KBChars), "~p", [KB]),
 		keybind_padded(KBChars, KBCharsPadded), string_chars(KBStr, KBCharsPadded)),
 		KBStrs),
 	findall(ActStr,
-		(member((_ -> Act), Keymaps), format(double_quotes(ActStr), "~p", [Act])),
+		(member((_ -> Act), Keymaps), format(string(ActStr), "~p", [Act])),
 		ActStrs),
 	maplist(string_length, KBStrs, KBWidths),
 	maplist(string_length, ActStrs, ActWidths),
@@ -522,7 +522,7 @@ list_cmds :-
 	findall(layout:set_layout(L), member(L, [nrows(2),nrows(3),nrows(4),ncols(2),ncols(3),ncols(4)]), SLCmds4),
 	append(SLCmds3, SLCmds4, SetLayoutCmds),
 
-	compat_nb_getval(workspaces, Wss),
+	nb_getval(workspaces, Wss),
 	findall(switch_workspace(Ws), member(Ws, Wss), SwitchWsByNameCmds),
 	findall(switch_workspace(Idx), nth1(Idx, Wss, _), SwitchWsByIdxCmds),
 	findall(move_focused_to_workspace(Ws), member(Ws, Wss), MoveToWsByNameCmds),
@@ -648,7 +648,7 @@ list_cmds :-
 	], Cmds),
 
 	findall(CmdStr,
-		(member(Cmd, Cmds), format(double_quotes(CmdStr), "~p", [Cmd])),
+		(member(Cmd, Cmds), format(string(CmdStr), "~p", [Cmd])),
 		CmdStrs),
 	maplist(string_length, CmdStrs, CmdWidths),
 	max_list(CmdWidths, CmdMaxWidth),
