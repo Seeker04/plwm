@@ -13,10 +13,10 @@ goal_expansion(use_foreign_library(_), true).
 
 goal_expansion(compound_name_arguments(Compound, Name, Args), (Compound =.. [Name | Args])).
 
-goal_expansion(ignore(Goal), sys:ignore(Goal)).
+goal_expansion(ignore(Goal), sys:ignore_helper(Goal)).
 
-goal_expansion(opt_arguments(Spec, Opts, PosArgs), sys:opt_arguments(Spec, Opts, PosArgs)).
-goal_expansion(opt_help(Spec, Help), sys:opt_help(Spec, Help)).
+goal_expansion(opt_arguments(Spec, Opts, PosArgs), sys:opt_arguments_helper(Spec, Opts, PosArgs)).
+goal_expansion(opt_help(Spec, Help), sys:opt_help_helper(Spec, Help)).
 
 % TODO implement on_signal equivalent in scryer-prolog
 goal_expansion(on_signal(_Sig, _Old, _New), true).
@@ -25,12 +25,15 @@ goal_expansion(on_signal(_Sig, _Old, _New), true).
 goal_expansion(exists_file(Path), files:file_exists(Path)).
 
 % format 
-goal_expansion(writeln(String), sys:writeln(String)).
-goal_expansion(writeln(Stream, String), sys:writeln(Stream, String)).
+goal_expansion(writeln(String), sys:writeln_helper(String)).
+goal_expansion(writeln(Stream, String), sys:writeln_helper(Stream, String)).
 goal_expansion(compat_format(Stream, Fmt, Args), sys:format_helper(Stream, Fmt, Args)).
 
+:- meta_predicate(compat_forall(0,0)).
+compat_forall(_,_) :- not_used.
+
 %iso_ext
-goal_expansion(forall(Goal, Test), iso_ext:forall(Goal, Test)).
+goal_expansion(compat_forall(Goal, Test), iso_ext:forall(Goal, Test)).
 goal_expansion(nb_getval(Var, Val), iso_ext:bb_get(Var, Val)).
 goal_expansion(nb_setval(Var, Val), iso_ext:bb_put(Var, Val)).
 

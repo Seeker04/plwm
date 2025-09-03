@@ -10,6 +10,8 @@
 
 :- module(setting, [set/2, add/2]).
 
+:- use_module(library(lists)).
+
 :- use_module(utils).
 
 %! setting(+Setting:atom) is semidet
@@ -37,7 +39,7 @@ setting(Setting) :- member(Setting, [
 %
 %  @arg Dryrun if true, only the validation is executed
 init_config(Dryrun) :-
-	forall(setting(Setting), (
+	compat_forall(setting(Setting), (
 		(call(user:Setting, Value) ->
 			(\+ valid_set(Setting, Value) ->
 				(Dryrun = false ->
@@ -89,17 +91,17 @@ valid_set_(border_color_focused,     Value) :- string(Value).
 valid_set_(snap_threshold,           Value) :- integer(Value), 0 =< Value.
 valid_set_(outer_gaps,               Value) :- integer(Value), 0 =< Value.
 valid_set_(inner_gaps,               Value) :- integer(Value), 0 =< Value.
-valid_set_(workspaces,               Value) :- Value \= [], is_set(Value), forall(member(Ws, Value), atom(Ws)).
+valid_set_(workspaces,               Value) :- Value \= [], is_set(Value), compat_forall(member(Ws, Value), atom(Ws)).
 valid_set_(starting_workspace,       Value) :- atom(Value).
 valid_set_(hide_empty_workspaces,    Value) :- Value = true ; Value = false.
 valid_set_(ws_format,                Value) :- catch(user:format_ws_name(Value, [1, a], _), _, fail).
 valid_set_(ws_format_occupied,       Value) :- catch(user:format_ws_name(Value, [1, a], _), _, fail).
-valid_set_(bar_classes,              Value) :- is_list(Value), forall(member(Pair, Value),
+valid_set_(bar_classes,              Value) :- is_list(Value), compat_forall(member(Pair, Value),
                                                (Pair = N-C, (string(N) ; var(N)), (string(C) ; var(C)))).
 valid_set_(bar_placement,            Value) :- Value = follow_focus ; Value = static.
 valid_set_(fifo_enabled,             Value) :- Value = true ; Value = false.
 valid_set_(fifo_path,                Value) :- string(Value).
-valid_set_(menucmd,                  Value) :- is_list(Value), forall(member(Arg, Value), string(Arg)).
+valid_set_(menucmd,                  Value) :- is_list(Value), compat_forall(member(Arg, Value), string(Arg)).
 valid_set_(animation_enabled,        Value) :- Value = true ; Value = false.
 valid_set_(animation_time,           Value) :- utils:is_float(Value), 0.0 < Value.
 valid_set_(animation_granularity,    Value) :- integer(Value), 1 =< Value.
@@ -108,7 +110,7 @@ valid_set_(scroll_up_action,         Value) :- utils:valid_callable(Value) ; Val
 valid_set_(scroll_down_action,       Value) :- utils:valid_callable(Value) ; Value = none.
 valid_set_(layout_default_overrides, Value) :-
 	is_list(Value),
-	forall(member(Override, Value), (
+	compat_forall(member(Override, Value), (
 		Override = (MonOR, WsOR -> NmasterOR, MfactOR, LayoutOR),
 		(var(MonOR)     ; string(MonOR)),
 		(var(WsOR)      ; atom(WsOR)),
@@ -119,7 +121,7 @@ valid_set_(layout_default_overrides, Value) :-
 .
 valid_set_(rules, Value) :-
 	is_list(Value),
-	forall(member(Rule, Value), (
+	compat_forall(member(Rule, Value), (
 		Rule = (RName, RClass, RTitle -> RMon, RWs, RMode),
 		(var(RName)  ; string(RName)  ; (RName  = exact(Str), string(Str))),
 		(var(RClass) ; string(RClass) ; (RClass = exact(Str), string(Str))),
@@ -132,7 +134,7 @@ valid_set_(rules, Value) :-
 .
 valid_set_(hooks, Value) :-
 	is_list(Value),
-	forall(member(Hook, Value), (
+	compat_forall(member(Hook, Value), (
 		Hook = (Event -> Action),
 		member(Event, [
 			start, quit, switch_workspace_pre, switch_workspace_post,
@@ -143,10 +145,10 @@ valid_set_(hooks, Value) :-
 .
 valid_set_(keymaps, Value) :-
 	is_list(Value),
-	forall(member(Keymap, Value), (
+	compat_forall(member(Keymap, Value), (
 		Keymap = (Keybind -> Action),
 		user:keybind_to_keylist(Keybind, KeyList),
-		forall(member(Key, KeyList), (user:modifier(Key) ; last(KeyList, Key))),
+		compat_forall(member(Key, KeyList), (user:modifier(Key) ; last(KeyList, Key))),
 		(utils:valid_callable(Action) ; Action = none)
 	))
 .
@@ -369,9 +371,9 @@ geometry_spec(X, Y, W, H) :-
 %  Also redraws layout to make changes immediately visible.
 update_all_borders :-
 	monws_keys(Keys),
-	forall(member(Mon-Ws, Keys), (
+	compat_forall(member(Mon-Ws, Keys), (
 		global_key_value(windows, Mon-Ws, Wins),
-		forall(member(Win, Wins), (
+		compat_forall(member(Win, Wins), (
 			set_border(Win)
 		))
 	)),
@@ -391,9 +393,9 @@ set_workspaces :-
 	user:workspaces(NewWss), nb_getval(workspaces, OldWss),
 
 	subtract(OldWss, NewWss, ToDelete), % delete workspaces no longer in workspaces/1
-	forall(member(Ws, ToDelete), delete_workspace(Ws)),
+	compat_forall(member(Ws, ToDelete), delete_workspace(Ws)),
 
-	forall(member(Ws, NewWss), create_workspace(Ws)),
+	compat_forall(member(Ws, NewWss), create_workspace(Ws)),
 
 	(OldWss = ToDelete ->               % cleanup last survivor if all old wss were to be deleted
 		last(ToDelete, SurvivorWs), % (because we refuse to remove the final ws if only 1 is left)

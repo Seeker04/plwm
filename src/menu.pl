@@ -2,6 +2,8 @@
 
 :- module(menu, []).
 
+:- use_module(library(lists)).
+
 :- use_module(layout).
 :- use_module(utils).
 
@@ -21,11 +23,11 @@ spawn_menu(Prompt, Entries, Callback) :-
 
 		process:process_create(path(MenuCmd), MenuArgsWithPrompt, [stdin(pipe(MenuIn)), stdout(pipe(MenuOut))]),
 
-		forall(member(Entry, Entries), writeln(MenuIn, Entry)), close(MenuIn),
+		compat_forall(member(Entry, Entries), writeln(MenuIn, Entry)), close(MenuIn),
 		read_string(MenuOut, Len, MenuOutStr),
 		(1 < Len ->
 			split_string(MenuOutStr, "\n", "\n", SelectedLines),
-			(forall(member(Line, SelectedLines), member(Line, Entries)) ->
+			(compat_forall(member(Line, SelectedLines), member(Line, Entries)) ->
 				ignore(call(Callback, SelectedLines))
 			; true)
 			% don't accept arbitrary input from menu prompt, only proper selection
@@ -179,7 +181,7 @@ pull_from :-
 	spawn_menu("pull from", Lines, menu:pull_from_(MenuInput))
 .
 pull_from_(MenuInput, Selections) :-
-	forall((member(Sel, Selections), member(Win-Sel, MenuInput)), (
+	compat_forall((member(Sel, Selections), member(Win-Sel, MenuInput)), (
 		active_mon_ws(ActMon, ActWs),
 		win_tomon_toworkspace_top(Win, ActMon, ActWs, true),
 		focus(Win), raise(Win)
@@ -220,7 +222,7 @@ close_windows :-
 	spawn_winlist_menu("close windows", menu:close_windows_)
 .
 close_windows_(MenuInput, Selections) :-
-	forall((member(Sel, Selections), member(Win-Sel, MenuInput)), close_window(Win))
+	compat_forall((member(Sel, Selections), member(Win-Sel, MenuInput)), close_window(Win))
 .
 
 %! keep_windows() is det
@@ -231,7 +233,7 @@ keep_windows :-
 	spawn_winlist_menu("keep windows", menu:keep_windows_)
 .
 keep_windows_(MenuInput, Selections) :-
-	forall((member(Win-Line, MenuInput), \+ member(Line, Selections)), close_window(Win))
+	compat_forall((member(Win-Line, MenuInput), \+ member(Line, Selections)), close_window(Win))
 .
 
 %*********************  "Dynamic workspaces" operations  **********************
@@ -287,7 +289,7 @@ delete_workspaces :-
 	; true)
 .
 delete_workspaces_(Selections) :-
-	forall(member(Sel, Selections), (atom_string(Ws, Sel), delete_workspace(Ws)))
+	compat_forall(member(Sel, Selections), (atom_string(Ws, Sel), delete_workspace(Ws)))
 .
 
 

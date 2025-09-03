@@ -6,19 +6,19 @@
 
 :- use_module(library(format)).
 
-:- meta_predicate(ignore(0)).
-ignore(Goal) :- (Goal -> true ; true).
+:- meta_predicate(ignore_helper(0)).
+ignore_helper(Goal) :- (Goal -> true ; true).
 
-writeln(String) :- format("~s~n", [String]).
-writeln(Stream, String) :- format(Stream, "~s~n", [String]).
+writeln_helper(String) :- format("~s~n", [String]).
+writeln_helper(Stream, String) :- format(Stream, "~s~n", [String]).
 
 format_helper(string(Str), Fmt, Args) :- !, phrase(format_(Fmt, Args), Str).
 format_helper(chars(Str), Fmt, Args) :- !, phrase(format_(Fmt, Args), Str).
 format_helper(atom(Atom), Fmt, Args) :- !, phrase(format_(Fmt, Args), Str), atom_chars(Atom, Str).
 
 % todo handle argument parsing and printing of help
-opt_arguments(_Spec, Opts, _PosArgs) :- Opts = [config("./config/config.pl")].
-opt_help(_,_).
+opt_arguments_helper(_Spec, Opts, _PosArgs) :- Opts = [config("./config/config.pl")].
+opt_help_helper(_,_).
 
 
 is_set_helper([]).

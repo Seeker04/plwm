@@ -1,5 +1,7 @@
 % MIT License, Copyright (c) 2023-2025 Barnabás Zahorán, see LICENSE
 
+:- use_module(library(lists)).
+
 % mocks
 border_width(1).
 border_width_focused(2).

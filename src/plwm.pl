@@ -7,6 +7,7 @@
 version(0.5).
 
 :- use_module(library(assoc)).
+:- use_module(library(lists)).
 
 :- use_module(fifo).
 :- use_module(layout).
@@ -304,7 +305,7 @@ grab_keys :-
 	plx:x_ungrab_key(Dp, AnyKey, AnyModifier, Rootwin),
 
 	keymaps(Keymaps),
-	forall(member((Keybind -> Action), Keymaps), (
+	compat_forall(member((Keybind -> Action), Keymaps), (
 		keybind_to_keylist(Keybind, KeyList), length(KeyList, N), Nm1 is N - 1,
 			utils:split_at(Nm1, KeyList, Mods, [Key]),
 		atom_string(Key, KeyStr), maplist(atom_string, ModAtoms, Mods),
@@ -313,7 +314,7 @@ grab_keys :-
 			writeln(user_error, Msg)
 		; true)
 	)),
-	forall(keymap_internal(Kcode, ModMask, _),
+	compat_forall(keymap_internal(Kcode, ModMask, _),
 		plx:x_grab_key(Dp, Kcode, ModMask, Rootwin, true, GrabModeAsync, GrabModeAsync)
 	)
 .
@@ -736,8 +737,8 @@ switch_workspace(Mon, Selector) :-
 			global_key_value(windows, Mon-NewWs, NewWins),
 			global_key_value(windows, Mon-OldWs, OldWins),
 
-			forall(member(Win, OldWins), hide(Win)),
-			forall(member(Win, NewWins), show(Win)),
+			compat_forall(member(Win, OldWins), hide(Win)),
+			compat_forall(member(Win, NewWins), show(Win)),
 			layout:relayout,
 
 			% focused window was remembered, restore it (if any)
@@ -803,7 +804,7 @@ switch_monitor(To) :-
 
 			(bar_placement(follow_focus) ->
 				nb_getval(bars, Bars),
-				forall(member(Bar, Bars), shiftcoord_win_from_to(Bar, ActMon, ToMon))
+				compat_forall(member(Bar, Bars), shiftcoord_win_from_to(Bar, ActMon, ToMon))
 				% move the bar(s) to the newly active monitor
 			; true),
 			update_ws_atoms,
@@ -937,7 +938,7 @@ create_workspace(Ws) :-
 	nb_getval(workspaces, Wss),
 	(\+ member(Ws, Wss) -> % ws with this name must not already exist
 		monitors(Mons),
-		forall(member(Mon, Mons), (
+		compat_forall(member(Mon, Mons), (
 			default_nmaster(Nmaster), default_mfact(Mfact), default_layout(Layout),
 			nb_getval(nmaster, ANmaster), nb_getval(mfact, AMfact), nb_getval(layout, ALayout),
 			nb_getval(focused, AFocused), nb_getval(windows, AWins),
@@ -950,7 +951,7 @@ create_workspace(Ws) :-
 			nb_setval(focused, NewAFocused), nb_setval(windows, NewAWins),
 
 			layout_default_overrides(LDefOverrides),
-			forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
+			compat_forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
 				(ground(NmasterOR) -> global_key_newvalue(nmaster, Mon-Ws, NmasterOR) ; true),
 				(ground(MfactOR)   -> global_key_newvalue(mfact,   Mon-Ws, MfactOR)   ; true),
 				(ground(LayoutOR)  -> global_key_newvalue(layout,  Mon-Ws, LayoutOR)  ; true)
@@ -999,7 +1000,7 @@ rename_workspace(OldName, NewName) :-
 		map_assoc(replace_value(OldName, NewName), AActiveWs, NewAActiveWs),
 		map_assoc(replace_value(OldName, NewName), APrevWs,   NewAPrevWs),
 		monitors(Mons),
-		forall(member(Mon, Mons), (
+		compat_forall(member(Mon, Mons), (
 			nb_getval(nmaster, ANmaster), nb_getval(mfact, AMfact), nb_getval(layout, ALayout),
 			nb_getval(focused, AFocused), nb_getval(windows, AWins),
 			replace_key(ANmaster, Mon-OldName, Mon-NewName, NewANmaster),
@@ -1063,14 +1064,14 @@ delete_workspace(Ws) :-
 	monitors(Mons), nb_getval(workspaces, Wss),
 	(Wss \= [_] ->  % don't allow deleting if there is only one ws left
 		(nextto(Ws, NWs, Wss) -> NextWs = NWs ; Wss = [NextWs|_]),
-		forall(member(Mon, Mons), (
+		compat_forall(member(Mon, Mons), (
 			global_key_value(active_ws, Mon, ActWs),
 			global_key_value(prev_ws, Mon, PrevWs),
 			(Ws = ActWs -> switch_workspace(Mon, NextWs) ; true),
 			(Ws = PrevWs -> global_key_newvalue(prev_ws, Mon, ActWs) ; true),
 
 			global_key_value(windows, Mon-Ws, Wins),
-			forall(member(Win, Wins), win_tomon_toworkspace_top(Win, Mon, NextWs, false)),
+			compat_forall(member(Win, Wins), win_tomon_toworkspace_top(Win, Mon, NextWs, false)),
 
 			delete_ws_assocs(Mon, Ws)
 		)),
@@ -1096,9 +1097,9 @@ delete_monitor(Mon) :-
 		(nextto(Mon, NMon, Mons) -> NextMon = NMon ; Mons = [NextMon|_]),
 
 		nb_getval(workspaces, Wss), % move windows to next monitor
-		forall(member(Ws, Wss), (
-			forall(global_key_value(windows, Mon-Ws, Wins), (
-				forall(member(Win, Wins), win_tomon_toworkspace_top(Win, NextMon, Ws, false))
+		compat_forall(member(Ws, Wss), (
+			compat_forall(global_key_value(windows, Mon-Ws, Wins), (
+				compat_forall(member(Win, Wins), win_tomon_toworkspace_top(Win, NextMon, Ws, false))
 		)))),
 
 		nb_getval(active_mon, ActMon), % focus next monitor if this was the focused one
@@ -1111,7 +1112,7 @@ delete_monitor(Mon) :-
 		nb_setval(monitor_geom, NewAMonGeom),  nb_setval(free_win_space, NewAFreeWinSpace),
 		nb_setval(active_ws,    NewAActiveWs), nb_setval(prev_ws,        NewAPrevWs),
 
-		forall(member(Ws, Wss), delete_ws_assocs(Mon, Ws)),
+		compat_forall(member(Ws, Wss), delete_ws_assocs(Mon, Ws)),
 
 	compat_format(string(Msg), "Monitor \"~s\" unmanaged", [Mon]),
 		writeln(Msg)
@@ -1612,7 +1613,7 @@ handle_event_(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
 	(Win == Rootwin ->
 		% Notice of pending jobs is implemented with a ConfigureNotify
 		(utils:jobs(Jobs) ->
-			forall(member(Job, Jobs),
+			compat_forall(member(Job, Jobs),
 				ignore(catch(call(Job), Ex, (writeln(Ex), true)))
 			),
 			retract(utils:jobs(_))
@@ -1623,7 +1624,7 @@ handle_event_(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
 handle_event_(rrscreenchangenotify, _) :-
 	monitors(Mons),
 	query_outputs(OutputInfos),
-	forall(member(Output-Geom, OutputInfos), (
+	compat_forall(member(Output-Geom, OutputInfos), (
 
 		% Monitor already managed
 		(member(Output, Mons) ->
@@ -1642,7 +1643,7 @@ handle_event_(rrscreenchangenotify, _) :-
 	)),
 
 	% Remove no longer connected monitors
-	forall((member(Mon, Mons), \+ member(Mon-_, OutputInfos)), (
+	compat_forall((member(Mon, Mons), \+ member(Mon-_, OutputInfos)), (
 		delete_monitor(Mon)
 	)),
 
@@ -1869,12 +1870,12 @@ trim_bar_space(Mon, [BarX, BarY, BarW, BarH]) :-
 %    monitor resolution - outer gaps - space reserved for status bars
 update_free_win_space :-
 	display(Dp), monitors(Mons),
-	forall(member(Mon, Mons), (
+	compat_forall(member(Mon, Mons), (
 		global_key_value(monitor_geom, Mon, MonGeom),
 		global_key_newvalue(free_win_space, Mon, MonGeom),
 
 		nb_getval(bars, Bars),
-		forall(member(Bar, Bars), (
+		compat_forall(member(Bar, Bars), (
 			(plx:x_get_window_attributes(Dp, Bar, BarGeom, Status), Status =\= 0 ->
 				rect_inmon(BarGeom, InMon),
 				(bar_placement(static) ->
@@ -1912,7 +1913,7 @@ update_clientlist :-
 	PropModeAppend is 2, XA_WINDOW is 33,
 
 	plx:x_delete_property(Dp, Rootwin, NetClientList),
-	forall((global_key_value(windows, _, Wins), member(Win, Wins)), (
+	compat_forall((global_key_value(windows, _, Wins), member(Win, Wins)), (
 		plx:x_change_property(Dp, Rootwin, NetClientList, XA_WINDOW, 32, PropModeAppend, [Win], 1)
 	))
 .
@@ -1923,7 +1924,7 @@ update_clientlist :-
 setup_hooks :-
 	retractall(hook(_, _)),
 	hooks(Hooks),
-	forall(member((Event -> Action), Hooks), (
+	compat_forall(member((Event -> Action), Hooks), (
 		assertz(hook(Event, Action))
 	))
 .
@@ -2058,9 +2059,9 @@ init_monitor(Mon, Geom) :-
 
 	% Apply per-monitor, per-workspace overrides
 	layout_default_overrides(LDefOverrides),
-	forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
+	compat_forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
 		(ground(Ws) -> ForWss = [Ws] ; ForWss = Wss),
-		forall(member(ForWs, ForWss), (
+		compat_forall(member(ForWs, ForWss), (
 			(ground(NmasterOR) -> global_key_newvalue(nmaster, Mon-ForWs, NmasterOR) ; true),
 			(ground(MfactOR)   -> global_key_newvalue(mfact,   Mon-ForWs, MfactOR)   ; true),
 			(ground(LayoutOR)  -> global_key_newvalue(layout,  Mon-ForWs, LayoutOR)  ; true)
@@ -2170,7 +2171,7 @@ reload_config :-
 	% Retract all settings after making a snapshot of them
 	empty_assoc(SettigValueMap0),
 	nb_setval(settings_snapshot, SettigValueMap0),
-	forall(setting:setting(Setting), (
+	compat_forall(setting:setting(Setting), (
 		call(user:Setting, Value),
 		global_key_newvalue(settings_snapshot, Setting, Value),
 		compound_name_arguments(Config, Setting, [_]),
@@ -2181,7 +2182,7 @@ reload_config :-
 	load_config,
 
 	% Restore previous values of those settings which were absent from the user config
-	forall(setting:setting(Setting), (
+	compat_forall(setting:setting(Setting), (
 		(\+ call(Setting, Value) ->
 			global_key_value(settings_snapshot, Setting, Value),
 			compound_name_arguments(Config, Setting, [Value]),
@@ -2194,7 +2195,7 @@ reload_config :-
 
 	% init_config assumes it's run during initialization, so it does not trigger
 	% post-set actions (e.g. relayout). Trigger those manually
-	forall(setting:setting(Setting), (
+	compat_forall(setting:setting(Setting), (
 		call(Setting, Value),
 		set(Setting, Value)
 	)),
@@ -2210,7 +2211,7 @@ reload_config :-
 %  @arg OnlyChanged whether to only dump settings that differ from their default values
 dump_settings(FilePath, OnlyChanged) :-
 	open(FilePath, write, DumpFile),
-	forall(setting:setting(Setting), (
+	compat_forall(setting:setting(Setting), (
 		call(Setting, Value),
 		((OnlyChanged = false ; \+ setting:default_set(Setting, Value)) ->
 			compound_name_arguments(Config, Setting, [Value]),
@@ -2258,9 +2259,6 @@ parse_opt(help(false)). parse_opt(version(false)). parse_opt(check(false)).
 %
 %  Entry point of plwm.
 main :-
-
-	writeln("Main"),
-
 	on_signal(term, _, quit),
 
 	% plx.so is only available locally when compiling before the first installation
@@ -2268,7 +2266,7 @@ main :-
 
 	opts_spec(OptsSpec),
 	opt_arguments(OptsSpec, Opts, _),
-	forall(member(Opt, Opts), parse_opt(Opt)),
+	compat_forall(member(Opt, Opts), parse_opt(Opt)),
 
 	load_config,
 	setting:init_config(false),
