@@ -4,7 +4,10 @@
 
 :- module(sys, []).
 
+:- use_module(library(dif)).
 :- use_module(library(format)).
+:- use_module(library(iso_ext), [forall/2]).
+:- use_module(library(lists)).
 
 :- meta_predicate(ignore_helper(0)).
 ignore_helper(Goal) :- (Goal -> true ; true).
@@ -36,3 +39,14 @@ atom_string_helper(Atom, Chars) :-
         ; number_chars(Chars, C), atom_chars(Atom, C)
         )
     )).
+
+
+sub_string_helper(String, Before, Len, After, SubString) :-
+    append([Prefix, SubString, Suffix], String),
+    length(SubString, Len),
+    length(Prefix, Before),
+    length(Suffix, After).
+
+:- meta_predicate(forall_helper(0,0)).
+forall_helper(Goal, Test) :-
+    forall(Goal, Test).

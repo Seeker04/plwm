@@ -27,13 +27,15 @@ goal_expansion(exists_file(Path), files:file_exists(Path)).
 % format 
 goal_expansion(writeln(String), sys:writeln_helper(String)).
 goal_expansion(writeln(Stream, String), sys:writeln_helper(Stream, String)).
+
+goal_expansion(compat_format(Fmt, Args), iso_ext:format(Fmt, Args)).
 goal_expansion(compat_format(Stream, Fmt, Args), sys:format_helper(Stream, Fmt, Args)).
 
 :- meta_predicate(compat_forall(0,0)).
-compat_forall(_,_) :- not_used.
+compat_forall(_,_) :-not_used.
 
 %iso_ext
-goal_expansion(compat_forall(Goal, Test), iso_ext:forall(Goal, Test)).
+goal_expansion(compat_forall(Goal, Test), sys:forall_helper(Module:Goal, Module:Test)) :- prolog_load_context(module, Module).
 goal_expansion(nb_getval(Var, Val), iso_ext:bb_get(Var, Val)).
 goal_expansion(nb_setval(Var, Val), iso_ext:bb_put(Var, Val)).
 
@@ -49,6 +51,9 @@ goal_expansion(last(List, Last), lists:append(_, [Last], List)).
 goal_expansion(selectchk(Elem, List, Rest), once(select(Elem, List, Rest))).
 
 goal_expansion(atom_string(Atom, Chars), sys:atom_string_helper(Atom, Chars)).
+
+goal_expansion(sub_string(String, Before, Len, After, SubString), sys:sub_string_helper(String, Before, Len, After, SubString)).
+
 
 % 
 :- initialization((
