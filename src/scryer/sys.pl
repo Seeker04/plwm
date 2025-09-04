@@ -22,7 +22,9 @@ opt_help_helper(_,_).
 
 char_type_helper(' ', white).
 char_type_helper('\t', white).
-char_type_helper(Char, Cat) :- charsio:char_type(Char, Cat).
+char_type_helper(Char, Cat) :- 
+        Cat = white -> true
+    ;   charsio:char_type(Char, Cat).
 
 
 % format
