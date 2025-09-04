@@ -2,6 +2,7 @@
 :- use_module(plx).
 
 :- use_module(library(assoc), []).
+:- use_module(library(error), []).
 :- use_module(library(format), []).
 :- use_module(library(iso_ext), []).
 :- use_module(library(lists), []).
@@ -20,6 +21,9 @@ goal_expansion(opt_help(Spec, Help), sys:opt_help_helper(Spec, Help)).
 
 % TODO implement on_signal equivalent in scryer-prolog
 goal_expansion(on_signal(_Sig, _Old, _New), true).
+
+% error
+goal_expansion(call_with_error_context(Goal, Ctx), error:call_with_error_context(Goal, Ctx)).
 
 % files
 goal_expansion(exists_file(AtomPath), (atom_chars(AtomPath, Path), files:file_exists(Path))).
