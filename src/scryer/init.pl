@@ -26,7 +26,7 @@ goal_expansion(on_signal(_Sig, _Old, _New), true).
 
 % charsio
 
-goal_expansion(char_type(Char, Cat), char_type_helper(Char, Cat)).
+goal_expansion(char_type(Char, Cat), sys:char_type_helper(Char, Cat)).
 
 % error
 goal_expansion(call_with_error_ctx(Goal, Ctx), error:call_with_error_context(Module:Goal, Ctx)) :- prolog_load_context(module, Module).
