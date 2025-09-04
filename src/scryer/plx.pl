@@ -355,7 +355,7 @@ x_next_event_(Dp, EventReturn) :-
        $decode_event(EventAtom, EventPtr, EventReturn)
     )).
 
-term_expansion(event_type_id_atom(Id, Atom), event_type_id_atom(Id, Atom) :- !).
+term_expansion(event_type_id_atom(Id, Atom), (event_type_id_atom(Id, Atom) :- !)).
 
 event_type_id_atom(2, keypress).
 event_type_id_atom(3, keyrelease).
