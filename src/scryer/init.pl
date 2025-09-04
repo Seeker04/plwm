@@ -22,7 +22,7 @@ goal_expansion(opt_help(Spec, Help), sys:opt_help_helper(Spec, Help)).
 goal_expansion(on_signal(_Sig, _Old, _New), true).
 
 % files
-goal_expansion(exists_file(Path), files:file_exists(Path)).
+goal_expansion(exists_file(AtomPath), (atom_chars(AtomPath, Path), files:file_exists(Path))).
 
 % format 
 goal_expansion(writeln(String), sys:writeln_helper(String)).
@@ -54,6 +54,9 @@ goal_expansion(atom_string(Atom, Chars), sys:atom_string_helper(Atom, Chars)).
 
 goal_expansion(sub_string(String, Before, Len, After, SubString), sys:sub_string_helper(String, Before, Len, After, SubString)).
 
+% os
+
+goal_expansion(getenv(Key, Value), sys:getenv_helper(Key, Value)).
 
 % 
 :- initialization((

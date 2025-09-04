@@ -310,7 +310,7 @@ grab_keys :-
 			utils:split_at(Nm1, KeyList, Mods, [Key]),
 		atom_string(Key, KeyStr), maplist(atom_string, ModAtoms, Mods),
 			(\+ translate_keymap(KeyStr, ModAtoms, Action) ->
-		compat_format(string(Msg), "warning: invalid key: ~q in keymap, ignored", [Key]),
+			compat_format(string(Msg), "warning: invalid key: ~q in keymap, ignored", [Key]),
 			writeln(user_error, Msg)
 		; true)
 	)),
@@ -2023,7 +2023,8 @@ init_monitors([Mon-[X, Y, W, H]|Rest]) :-
 init_monitor(Mon, Geom) :-
 	% A monitor with this geometry is already managed, don't register mirror
 	nb_getval(monitor_geom, AMonGeom), gen_assoc(OldMon, AMonGeom, Geom) ->
-	compat_format("Monitor \"~s\" has same geometry as \"~s\", ignoring it~n", [Mon, OldMon])
+		compat_format(string(Msg), "Monitor \"~s\" has same geometry as \"~s\", ignoring it", [Mon, OldMon]),
+	writeln(Msg)
 	;
 
 	default_nmaster(Nmaster), default_mfact(Mfact), default_layout(Layout),
@@ -2067,7 +2068,8 @@ init_monitor(Mon, Geom) :-
 			(ground(LayoutOR)  -> global_key_newvalue(layout,  Mon-ForWs, LayoutOR)  ; true)
 		))
 	)),
-compat_format("Monitor \"~s\" managed~n", [Mon])
+	compat_format(string(Msg), "Monitor \"~s\" managed", [Mon]),
+	writeln(Msg)
 .
 
 %! init_x() is det
@@ -2095,8 +2097,7 @@ init_x :-
 load_custom_config :-
 	config_flag(UserC) ->
 		exists_file(UserC) ->
-			(string(UserC) -> atom_chars(Atom, UserC) ; Atom = UserC),
-			consult(Atom)
+			consult(UserC)
 .
 
 %! load_xdg_config(++PathSuffix) is semidet
@@ -2106,11 +2107,10 @@ load_custom_config :-
 %
 %  @arg PathSuffix relative path from $XDG_CONFIG_HOME to the configuration file
 load_xdg_config(PathSuffix) :-
-	getenv("XDG_CONFIG_HOME", XdgConfHome) ->
-		append(XdgConfHome, PathSuffix, XdgConf),
+	getenv('XDG_CONFIG_HOME', XdgConfHome) ->
+		atom_concat(XdgConfHome, PathSuffix, XdgConf),
 		exists_file(XdgConf) ->
-			atom_chars(Atom, XdgConf),
-			consult(Atom)
+			consult(XdgConf)
 .
 
 %! load_home_config(++PathSuffix) is semidet
@@ -2120,11 +2120,10 @@ load_xdg_config(PathSuffix) :-
 %
 %  @arg PathSuffix relative path from $HOME/.config to the configuration file
 load_home_config(PathSuffix) :-
-	getenv("HOME", Home) ->
-		append(Home, "/.config", HomeCDir), append(HomeCDir, PathSuffix, HomeConf),
+	getenv('HOME', Home) ->
+		atom_concat(Home, '/.config', HomeCDir), atom_concat(HomeCDir, PathSuffix, HomeConf),
 		exists_file(HomeConf) ->
-			atom_chars(Atom, HomeConf),
-			consult(Atom)
+			consult(HomeConf)
 .
 
 %! load_etc_config(++PathSuffix) is semidet
@@ -2134,10 +2133,9 @@ load_home_config(PathSuffix) :-
 %
 %  @arg PathSuffix relative path from /etc to the configuration file
 load_etc_config(PathSuffix) :-
-	append("/etc", PathSuffix, EtcConf),
+	atom_concat('/etc', PathSuffix, EtcConf),
 	exists_file(EtcConf) ->
-		atom_chars(Atom, EtcConf),
-		consult(Atom)
+		consult(EtcConf)
 .
 
 %! load_config() is det
@@ -2152,13 +2150,12 @@ load_etc_config(PathSuffix) :-
 %  Note: even if none of the above works, the predicate simply succeeds since
 %  the config is optional.
 load_config :-
-	PathSuffix = "/plwm/config.pl",
+	PathSuffix = '/plwm/config.pl',
 	(load_custom_config            -> writeln("-c user config loaded")
 	; load_xdg_config(PathSuffix)  -> writeln("xdg config loaded")
 	; load_home_config(PathSuffix) -> writeln("home config loaded")
 	; load_etc_config(PathSuffix)  -> writeln("etc config loaded")
-	; error(existence_error(config, "config.pl"), load_config/1)
-	)
+	; writeln("no config loaded"))
 .
 
 %! reload_config() is det

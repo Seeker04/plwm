@@ -8,10 +8,16 @@
 :- use_module(library(format)).
 :- use_module(library(iso_ext), [forall/2]).
 :- use_module(library(lists)).
+:- use_module(library(os)).
 
 :- meta_predicate(ignore_helper(0)).
 ignore_helper(Goal) :- (Goal -> true ; true).
 
+% todo handle argument parsing and printing of help
+opt_arguments_helper(_Spec, Opts, _PosArgs) :- Opts = [config('./config/config.pl')].
+opt_help_helper(_,_).
+
+% format
 writeln_helper(String) :- format("~s~n", [String]).
 writeln_helper(Stream, String) :- format(Stream, "~s~n", [String]).
 
@@ -19,10 +25,13 @@ format_helper(string(Str), Fmt, Args) :- !, phrase(format_(Fmt, Args), Str).
 format_helper(chars(Str), Fmt, Args) :- !, phrase(format_(Fmt, Args), Str).
 format_helper(atom(Atom), Fmt, Args) :- !, phrase(format_(Fmt, Args), Str), atom_chars(Atom, Str).
 
-% todo handle argument parsing and printing of help
-opt_arguments_helper(_Spec, Opts, _PosArgs) :- Opts = [config("./config/config.pl")].
-opt_help_helper(_,_).
+% iso_ext
 
+:- meta_predicate(forall_helper(0,0)).
+forall_helper(Goal, Test) :-
+    forall(Goal, Test).
+
+% lists
 
 is_set_helper([]).
 is_set_helper([X | Xs]) :- maplist(dif(X), Xs), is_set_helper(Xs).
@@ -47,6 +56,4 @@ sub_string_helper(String, Before, Len, After, SubString) :-
     length(Prefix, Before),
     length(Suffix, After).
 
-:- meta_predicate(forall_helper(0,0)).
-forall_helper(Goal, Test) :-
-    forall(Goal, Test).
+getenv_helper(AtomKey, AtomValue) :- atom_chars(AtomKey, Key), os:getenv(Key, Value), atom_chars(AtomValue, Value).
