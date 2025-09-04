@@ -24,6 +24,10 @@ goal_expansion(opt_help(Spec, Help), sys:opt_help_helper(Spec, Help)).
 % TODO implement on_signal equivalent in scryer-prolog
 goal_expansion(on_signal(_Sig, _Old, _New), true).
 
+% charsio
+
+goal_expansion(char_type(Char, Cat), char_type_helper(Char, Cat)).
+
 % error
 goal_expansion(call_with_error_ctx(Goal, Ctx), error:call_with_error_context(Module:Goal, Ctx)) :- prolog_load_context(module, Module).
 
@@ -62,6 +66,10 @@ goal_expansion(selectchk(Elem, List, Rest), once(select(Elem, List, Rest))).
 goal_expansion(atom_string(Atom, Chars), sys:atom_string_helper(Atom, Chars)).
 
 goal_expansion(sub_string(String, Before, Len, After, SubString), sys:sub_string_helper(String, Before, Len, After, SubString)).
+
+goal_expansion(string_chars(String, Chars), (String = Chars)).
+goal_expansion(string_concat(A, B, C), lists:append(A, B, C)).
+
 
 :- meta_predicate(max_member(2,-,+)).
 max_member(_,_,_) :- not_used.

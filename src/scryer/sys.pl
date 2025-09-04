@@ -4,6 +4,7 @@
 
 :- module(sys, []).
 
+:- use_module(library(charsio)).
 :- use_module(library(dif)).
 :- use_module(library(format)).
 :- use_module(library(iso_ext), [forall/2]).
@@ -16,6 +17,13 @@ ignore_helper(Goal) :- (Goal -> true ; true).
 % todo handle argument parsing and printing of help
 opt_arguments_helper(_Spec, Opts, _PosArgs) :- Opts = [config('./config/config.pl')].
 opt_help_helper(_,_).
+
+% charsio
+
+char_type_helper(' ', white).
+char_type_helper('\t', white).
+char_type_helper(Char, Cat) :- charsio:char_type(Char, Cat).
+
 
 % format
 writeln_helper(String) :- format("~s~n", [String]).
