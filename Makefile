@@ -34,6 +34,8 @@ run-scryer: $(X11PLWM_SO)
 run-swi: $(PLWM_SWI)
 	$(PLWM_SWI) -c config/config.pl
 
+debs: deb-core deb-scryer deb-swi
+
 deb-core: src/*
 	cargo deb --variant=core --no-build
 
