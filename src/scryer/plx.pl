@@ -355,18 +355,20 @@ x_next_event_(Dp, EventReturn) :-
        $decode_event(EventAtom, EventPtr, EventReturn)
     )).
 
-event_type_id_atom(2, keypress) :- !.
-event_type_id_atom(3, keyrelease) :- !.
-event_type_id_atom(4, buttonpress) :- !.
-event_type_id_atom(5, buttonrelease) :- !.
-event_type_id_atom(6, motionnotify) :- !.
-event_type_id_atom(7, enternotify) :- !.
-event_type_id_atom(17, destroynotify) :- !.
-event_type_id_atom(18, unmapnotify) :- !.
-event_type_id_atom(20, maprequest) :- !.
-event_type_id_atom(22, configurenotify) :- !.
-event_type_id_atom(28, propertynotify) :- !.
-event_type_id_atom(33, clientmessage) :- !.
+term_expansion(event_type_id_atom(Id, Atom), event_type_id_atom(Id, Atom) :- !).
+
+event_type_id_atom(2, keypress).
+event_type_id_atom(3, keyrelease).
+event_type_id_atom(4, buttonpress).
+event_type_id_atom(5, buttonrelease).
+event_type_id_atom(6, motionnotify).
+event_type_id_atom(7, enternotify).
+event_type_id_atom(17, destroynotify).
+event_type_id_atom(18, unmapnotify).
+event_type_id_atom(20, maprequest).
+event_type_id_atom(22, configurenotify).
+event_type_id_atom(28, propertynotify).
+event_type_id_atom(33, clientmessage).
 
 event_type_id_atom(EventId, EventAtom) :- rr_event_base(RrEventBase),  RrEventId is EventId - RrEventBase, rr_event_type_id_atom(RrEventId, EventAtom), !.
 
