@@ -31,7 +31,7 @@ merge-assets.append = [
 ]
 
 [package.metadata.deb.variants.scryer]
-depends = ["$auto", "plwm-core", "scryer-prolog"]
+depends = ["$auto", "plwm-core", "suckless-tools", "scryer-prolog"]
 preserve-symlinks = true
 merge-assets.append = [
     [
@@ -68,7 +68,7 @@ merge-assets.append = [
 
 
 [package.metadata.deb.variants.swi]
-depends = ["$auto", "plwm-core"]
+depends = ["$auto", "plwm-core", "suckless-tools"]
 preserve-symlinks = true
 merge-assets.append = [
     [
