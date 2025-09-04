@@ -35,6 +35,14 @@ forall_helper(Goal, Test) :-
 
 is_set_helper([]).
 is_set_helper([X | Xs]) :- maplist(dif(X), Xs), is_set_helper(Xs).
+
+:- meta_predicate(max_member_helper(2, -, +)).
+
+max_member_helper(Pred, X, [X]).
+max_member_helper(Pred, Max, [X0, X1 | Xs]) :- 
+    call(Pred, X0, X1) -> 
+        max_member_helper(Pred, Max, [X1 | Xs]) 
+    ;   max_member_helper(Pred, Max, [X0 | Xs]).
     
 atom_string_helper(Atom, Chars) :-
     ( var(Chars) ->
