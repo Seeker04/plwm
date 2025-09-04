@@ -77,15 +77,57 @@
 ])).
 
 :- initialization(foreign_struct('XKeyEvent', [
-    i32, u64, i32, ptr, u64, u64, u64, i32, i32, i32, i32, u32, u32, i32
+    i32, % type 
+    u64, % serial
+    i32, % send_event
+    ptr, % display
+    u64, % windows
+    u64, % root
+    u64, % subwindow
+    u64, % time
+    i32, % x
+    i32, % y
+    i32, % x_root
+    i32, % y_root
+    u32, % state
+    u32, % keycode
+    i32 % same_screen
 ])).
 
 :- initialization(foreign_struct('XButtonEvent', [
-    i32, u64, i32, ptr, u64, u64, u64, i32, i32, i32, i32, u32, u32, i32
+    i32, % type 
+    u64, % serial
+    i32, % send_event
+    ptr, % display
+    u64, % windows
+    u64, % root
+    u64, % subwindow
+    u64, % time
+    i32, % x
+    i32, % y
+    i32, % x_root
+    i32, % y_root
+    u32, % state
+    u32, % button
+    i32 % same_screen
 ])).
 
 :- initialization(foreign_struct('XMotionEvent', [
-    i32, u64, i32, ptr, u64, u64, u64, i32, i32, i32, i32, u32, u8, i32
+    i32, % type 
+    u64, % serial
+    i32, % send_event
+    ptr, % display
+    u64, % windows
+    u64, % root
+    u64, % subwindow
+    u64, % time
+    i32, % x
+    i32, % y
+    i32, % x_root
+    i32, % y_root
+    u32, % state
+    u8, % us_hint
+    i32 % same_screen
 ])).
 
 % define Xft structs
@@ -430,7 +472,7 @@ decode_event(buttonrelease, EventPtr, [buttonrelease | EventData ]) :- !,
     
 decode_event(motionnotify, EventPtr, [ motionnotify | EventData]) :- !,
     $ffi:read_ptr('XMotionEvent', EventPtr, Data), 
-    $(Data = [ 'XMotionEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,IsHint,_])
+    $(Data = [ 'XMotionEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,IsHint,_]),
     $movement_common(EventPtr, IsHint, EventData).
 
 decode_event(unsupported_event, _, "unsupported_event").
