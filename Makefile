@@ -97,5 +97,8 @@ test:
 install:
 	tools/install.sh
 
+install-debs: debs
+	run0 apt reinstall ./target/debian/*.deb
+
 uninstall:
 	tools/uninstall.sh
