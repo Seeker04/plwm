@@ -5,6 +5,7 @@
 % :- set_prolog_flag(iso, true).
 
 % error
+goal_expansion(call_with_error_context(Goal, _Ctx), call(Goal)).
 goal_expansion(error(Exception, Src), throw(error(Exception, Src))).
 
 % format
