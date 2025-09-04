@@ -2,6 +2,8 @@
 
 :- module(fifo, []).
 
+:- use_module(library(lists)).
+
 %! setup_fifo is det
 %
 %  If fifo_enabled/1 and fifo_path/1 are set, attempts to create

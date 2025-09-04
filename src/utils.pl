@@ -6,6 +6,7 @@
 %                 ^ these are used quite often, so it's worth exporting them
 
 :- use_module(library(assoc)).
+:- use_module(library(lists)).
 
 %! valid_callable(++Callable:callable) is det
 %
