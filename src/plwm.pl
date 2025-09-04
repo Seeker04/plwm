@@ -1381,7 +1381,7 @@ unmanage(Win) :-
 %
 %  @arg EventType type of the X11 event (e.g. keypress, enternotify, propertynotify)
 %  @arg EventArgs arguments from the X11 event, different for each event type
-handle_event(EventType, EventArgs) :- call_with_error_context(handle_event_(EventType, EventArgs), predicate-handle_event/2).
+handle_event(EventType, EventArgs) :- call_with_error_ctx(handle_event_(EventType, EventArgs), predicate-handle_event/2).
 
 handle_event_(keypress, [_, _, _, _, _, _, _, _, _, _, _, State, Keycode, _]) :-
 	(keymap_internal(Keycode, State, Action) ->
