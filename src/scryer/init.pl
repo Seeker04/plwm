@@ -63,7 +63,7 @@ goal_expansion(sub_string(String, Before, Len, After, SubString), sys:sub_string
 
 :- meta_predicate(max_member(2,-,+)).
 max_member(_,_,_) :- not_used.
-goal_expansion(max_member(Pred, Max, List), max_member_helper(Module:Pred, Max, List)) :- prolog_load_context(module, Module).
+goal_expansion(max_member(Pred, Max, List), sys:max_member_helper(Module:Pred, Max, List)) :- prolog_load_context(module, Module).
 
 
 % os
