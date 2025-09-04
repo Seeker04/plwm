@@ -413,23 +413,23 @@ decode_event(configurenotify, EventPtr, [configurenotify, Type, Serial, SendEven
 decode_event(rrscreenchangenotify, _EventPtr, [rrscreenchangenotify]) :- !.
     
 decode_event(keypress, EventPtr, [keypress | EventData ]) :- !,
-    ffi:read_ptr('XKeyEvent', EventPtr, [ 'XKeyEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,_,KeyCode,_]), 
+    ffi:read_ptr('XKeyEvent', EventPtr, [ 'XKeyEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,KeyCode,_]), 
     movement_common(EventPtr, KeyCode, EventData).
 
 decode_event(keyrelease, EventPtr, [keyrelease | EventData ]) :- !,
-    ffi:read_ptr('XKeyEvent', EventPtr, [ 'XKeyEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,_,KeyCode,_]), 
+    ffi:read_ptr('XKeyEvent', EventPtr, [ 'XKeyEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,KeyCode,_]), 
     movement_common(EventPtr, KeyCode, EventData).
 
 decode_event(buttonpress, EventPtr, [buttonpress | EventData]) :- !,
-    ffi:read_ptr('XButtonEvent', EventPtr, [ 'XButtonEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,_,Button,_]), 
+    ffi:read_ptr('XButtonEvent', EventPtr, [ 'XButtonEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,Button,_]), 
     movement_common(EventPtr, Button, EventData).
     
 decode_event(buttonrelease, EventPtr, [buttonrelease | EventData ]) :- !,
-    ffi:read_ptr('XButtonEvent', EventPtr, [ 'XButtonEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,_,Button,_]), 
+    ffi:read_ptr('XButtonEvent', EventPtr, [ 'XButtonEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,Button,_]), 
     movement_common(EventPtr, Button, EventData).
     
 decode_event(motionnotify, EventPtr, [ motionnotify | EventData]) :- !,
-    ffi:read_ptr('XMotionEvent', EventPtr, [ 'XMotionEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,_,IsHint,_]), 
+    ffi:read_ptr('XMotionEvent', EventPtr, [ 'XMotionEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,IsHint,_]), 
     movement_common(EventPtr, IsHint, EventData).
 
 decode_event(unsupported_event, _, "unsupported_event").
