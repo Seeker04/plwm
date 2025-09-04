@@ -1741,7 +1741,8 @@ eventloop :-
 	display(Dp),
 
 	plx:x_next_event(Dp, Event),
-	(Event = [EventType|EventArgs] ->
+	( Event = "unsupported_event" -> true
+	; Event = [EventType|EventArgs] ->
 		handle_event(EventType, EventArgs)
 	; true),  % simply ignore "unsupported_event" cases
 
