@@ -29,6 +29,9 @@ goal_expansion(call_with_error_ctx(Goal, Ctx), error:call_with_error_context(Goa
 goal_expansion(exists_file(AtomPath), (atom_chars(AtomPath, Path), files:file_exists(Path))).
 
 % format 
+writeln(_) :- not_used.
+writeln(_,_) :- not_used.
+
 goal_expansion(writeln(String), sys:writeln_helper(String)).
 goal_expansion(writeln(Stream, String), sys:writeln_helper(Stream, String)).
 
