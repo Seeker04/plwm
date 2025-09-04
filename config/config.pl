@@ -252,7 +252,8 @@ keymaps([
 
   % Launch applications
   (ctrl + shift + space      ->  shellcmd("alacritty"))           ,
-  (alt + a                   ->  shellcmd("dmenu_run -l 20 -p run"))
+  (alt + a                   ->  shellcmd("dmenu_run -l 20 -p run")),
+  (ctrl + alt + t            ->  shellcmd("x-terminal-emulator"))
 
   % Toggle status bar
  %alt + b                   ->  shellcmd("pkill polybar || polybar top") ,
