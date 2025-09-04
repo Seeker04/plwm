@@ -48,7 +48,7 @@ is_set_helper([X | Xs]) :- maplist(dif(X), Xs), is_set_helper(Xs).
 
 :- meta_predicate(max_member_helper(2, -, +)).
 
-max_member_helper(Pred, X, [X]).
+max_member_helper(_Pred, X, [X]).
 max_member_helper(Pred, Max, [X0, X1 | Xs]) :- 
     call(Pred, X0, X1) -> 
         max_member_helper(Pred, Max, [X1 | Xs]) 
@@ -74,4 +74,9 @@ sub_string_helper(String, Before, Len, After, SubString) :-
     length(Prefix, Before),
     length(Suffix, After).
 
+% os
+
 getenv_helper(AtomKey, AtomValue) :- atom_chars(AtomKey, Key), os:getenv(Key, Value), atom_chars(AtomValue, Value).
+
+shell_helper(Command) :- os:shell(Command).
+shell_helper(Command, ExitCode) :- os:shell(Command, ExitCode).

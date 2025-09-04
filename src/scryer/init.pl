@@ -6,6 +6,7 @@
 :- use_module(library(format), []).
 :- use_module(library(iso_ext), []).
 :- use_module(library(lists), []).
+:- use_module(library(os), []).
 :- use_module(library(pio), []).
 :- use_module(library(si), []).
 
@@ -79,6 +80,9 @@ goal_expansion(max_member(Pred, Max, List), sys:max_member_helper(Module:Pred, M
 % os
 
 goal_expansion(getenv(Key, Value), sys:getenv_helper(Key, Value)).
+
+goal_expansion(shell(Command), sys:shell_helper(Command)).
+goal_expansion(shell(Command, ExitCode), sys:shell_helper(Command, ExitCode)).
 
 % 
 :- initialization((
