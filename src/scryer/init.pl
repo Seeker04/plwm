@@ -23,7 +23,7 @@ goal_expansion(opt_help(Spec, Help), sys:opt_help_helper(Spec, Help)).
 goal_expansion(on_signal(_Sig, _Old, _New), true).
 
 % error
-goal_expansion(call_with_error_ctx(Goal, Ctx), error:call_with_error_context(Goal, Ctx)).
+goal_expansion(call_with_error_ctx(Goal, Ctx), error:call_with_error_context(Module:Goal, Ctx)) :- prolog_load_context(module, Module).
 
 % files
 goal_expansion(exists_file(AtomPath), (atom_chars(AtomPath, Path), files:file_exists(Path))).
