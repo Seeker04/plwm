@@ -71,6 +71,7 @@ goal_expansion(sub_string(String, Before, Len, After, SubString), sys:sub_string
 goal_expansion(string_chars(String, Chars), (String = Chars)).
 goal_expansion(string_concat(A, B, C), lists:append(A, B, C)).
 
+goal_expansion(delete(Xs0, Elem, Xs1), sys:delete_helper(Xs0, Elem, Xs1)).
 
 :- meta_predicate(max_member(2,-,+)).
 max_member(_,_,_) :- not_used.

@@ -53,6 +53,12 @@ max_member_helper(Pred, Max, [X0, X1 | Xs]) :-
     call(Pred, X0, X1) -> 
         max_member_helper(Pred, Max, [X1 | Xs]) 
     ;   max_member_helper(Pred, Max, [X0 | Xs]).
+
+delete_helper([], _, []).
+delete_helper([X | Xs0], Elem, Xs1) :- 
+        \+(Xs0 \= Elem) -> 
+            delete_helper(Xs0, Elem, Xs1) 
+        ;   Xs1 = [X | Xs2], delete_helper(Xs0, Elem, Xs2).
     
 atom_string_helper(Atom, Chars) :-
     ( var(Chars) ->
