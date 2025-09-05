@@ -543,7 +543,7 @@ x_get_transient_for_hint(Dp, Win, PropWindow, Status) :-
         let(WRet, u64, 0)
     ],(
         ffi:'XGetTransientForHint'(Dp, Win, WRet, St),
-        ffi:ptr_read(u64, WRet, Pw)
+        ffi:read_ptr(u64, WRet, Pw)
     )),
     Pw = PropWindow,
     St = Status.
@@ -690,7 +690,7 @@ x_get_wm_protocols(Dp, Win, ProtocolRet, CountRet) :-
         (Cnt == 0 -> 
             Protos = []
         ;   ffi:array_type(u64, Cnt, ArrayType),
-            ffi:ptr_read(ptr, ProtosPtrPtr, ProtosPtr),
+            ffi:read_ptr(ptr, ProtosPtrPtr, ProtosPtr),
             ffi:read_ptr(ArrayType, ProtosPtr, [ ArrayType | Protos ]),
             ffi:'XFree'(ProtosPtr)
         )
