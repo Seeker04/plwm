@@ -64,6 +64,32 @@
     i32, u64, i32, ptr, u64, u64, u64, i32
 ])).
 
+:- initialization(foreign_struct('XWindowAttributes', [
+    i32, % x
+    i32, % y
+    i32, % width
+    i32, % height
+    i32, % border_width
+    i32, % depth
+    ptr, % visual
+    u64, % root
+    i32, % class
+    i32, % bit_gravity
+    i32, % win_gravity
+    i32, % backing_store
+    u64, % backing_planes
+    u64, % backing_pixel
+    i32, % save_under
+    u64, % colormap
+    i32, % map_installed
+    i32, % map_state
+    i64, % all_event_masks
+    i64, % your_event_masks
+    i64, % do_not_propagate_masks
+    i32, % override_redirect
+    ptr % screen
+])).
+
 
 % technically a union of [c_char; 20], [c_short; 10] and [c_long; 5], but we only use the long
 % so we just define it as 5 longs
@@ -305,6 +331,21 @@ x_change_property(Dp, Win, Prop, Atom, Format, Mode, Data, NElements) :-
     ],
         ffi:'XChangeProperty'(Dp, Win, Prop, Atom, Format, Mode, ArrayPtr, Len, _)
     ).
+
+x_get_window_attributes(Dp, Win, WinAttrRet, Status) :-
+    length(Init, 24), maplist(=(0), Init),
+    with_locals(
+        [
+            let(Ret, 'XWindowAttributes', ['XWindowAttributes' | Init ])
+        ],
+        (
+            ffi:'XGetWindowAttributes'(Dp, Win, Ret, St),
+            ffi:read_ptr('XWindowAttributes', Ret, ['XWindowAttributes' , X, Y, Width, Height | _])
+        )),
+        WinAttrRet = [X, Y, Width, Height],
+        Status = St.
+
+
 
 x_change_window_attributes(Dp, Win, ValueMask, EventMask) :-
     with_locals([
