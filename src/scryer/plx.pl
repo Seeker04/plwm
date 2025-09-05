@@ -333,7 +333,7 @@ x_change_property(Dp, Win, Prop, Atom, Format, Mode, Data, NElements) :-
     ).
 
 x_get_window_attributes(Dp, Win, WinAttrRet, Status) :-
-    length(Init, 24), maplist(=(0), Init),
+    length(Init, 23), maplist(=(0), Init),
     with_locals(
         [
             let(Ret, 'XWindowAttributes', ['XWindowAttributes' | Init ])
