@@ -11,6 +11,10 @@
 :- use_module(library(lists)).
 :- use_module(library(os)).
 
+% plwm only uses this with Term instantiated to an integer
+% todo proper implementation?
+term_to_atom_helper(Term, Atom) :- number_chars(Term, Chars), atom_chars(Atom, Chars).
+
 :- meta_predicate(ignore_helper(0)).
 ignore_helper(Goal) :- (Goal -> true ; true).
 

@@ -15,6 +15,8 @@ goal_expansion(use_foreign_library(_), true).
 
 goal_expansion(compound_name_arguments(Compound, Name, Args), (Compound =.. [Name | Args])).
 
+goal_expansion(term_to_atom(Term, Atom), sys:term_to_atom_helper(Tern, Atom)).
+
 :- meta_predicate(ignore(0)).
 ignore(_) :- not_used.
 goal_expansion(ignore(Goal), sys:ignore_helper(Module:Goal)) :- prolog_load_context(module, Module).
