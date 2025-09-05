@@ -1,12 +1,4 @@
-:- module(plx, [
-    x_open_display/2,
-    default_root_window/2,
-    default_screen/2,
-    x_set_error_handler/1,
-    xrr_query_extension/3,
-    xrr_select_input/3,
-    xrr_get_screen_resources/4
-]).
+:- module(plx, []).
 
 :- use_module(library(ffi)).
 :- use_module(library(lists)).
