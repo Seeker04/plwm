@@ -29,6 +29,10 @@
     u16, u16, u16, u16
 ])).
 
+:- initialization(foreign_struct('XClassHint', [
+    ptr, ptr
+])).
+
 :- initialization(foreign_struct('XSetWindowAttributes', [
     u64, u64, u64, u64, i32, i32, i32, u64, u64, i32, i64, i64, i32, u64, u64
 ])).
@@ -353,6 +357,20 @@ x_change_window_attributes(Dp, Win, ValueMask, EventMask) :-
     ],
         ffi:'XChangeWindowAttributes'(Dp, Win, ValueMask, WinAttributesPtr, _)
     ).
+
+x_get_class_hint(Dp, Win , ResName, ResClass) :-
+    with_locals(
+        [
+            let(Ch, 'XClassHint', ['XClassHint', 0, 0])
+        ],
+        ffi:'XGetClassHint'(Dp, Win, Ch, Bool),
+        Bool \= 0,
+        ffi:read_ptr('XClassHint', Ch, ['XClassHint', NamePtr, ClassPtr]),
+        (NamePtr = 0 -> Name = "" ; ffi:read_ptr(cstr, NamePtr, Name), c_free(NamePtr)),
+        (ClassPtr = 0 -> Class = "" ; ffi:read_ptr(cstr, ClassPtr, Class), c_free(ClassPtr))
+    ),
+    ResName = Name,
+    ResClass = Class.
 
 x_create_simple_window(Dp, Parent, X, Y, Width, Height, BorderW, Border, Background, Win) :-
     ffi:'XCreateSimpleWindow'(Dp, Parent, X, Y, Width, Height, BorderW, Border, Background, Win).
