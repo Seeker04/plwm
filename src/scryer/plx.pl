@@ -692,7 +692,7 @@ x_get_wm_protocols(Dp, Win, ProtocolRet, CountRet) :-
         ;   ffi:array_type(u64, Cnt, ArrayType),
             ffi:read_ptr(ptr, ProtosPtrPtr, ProtosPtr),
             ffi:read_ptr(ArrayType, ProtosPtr, [ ArrayType | Protos ]),
-            ffi:'XFree'(ProtosPtr)
+            ffi:'XFree'(ProtosPtr, _)
         )
     )),
     CountRet = Cnt,
