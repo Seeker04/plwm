@@ -289,6 +289,8 @@ x_open_display(DpName, DpPtr) :-
     ),
     ffi:'XOpenDisplay'(DpArg, DpPtr).
 
+x_close_display(Dp) :- ffi:'XCloseDisplay'(Dp, _).
+
 default_root_window(DpPtr, Win) :-
     ffi:'x11plwm_DefaultRootWindow'(DpPtr, Win).
 
