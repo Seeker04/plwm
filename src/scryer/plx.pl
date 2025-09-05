@@ -25,12 +25,17 @@
     ptr, ptr
 ])).
 
+
+:- initialization(foreign_struct('XWindowChanges', [
+    i32, i32, i32, i32, i32, u64, i32
+])).
+
 :- initialization(foreign_struct('XSetWindowAttributes', [
     u64, u64, u64, u64, i32, i32, i32, u64, u64, i32, i64, i64, i32, u64, u64
 ])).
 
 :- initialization(foreign_struct('XTextProperty', [
-    u8, u64, i32, u64
+    ptr, u64, i32, u64
 ])).
 
 % XEvent is a union with the size of 24x long
@@ -84,6 +89,30 @@
     i64, % do_not_propagate_masks
     i32, % override_redirect
     ptr % screen
+])).
+
+:- initialization(foreign_struct('AspectRatio', [
+        i32, % x
+        i32  % y
+])).
+
+:- initialization(foreign_struct('XSizeHints', [
+    u64, % flags
+    i32, % x
+    i32, % y
+    i32, % width
+    i32, % height
+    i32, % min_width
+    i32, % min_height
+    i32, % max_width
+    i32, % max_height
+    i32, % width_inc
+    i32, % height_inc
+    'AspectRatio', % min_aspect
+    'AspectRatio', % max_aspect
+    i32, % base_width
+    i32, % base_height
+    i32  % win_gravity
 ])).
 
 
@@ -181,6 +210,8 @@
 
 % bind to X11 shared library
 :- initialization(use_foreign_module("libX11.so", [
+    'XFree'([ptr], i32),
+
     'XOpenDisplay'([cstr], ptr),
     'XCloseDisplay'([ptr], i32),
 
@@ -207,7 +238,7 @@
     'XNextEvent'([ptr, ptr], i32),
     'XSendEvent'([ptr, u64, i32, u64, ptr], i32),
 
-    'XRaiseWindow'([ptr, u64], void),
+    'XRaiseWindow'([ptr, u64], i32),
     'XGetWindowAttributes'([ptr, u64, ptr], i32),
     'XChangeWindowAttributes'([ptr, u64, u64, ptr], i32),
     'XMoveResizeWindow'([ptr, u64, i32, i32, u32, u32], i32),
@@ -229,13 +260,35 @@
 
     'XInternAtom'([ptr, cstr, i32], u64),
 
+    'XGetWindowProperty'([
+        ptr, % display
+        u64, % ww
+        u64, % property
+        u64, % long_offset
+        u64, % long_length
+        i32, % delete
+        u64, % req_type
+        ptr, % actual_type_return
+        ptr, % actual_format_return
+        ptr, % nitems_return
+        ptr, % bytes_after_return
+        ptr  % prop_return
+    ], i32),
     'XChangeProperty'([ptr, u64, u64, u64, i32, i32, ptr, i32], i32),
+    'XDeleteProperty'([ptr, u64, u64], i32),
 
     'XCreateSimpleWindow'([ptr, u64, i32, i32, u32, u32, u32, u64, u64], u64),
 
     'Xutf8TextListToTextProperty'([ptr, ptr, i32, i32, ptr], i32),
 
-    'XSetTextProperty'([ptr, u64, ptr, u64], void)
+    'XSetTextProperty'([ptr, u64, ptr, u64], void),
+
+    'XGetTransientForHint'([ptr, u64, ptr], i32),
+
+    'XWarpPointer'([ptr, u64, u64, i32, i32, u32, u32, i32, i32], i32),
+
+    'XGetWMProtocols'([ptr, u64, ptr, ptr], i32),
+    'XGetWMNormalHints'([ptr, u64, ptr, ptr], i32)
 ])).
 
 % bind to Xft shared library
@@ -291,6 +344,8 @@ x_open_display(DpName, DpPtr) :-
 
 x_close_display(Dp) :- ffi:'XCloseDisplay'(Dp, _).
 
+x_set_close_down_mode(Dp, Mode) :- ffi:'XSetCloseDownMode'(Dp, Mode, _).
+
 default_root_window(DpPtr, Win) :-
     ffi:'x11plwm_DefaultRootWindow'(DpPtr, Win).
 
@@ -309,6 +364,28 @@ x_set_error_handler(true) :- ffi:'x11plwm_set_error_handler'(1).
 x_intern_atom(Dp, Name, IfExists, Atom) :-
     bool_int(IfExists, If),
     ffi:'XInternAtom'(Dp, Name, If, Atom).
+
+x_get_window_property(Dp, Win, Prop, Del, ReqType, PropRet) :-
+    bool_int(Del, Delete),
+    with_locals([
+        let(AtrPtr, u64, 0),
+        let(AfrPtr, i32, 0),
+        let(NrPtr, u64, 0),
+        let(BarPtr, u64, 0),
+        let(PPtr, ptr, 0)
+    ],
+    (
+        ffi:'XGetWindowProperty'(Dp, Win, Prop, 0, 8 /*sizeof(Atom)*/, Delete, ReqType, AtrPtr, AfrPtr, NrPtr, BarPtr, PPtr, Ret),
+        (
+            (
+                Ret == 0, 
+                ffi:read_ptr(ptr, PPtr, P), 
+                P \= 0
+            ) ->    ffi:read_ptr(u64, P, Property), ffi:'XFree'(P, _)
+            ;       Property = 0
+        )
+    )),
+    PropRet = Property.
 
 x_change_property(Dp, Win, Prop, Atom, Format, Mode, Data, NElements) :-
     (chars_si(Data) ->
@@ -329,6 +406,8 @@ x_change_property(Dp, Win, Prop, Atom, Format, Mode, Data, NElements) :-
     ],
         ffi:'XChangeProperty'(Dp, Win, Prop, Atom, Format, Mode, ArrayPtr, Len, _)
     ).
+
+x_delete_property(Dp, Win, Property) :- ffi:'XDeleteProperty'(Dp, Win, Property, _).
 
 x_get_window_attributes(Dp, Win, WinAttrRet, Status) :-
     length(Init, 23), maplist(=(0), Init),
@@ -361,8 +440,8 @@ x_get_class_hint(Dp, Win , ResName, ResClass) :-
             ffi:'XGetClassHint'(Dp, Win, Ch, Bool),
             Bool \= 0,
             ffi:read_ptr('XClassHint', Ch, ['XClassHint', NamePtr, ClassPtr]),
-            (NamePtr = 0 -> Name = "" ; ffi:read_ptr(cstr, NamePtr, Name), c_free(NamePtr)),
-            (ClassPtr = 0 -> Class = "" ; ffi:read_ptr(cstr, ClassPtr, Class), c_free(ClassPtr))
+            (NamePtr = 0 -> Name = "" ; ffi:read_ptr(cstr, NamePtr, Name), ffi:'XFree'(NamePtr, _)),
+            (ClassPtr = 0 -> Class = "" ; ffi:read_ptr(cstr, ClassPtr, Class), ffi:'XFree'(ClassPtr, _))
         )
     ),
     ResName = Name,
@@ -380,6 +459,8 @@ x_create_font_cursor(Dp, Shape, Cursor) :-
 x_define_cursor(Dp, Win, Cursor) :-
     ffi:'XDefineCursor'(Dp, Win, Cursor, _).
 
+x_free_cursor(Dp, Cursor) :- ffi:'XFreeCursor'(Dp, Cursor, _).
+
 x_grab_key(Dp, KeyCode, Modifiers, GrabWindow, OwnerEvents, PointerMode, KeyboardMode) :-
     bool_int(OwnerEvents, Oes),
     ffi:'XGrabKey'(Dp, KeyCode, Modifiers, GrabWindow, Oes, PointerMode, KeyboardMode, _).
@@ -393,6 +474,16 @@ x_grab_button(Dp, Button, Modifiersm, GrabWindow, OwnerEvents, EventMask, Pointe
 
 x_ungrab_button(Dp, Button, Modifiers, GrabWindow) :-
     ffi:'XUngrabButton'(Dp, Button, Modifiers, GrabWindow, _).
+
+x_grab_pointer(Dp, GWin, OwenerEvents, EventMask, PointerMode, KeyboardMode, ConfinedTo, Cursor, Time) :-
+    bool_int(OwenerEvents, Oe),
+    ffi:'XGrabPointer'(Dp, GWin, Oe, EventMask, PointerMode, KeyboardMode, ConfinedTo, Cursor, Time).
+
+x_ungrab_pointer(Dp, Time) :- ffi:'XUngrabPointer'(Dp, Time).
+
+x_grab_server(Dp) :- ffi:'XGrabServer'(Dp, _).
+
+x_ungrab_server(Dp) :- ffi:'XUngrabServer'(Dp, _).
 
 x_string_to_keysym(KeyName, KeySymbol) :-
     ffi:'XStringToKeysym'(KeyName, KeySymbol).
@@ -433,9 +524,36 @@ x_utf8_text_list_to_text_property_(Dp, List, Count, Style, TextPropReturn) :-
     ),
     TProp = TextPropReturn.
 
+x_get_text_property(Dp, Win, Text, Property, Status) :-
+    with_locals([
+        let(TProp, 'XTextProperty', ['XTextProperty', 0, 0, 0, 0])
+    ],(
+        ffi:'XGetTextProperty'(Dp, Win, TProp, Property, St),
+        (   St = 0 -> 
+            Txt = ""
+        ;   ffi:read_ptr('XTextProperty', TProp, ['XTextProperty', ValuePtr, _, _, _]),
+            ffi:read_ptr(cstr, ValuePtr, Txt)
+        )
+    )),
+    Status = St,
+    Text = Txt.
+
+x_get_transient_for_hint(Dp, Win, PropWindow, Status) :-
+    with_locals([
+        let(WRet, u64, 0)
+    ],(
+        ffi:'XGetTransientForHint'(Dp, Win, WRet, St),
+        ffi:ptr_read(u64, WRet, Pw)
+    )),
+    Pw = PropWindow,
+    St = Status.
 
 x_set_text_property(Dp, Win, TextProp, Property) :- 
     ffi:'XSetTextProperty'(Dp, Win, TextProp, Property).
+
+x_send_event(Dp, Win, Propagate, EventMask, EventSend) :-
+    bool_int(Propagate, P),
+    ffi:'XSendEvent'(Dp, Win, P, EventMask, EventSend, _).
 
 x_next_event(Dp, EventReturn) :- call_with_error_context(x_next_event_(Dp, EventReturn), predicate-x_next_event/2).
 
@@ -537,6 +655,105 @@ movement_common(EventPtr, Value, [Serial, SendEvent, Display, Window, Root, SubW
     bool_int(SendEvent, Se),
     bool_int(SameScreen, Sc).
 
+
+x_raise_window(Dp, Win) :- ffi:'XRaiseWindow'(Dp, Win, _).
+
+x_move_resize_window(Dp, Win, X, Y, Width, Height) :- ffi:'XMoveResizeWindow'(Dp, Win, X, Y, Width, Height, _).
+
+x_map_window(Dp, Win) :- ffi:'XMapWindow'(Dp, Win, _).
+
+x_configure_window(Dp, Win, ValueMask, X, Y, Width, Height, BorderWidth, Sibling, StackMode) :-
+    with_locals([
+        let(WinChange, 'XWindowChanges', ['XWindowChanges' , X, Y, Width, Height, BorderWidth, Sibling, StackMode ])
+    ],
+        ffi:'XConfigureWindow'(Dp, Win, ValueMask, WinChange ,_)
+    ).
+
+x_set_window_border(Dp, Win, BorderPixel) :- ffi:'XSetWindowBorder'(Dp, Win, BorderPixel, _).
+
+x_set_input_focus(Dp, Focus, RevertTo, Time) :- ffi:'XSetInputFocus'(Dp, Focus, RevertTo, Time, _).
+
+x_kill_client(Dp, Resource) :- ffi:'XKillClient'(Dp, Resource, _).
+
+x_sync(Dp, Discard) :- 
+    bool_int(Discard, D),
+    ffi:'XSync'(Dp, D, _).
+
+x_get_wm_protocols(Dp, Win, ProtocolRet, CountRet) :-
+    with_locals([
+        let(ProtosPtrPtr, ptr, 0),
+        let(CntPtr, i32, 0)
+    ],(
+        ffi:'XGetWMProtocols'(Dp, Win, ProtosPtrPtr, CntPtr, Ret),
+        Ret \= 0,
+        ffi:read_ptr(i32, CntPtr, Cnt),
+        (Cnt == 0 -> 
+            Protos = []
+        ;   ffi:array_type(u64, Cnt, ArrayType),
+            ffi:ptr_read(ptr, ProtosPtrPtr, ProtosPtr),
+            ffi:read_ptr(ArrayType, ProtosPtr, [ ArrayType | Protos ]),
+            ffi:'XFree'(ProtosPtr)
+        )
+    )),
+    CountRet = Cnt,
+    ProtocolRet = Protos.
+
+x_get_wm_normal_hints(Dp, Win, HintsRet, Status) :-
+    with_locals([
+        let(HintsPtr, 'XSizeHints', ['XSizeHints', 0,0,0,0,0,0,0,0,0,0,0,['AspectRatio', 0, 0],['AspectRatio', 0, 0],0,0,0]),
+        let(SupRetPtr, i64, 0)
+    ],(
+        ffi:'XGetWMNormalHints'(Dp, Win, HintsPtr, SupRetPtr, St),
+        (St == 0 -> Hints = [],
+            ffi:read_ptr('XSizeHints', HintsPtr, ['XSizeHints', 
+                Flags, 
+                X, Y, 
+                Width, Height, 
+                MinWidth, MinHeight, 
+                MaxWidth,MaxHeight,
+                WidthInc, HeightInc,
+                ['AspectRatio', MinAspectX, MinAspectY],
+                ['AspectRatio', MaxAspectX, MaxAspectY],
+                BaseWidth, BaseHeight,
+                WinGravity
+            ]),
+            Hints = [
+                Flags,
+                X,
+                Y,
+                Width,
+                Height,
+                MinWidth,
+                MinHeight,
+                MaxWidth,
+                MaxHeight,
+                WidthInc,
+                HeightInc,
+                MinAspectX,
+                MinAspectY,
+                MaxAspectX,
+                MaxAspectY,
+                BaseWidth,
+                BaseHeight,
+                WinGravity
+            ]
+        )
+    )),
+    Status = St,
+    HintsRet = Hints.
+
+x_warp_pointer(Dp, SrcWin, DestWin, SrcX, SrcY, SrcWidth, SrcHeight, DestX, DestY) :-
+    ffi:'XWarpPointer'(Dp, SrcWin, DestWin, SrcX, SrcY, SrcWidth, SrcHeight, DestX, DestY, _).
+
+create_configure_event(Dp, Win, ConfigureEvent) :- 
+    event_type_id_atom(ConfigureNotify, configurenotify),
+    ffi:allocate(c, 'XConfigureEvent', ['XConfigureEvent', ConfigureNotify, 0, 0, Dp, Win, Win, 0, 0, 0, 0, 0, 0, 0], ConfigureEventPtr),
+    ConfigureEvent = ConfigureEventPtr.
+
+create_clientmessage_event(Win, MsgType, Format, Datal0, Datal1, ClientMsg) :-
+    event_type_id_atom(ClientMessage, clientmessage),
+    ffi:allocate(c, 'XClientMessageEvent', ['XClientMessageEvent', ClientMessage, 0, 0, 0, Win, MsgType, Format, ['ClientMessageData', Datal0, Datal1, 0, 0, 0]], ClientMsgPtr),
+    ClientMsg = ClientMsgPtr.
 
 :- dynamic(rr_event_base/1).
 
