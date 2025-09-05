@@ -129,7 +129,7 @@ spawn_winlist_menu(Prompt, Callback) :-
 %  Lists all monitor-workspace combinations other than the active one using spawn_menu/3.
 %  If a selection happens, switches to that monitor-workspace.
 goto_workspace :-
-	monws_keys(Keys), active_mon_ws(ActMon, ActWs),
+	monws_keys(Keys), user:active_mon_ws(ActMon, ActWs),
 	findall(Mon-Ws-MenuEntry, (   % map key (Mon-Ws) to lines for later lookup
 		member(Mon-Ws, Keys),
 		Mon-Ws \= ActMon-ActWs,
@@ -166,7 +166,7 @@ goto_window_(MenuInput, [Selection]) :-
 %  Lists all windows other than the ones on the active workspace using spawn_menu/3.
 %  If a selection happens, moves the selected window(s) to the active monitor-workspace.
 pull_from :-
-	user:display(Dp), active_mon_ws(ActMon, ActWs), monws_keys(Keys), XA_WM_NAME is 39,
+	user:display(Dp), user:active_mon_ws(ActMon, ActWs), monws_keys(Keys), XA_WM_NAME is 39,
 	findall(MenuEntries, (
 		member(Mon-Ws, Keys), Mon-Ws \= ActMon-ActWs, global_key_value(windows, Mon-Ws, Wins),
 		findall(Win-MenuEntry, (   % map XID to lines for later lookup
@@ -182,7 +182,7 @@ pull_from :-
 .
 pull_from_(MenuInput, Selections) :-
 	compat_forall((member(Sel, Selections), member(Win-Sel, MenuInput)), (
-		active_mon_ws(ActMon, ActWs),
+		user:active_mon_ws(ActMon, ActWs),
 		win_tomon_toworkspace_top(Win, ActMon, ActWs, true),
 		focus(Win), raise(Win)
 	))
@@ -195,7 +195,7 @@ pull_from_(MenuInput, Selections) :-
 push_to :-
 	global_value(focused, FocusedWin),
 	(FocusedWin =\= 0 ->
-		monws_keys(Keys), active_mon_ws(ActMon, ActWs),
+		monws_keys(Keys), user:active_mon_ws(ActMon, ActWs),
 		findall(Mon-Ws-MenuEntry, (   % map key (Mon-Ws) to lines for later lookup
 			member(Mon-Ws, Keys),
 			Mon-Ws \= ActMon-ActWs,
@@ -254,7 +254,7 @@ create_workspace :-
 %  Prompts the user for a new workspace name.
 %  If it is non-empty and unique, renames the active workspace to it.
 rename_workspace :- % will rename the active one
-	active_mon_ws(_, ActWs),
+	user:active_mon_ws(_, ActWs),
 	(read_from_prompt("rename workspace to", Input) ->
 		atom_string(Ws, Input),
 		rename_workspace(ActWs, Ws)
@@ -266,7 +266,7 @@ rename_workspace :- % will rename the active one
 %  Lists the possible new workspace indices for the active one.
 %  If a selection happens, the active workspace is re-indexed to the new position.
 reindex_workspace :- % will reindex the active one
-	active_mon_ws(_, ActWs), nb_getval(workspaces, Wss), nth1(ActIdx, Wss, ActWs),
+	user:active_mon_ws(_, ActWs), nb_getval(workspaces, Wss), nth1(ActIdx, Wss, ActWs),
 	length(Wss, WsCnt),
 	(1 < WsCnt ->
 		findall(IStr, (between(1, WsCnt, I), I =\= ActIdx, number_string(I, IStr)), Lines),

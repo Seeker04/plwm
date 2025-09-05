@@ -34,7 +34,7 @@ is_layout(Layout) :- member(Layout, [
 %  Sets the layout of the active monitor-workspace.
 %
 %  @arg Layout layout to set
-set_layout(Layout) :- active_mon_ws(ActMon, ActWs), set_layout(ActMon-ActWs, Layout).
+set_layout(Layout) :- user:active_mon_ws(ActMon, ActWs), set_layout(ActMon-ActWs, Layout).
 
 %! set_layout(++Mon-Ws:string-atom, ++Layout:term) is det
 %
