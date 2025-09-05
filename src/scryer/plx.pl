@@ -363,11 +363,13 @@ x_get_class_hint(Dp, Win , ResName, ResClass) :-
         [
             let(Ch, 'XClassHint', ['XClassHint', 0, 0])
         ],
-        ffi:'XGetClassHint'(Dp, Win, Ch, Bool),
-        Bool \= 0,
-        ffi:read_ptr('XClassHint', Ch, ['XClassHint', NamePtr, ClassPtr]),
-        (NamePtr = 0 -> Name = "" ; ffi:read_ptr(cstr, NamePtr, Name), c_free(NamePtr)),
-        (ClassPtr = 0 -> Class = "" ; ffi:read_ptr(cstr, ClassPtr, Class), c_free(ClassPtr))
+        (
+            ffi:'XGetClassHint'(Dp, Win, Ch, Bool),
+            Bool \= 0,
+            ffi:read_ptr('XClassHint', Ch, ['XClassHint', NamePtr, ClassPtr]),
+            (NamePtr = 0 -> Name = "" ; ffi:read_ptr(cstr, NamePtr, Name), c_free(NamePtr)),
+            (ClassPtr = 0 -> Class = "" ; ffi:read_ptr(cstr, ClassPtr, Class), c_free(ClassPtr))
+        )
     ),
     ResName = Name,
     ResClass = Class.
