@@ -2,6 +2,7 @@
 :- use_module(plx).
 
 :- use_module(library(assoc), []).
+:- use_module(library(between), []).
 :- use_module(library(error), []).
 :- use_module(library(format), []).
 :- use_module(library(iso_ext), []).
