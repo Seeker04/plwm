@@ -297,6 +297,7 @@
 
     'Xutf8TextListToTextProperty'([ptr, ptr, i32, i32, ptr], i32),
 
+    'XGetTextProperty'([ptr, u64, ptr, u64], i32),
     'XSetTextProperty'([ptr, u64, ptr, u64], void),
 
     'XGetTransientForHint'([ptr, u64, ptr], i32),
