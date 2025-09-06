@@ -65,6 +65,22 @@
     i32, u64, i32, ptr, u64, u64, u64, i32
 ])).
 
+:- initialization(foreign_struct('XConfigureEvent', [
+    i32, 
+    u64, 
+    i32, 
+    ptr, 
+    u64, 
+    u64, 
+    i32, 
+    i32, 
+    i32, 
+    i32, 
+    i32, 
+    u64, 
+    i32
+])).
+
 :- initialization(foreign_struct('XWindowAttributes', [
     i32, % x
     i32, % y
