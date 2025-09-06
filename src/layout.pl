@@ -316,8 +316,8 @@ calculate_layout(MasterType, Mon, WinCnt, [BX, BY, BW, BH], Geoms) :-
 %
 %  @arg MaxBorderW the largest configured border width
 max_border_width(MaxBorderW) :-
-	border_width(BorderW),
-	border_width_focused(BorderWF),
+	user:border_width(BorderW),
+	user:border_width_focused(BorderWF),
 	MaxBorderW is max(BorderW, BorderWF)
 .
 
