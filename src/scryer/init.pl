@@ -27,6 +27,10 @@ goal_expansion(opt_help(Spec, Help), sys:opt_help_helper(Spec, Help)).
 % TODO implement on_signal equivalent in scryer-prolog
 goal_expansion(on_signal(_Sig, _Old, _New), true).
 
+% between
+
+goal_expansion(between(Min, Max, Val), between:between(Min, Max, Val)).
+
 % charsio
 
 goal_expansion(char_type(Char, Cat), sys:char_type_helper(Char, Cat)).
