@@ -289,9 +289,9 @@ set_(outer_gaps,               Value) :- store_setting(outer_gaps, Value), updat
 set_(inner_gaps,               Value) :- store_setting(inner_gaps, Value), layout:relayout.
 set_(workspaces,               Value) :- store_setting(workspaces, Value), set_workspaces.
 set_(starting_workspace,       Value) :- store_setting(starting_workspace, Value). % no sense to change, but we allow it
-set_(hide_empty_workspaces,    Value) :- store_setting(hide_empty_workspaces, Value), update_ws_atoms.
-set_(ws_format,                Value) :- store_setting(ws_format, Value),             update_ws_atoms.
-set_(ws_format_occupied,       Value) :- store_setting(ws_format_occupied, Value),    update_ws_atoms.
+set_(hide_empty_workspaces,    Value) :- store_setting(hide_empty_workspaces, Value), user:update_ws_atoms.
+set_(ws_format,                Value) :- store_setting(ws_format, Value),             user:update_ws_atoms.
+set_(ws_format_occupied,       Value) :- store_setting(ws_format_occupied, Value),    user:update_ws_atoms.
 set_(layout_default_overrides, Value) :- store_setting(layout_default_overrides, Value).
 set_(bar_classes,              Value) :- store_setting(bar_classes, Value).
 set_(bar_placement,            Value) :- store_setting(bar_placement, Value), update_free_win_space.

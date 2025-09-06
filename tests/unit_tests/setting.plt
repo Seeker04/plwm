@@ -38,7 +38,7 @@ delete_workspace(Ws) :- nb_getval(workspaces, Wss), member(Ws, Wss).
 create_workspace(Ws) :- atom(Ws).
 set_border(N) :- integer(N).
 switch_workspace(next). switch_workspace(prev).
-alloc_colors. update_free_win_space. layout:relayout. set_workspaces. update_ws_atoms.
+alloc_colors. update_free_win_space. layout:relayout. set_workspaces. user:update_ws_atoms.
 grab_buttons. grab_keys. setup_hooks.
 
 :- begin_tests(setting_tests).
