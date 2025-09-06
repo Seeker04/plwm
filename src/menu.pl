@@ -68,7 +68,7 @@ read_from_prompt(Prompt, Input) :-  % use menucmd as a simple input prompt
 %  @arg Ws workspace name
 %  @arg string output of the formatting
 mon_ws_format(Mon, Ws, Str) :-
-	monitors(Mons), nb_getval(workspaces, Wss), length(Mons, MonCnt), length(Wss, WsCnt),
+	user:monitors(Mons), nb_getval(workspaces, Wss), length(Mons, MonCnt), length(Wss, WsCnt),
 	(1 == MonCnt, 1 == WsCnt -> Str = ""
 	;1 == MonCnt, 1 <  WsCnt ->compat_format(string(Str),      "~a", [     Ws])
 	;1 <  MonCnt, 1 == WsCnt ->compat_format(string(Str), "~s"     , [Mon    ])
@@ -88,7 +88,7 @@ mon_ws_format(Mon, Ws, Str) :-
 %  @arg WinT window title string
 %  @arg string output of the formatting
 mon_ws_wint_format(Mon, Ws, WinT, Str) :-
-	monitors(Mons), nb_getval(workspaces, Wss), length(Mons, MonCnt), length(Wss, WsCnt),
+	user:monitors(Mons), nb_getval(workspaces, Wss), length(Mons, MonCnt), length(Wss, WsCnt),
 	maplist(atom_length, Wss, WsWidths),
 	max_list(WsWidths, WsMaxWidth),
 	(1 == MonCnt, 1 == WsCnt ->compat_format(string(Str),                    "~s", [WinT])
@@ -526,7 +526,7 @@ list_cmds :-
 	findall(move_focused_to_workspace(Ws), member(Ws, Wss), MoveToWsByNameCmds),
 	findall(move_focused_to_workspace(Idx), nth1(Idx, Wss, _), MoveToWsByIdxCmds),
 
-	monitors(Mons),
+	user:monitors(Mons),
 	findall(switch_monitor(Mon), member(Mon, Mons), SwitchMonCmds),
 	findall(switch_monitor(Idx), nth1(Idx, Mons, _), SwitchMonByIdxCmds),
 	findall(move_focused_to_monitor(Mon), member(Mon, Mons), MoveToMonCmds),
