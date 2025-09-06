@@ -370,7 +370,7 @@ geometry_spec(X, Y, W, H) :-
 %  Applies border_width/1 and border_width_focused/1 on all windows.
 %  Also redraws layout to make changes immediately visible.
 update_all_borders :-
-	monws_keys(Keys),
+	user:monws_keys(Keys),
 	compat_forall(member(Mon-Ws, Keys), (
 		global_key_value(windows, Mon-Ws, Wins),
 		compat_forall(member(Win, Wins), (
