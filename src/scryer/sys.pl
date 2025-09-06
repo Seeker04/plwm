@@ -7,7 +7,7 @@
 :- use_module(library(charsio)).
 :- use_module(library(dif)).
 :- use_module(library(format)).
-:- use_module(library(iso_ext), [forall/2]).
+:- use_module(library(iso_ext)).
 :- use_module(library(lists)).
 :- use_module(library(os)).
 
@@ -44,6 +44,11 @@ format_helper(atom(Atom), Fmt, Args) :- !, phrase(format_(Fmt, Args), Str), atom
 :- meta_predicate(forall_helper(0,0)).
 forall_helper(Goal, Test) :-
     forall(Goal, Test).
+
+% todo nb_getval, nb_current should probably be implemented differently
+nb_getval_helper(Var, Val) :- bb_get(Var, V) , Var \= '$undefined', Val = V.
+nb_current_helper(Var, Val) :- bb_get(Var, V) , Var \= '$undefined', Val = V.
+nb_delete_helper(Var) :- bb_put(Var, '$undefined').
 
 % lists
 

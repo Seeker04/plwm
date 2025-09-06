@@ -52,10 +52,10 @@ goal_expansion(compat_format(Stream, Fmt, Args), sys:format_helper(Stream, Fmt, 
 compat_forall(_,_) :-not_used.
 goal_expansion(compat_forall(Goal, Test), sys:forall_helper(Module:Goal, Module:Test)) :- prolog_load_context(module, Module).
 
-% todo nb_getval, nb_current should probably be implemented differently
-goal_expansion(nb_getval(Var, Val), iso_ext:bb_get(Var, Val)).
+goal_expansion(nb_getval(Var, Val), sys:nb_getval_helper(Var, Val)).
 goal_expansion(nb_setval(Var, Val), iso_ext:bb_put(Var, Val)).
-goal_expansion(nb_current(Var, Val), iso_ext:bb_get(Var, Val)).
+goal_expansion(nb_current(Var, Val), sys:nb_current_helper(Var, Val)).
+goal_expansion(nb_delete(Var), sys:nb_delete_helper(Var)).
 
 % lists
 goal_expansion(string(Term), si:chars_si(Term)).
