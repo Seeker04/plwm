@@ -436,14 +436,14 @@ apply_geoms(Wins, Geoms) :-
 			thread_create(
 				animation:interpolate_geom(Win, X, Y, W, H, NewX, NewY, NewW, NewH, AnimG, AnimT)
 			, ThreadId),
-			win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])
+			user:win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])
 		), ThreadIds),
 		compat_forall(member(ThreadId, ThreadIds), thread_join(ThreadId))
 	;
 		compat_forall(member(Win-[NewX, NewY, NewW, NewH], WinGeomMap), (
 			user:display(Dp),
 			plx:x_move_resize_window(Dp, Win, NewX, NewY, NewW, NewH),
-			win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])
+			user:win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])
 		))
 	)
 .
