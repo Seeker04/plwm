@@ -70,6 +70,7 @@ goal_expansion(is_list(Xs), si:list_si(Xs)).
 goal_expansion(is_set(Xs), sys:is_set_helper(Xs)).
 
 goal_expansion(last(List, Last), lists:append(_, [Last], List)).
+goal_expansion(nexto(X, Y, List), lists:append(_, [X, Y | _], List)).
 
 goal_expansion(selectchk(Elem, List, Rest), once(select(Elem, List, Rest))).
 
