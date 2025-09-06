@@ -30,7 +30,7 @@ goal_expansion(on_signal(_Sig, _Old, _New), true).
 
 % between
 
-goal_expansion(between(Min, Max, Val), between:between(Min, Max, Val)).
+goal_expansion(between(Min, Max, Val), sys:between_helper(Min, Max, Val)).
 
 % charsio
 

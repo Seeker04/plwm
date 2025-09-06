@@ -4,6 +4,7 @@
 
 :- module(sys, []).
 
+:- use_module(library(between)).
 :- use_module(library(charsio)).
 :- use_module(library(dif)).
 :- use_module(library(format)).
@@ -21,6 +22,9 @@ ignore_helper(Goal) :- (Goal -> true ; true).
 % todo handle argument parsing and printing of help
 opt_arguments_helper(_Spec, Opts, _PosArgs) :- Opts = [config('./config/config.pl')].
 opt_help_helper(_,_).
+
+% between
+between_helper(Min, Max, Val) :- between:between(Min, Max, Val).
 
 % charsio
 
