@@ -6,7 +6,6 @@
 :- use_module(library(error)).
 :- use_module(library(si)).
 :- use_module(library(charsio)).
-:- use_module(library(debug)).
 
 % Note: assumes
 %    char           = u8
@@ -584,7 +583,7 @@ x_next_event_(Dp, EventReturn) :-
        ffi:'XNextEvent'(Dp, EventPtr, _),
        ffi:read_ptr('XAnyEvent', EventPtr, ['XAnyEvent' , EventId | _]),
        event_type_id_atom(EventId, EventAtom),
-       $decode_event(EventAtom, EventPtr, EventReturn)
+       decode_event(EventAtom, EventPtr, EventReturn)
     )).
 
 term_expansion(event_type_id_atom(Id, Atom), (event_type_id_atom(Id, Atom) :- !)).
@@ -661,14 +660,14 @@ decode_event(buttonrelease, EventPtr, [buttonrelease | EventData ]) :- !,
     movement_common(EventPtr, Button, EventData).
     
 decode_event(motionnotify, EventPtr, [ motionnotify | EventData]) :- !,
-    $ffi:read_ptr('XMotionEvent', EventPtr, Data), 
-    $(Data = [ 'XMotionEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,IsHint,_]),
-    $movement_common(EventPtr, IsHint, EventData).
+    ffi:read_ptr('XMotionEvent', EventPtr, Data), 
+    Data = [ 'XMotionEvent',_,_,_,_,_,_,_,_,_,_,_,_,_,IsHint,_],
+    movement_common(EventPtr, IsHint, EventData).
 
 decode_event(unsupported_event, _, "unsupported_event").
 
 movement_common(EventPtr, Value, [Serial, SendEvent, Display, Window, Root, SubWindow, Time, X, Y, XRoot, YRoot, State, Value, SameScreen]) :-
-    $ffi:read_ptr('XKeyEvent', EventPtr, ['XKeyEvent', _, Serial, Se, Display, Window, Root, SubWindow, Time, X, Y, XRoot, YRoot, State, _, Sc]),
+    ffi:read_ptr('XKeyEvent', EventPtr, ['XKeyEvent', _, Serial, Se, Display, Window, Root, SubWindow, Time, X, Y, XRoot, YRoot, State, _, Sc]),
     bool_int(SendEvent, Se),
     bool_int(SameScreen, Sc).
 
