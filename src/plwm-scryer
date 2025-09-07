@@ -1,9 +1,19 @@
 #!/bin/bash
 
 set -e
+set -o pipefail
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "$(realpath "${BASH_SOURCE[0]}")" )" &> /dev/null && pwd )
 
 export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${SCRIPT_DIR}/../bin:/usr/lib"
 
-scryer-prolog -g main -g halt "${SCRIPT_DIR}/scryer/init.pl" "${SCRIPT_DIR}/plwm.pl"  -- "$@"
+STATE_DIR="${XDG_STATE_HOME-"${HOME}/.local/state"}/plwm"
+
+
+if ! -d $STATE_DIR ; then
+    mkdir -p "${STATE_DIR}"
+fi
+
+LOG="${STATE_DIR}/plwm-scryer.log"
+
+scryer-prolog -g main -g halt "${SCRIPT_DIR}/scryer/init.pl" "${SCRIPT_DIR}/plwm.pl"  -- "$@" |& tee "${LOG}"
