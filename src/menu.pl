@@ -646,7 +646,7 @@ list_cmds :-
 	], Cmds),
 
 	findall(CmdStr,
-		(member(Cmd, Cmds),compat_format(chars(CmdStr), "q", [Cmd])),
+		(member(Cmd, Cmds),compat_format(chars(CmdStr), "~q", [Cmd])),
 		CmdStrs),
 	maplist(string_length, CmdStrs, CmdWidths),
 	max_list(CmdWidths, CmdMaxWidth),
