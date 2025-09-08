@@ -10,7 +10,7 @@ export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${SCRIPT_DIR}/../bin:/usr/lib"
 STATE_DIR="${XDG_STATE_HOME-"${HOME}/.local/state"}/plwm"
 
 
-if ! -d $STATE_DIR ; then
+if [ ! -d $STATE_DIR ] ; then
     mkdir -p "${STATE_DIR}"
 fi
 
