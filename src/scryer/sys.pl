@@ -37,8 +37,8 @@ char_type_helper(Char, Cat) :-
 
 
 % format
-writeln_helper(String) :- format("~s~n", [String]).
-writeln_helper(Stream, String) :- format(Stream, "~s~n", [String]).
+writeln_helper(String) :- format("~q~n", [String]).
+writeln_helper(Stream, String) :- format(Stream, "~q~n", [String]).
 
 format_helper(string(Str), Fmt, Args) :- !, phrase(format_(Fmt, Args), Str).
 format_helper(chars(Str), Fmt, Args) :- !, phrase(format_(Fmt, Args), Str).
