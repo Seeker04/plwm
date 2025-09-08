@@ -323,7 +323,7 @@ cmd_desc(change_mfact(F) , D) :-
 	;utils:is_float(F), 0.05 =< F, F =< 0.95 ->compat_format(string(D), "Set master area to ~0f%", [F*100])
 	;                            D = "Error: invalid argument").
 cmd_desc(change_mfact, "Set master area").
-cmd_desc(layout:set_layout(L), D) :-compat_format(string(D), "Switch to ~p layout", [L]).
+cmd_desc(layout:set_layout(L), D) :-compat_format(string(D), "Switch to ~q layout", [L]).
 cmd_desc(toggle_workspace    , "Switch between last two workspaces").
 cmd_desc(toggle_hide_empty_workspaces, "Toggle the hide_empty_workspaces setting").
 cmd_desc(switch_workspace(prev), "Go to previous workspace")                    :- !.
@@ -331,13 +331,13 @@ cmd_desc(switch_workspace(next), "Go to next workspace")                        
 cmd_desc(switch_workspace(prev_nonempty), "Go to previous non-empty workspace") :- !.
 cmd_desc(switch_workspace(next_nonempty), "Go to next non-empty workspace")     :- !.
 cmd_desc(switch_workspace(N) , D) :- integer(N),compat_format(string(D), "Go to workspace #~d", [N]), !.
-cmd_desc(switch_workspace(W) , D) :-compat_format(string(D), "Go to workspace ~p", [W]).
+cmd_desc(switch_workspace(W) , D) :-compat_format(string(D), "Go to workspace ~q", [W]).
 cmd_desc(move_focused_to_workspace(prev), "Move focused window to previous workspace")          :- !.
 cmd_desc(move_focused_to_workspace(next), "Move focused window to next workspace")              :- !.
 cmd_desc(move_focused_to_workspace(prev_nonempty), "Move focused window to previous workspace") :- !.
 cmd_desc(move_focused_to_workspace(next_nonempty), "Move focused window to next workspace")     :- !.
 cmd_desc(move_focused_to_workspace(N) , D) :- integer(N),compat_format(string(D), "Move focused window to workspace #~d", [N]), !.
-cmd_desc(move_focused_to_workspace(W) , D) :-compat_format(string(D), "Move focused window to workspace ~p", [W]).
+cmd_desc(move_focused_to_workspace(W) , D) :-compat_format(string(D), "Move focused window to workspace ~q", [W]).
 cmd_desc(switch_monitor(prev) , "Switch to previous monitor").
 cmd_desc(switch_monitor(next) , "Switch to next monitor").
 cmd_desc(switch_monitor(prev_nonempty), "Switch to previous non-empty monitor").
@@ -486,17 +486,17 @@ run_cmd(MenuEntries, [Selection]) :-
 list_keymaps :-
 	keymaps(Keymaps),
 	findall(KBStr,
-		(member((KB -> _), Keymaps),compat_format(chars(KBChars), "~p", [KB]),
+		(member((KB -> _), Keymaps),compat_format(chars(KBChars), "q", [KB]),
 		keybind_padded(KBChars, KBCharsPadded), string_chars(KBStr, KBCharsPadded)),
 		KBStrs),
 	findall(ActStr,
-		(member((_ -> Act), Keymaps),compat_format(chars(ActStr), "~p", [Act])),
+		(member((_ -> Act), Keymaps),compat_format(chars(ActStr), "~q", [Act])),
 		ActStrs),
 	maplist(string_length, KBStrs, KBWidths),
 	maplist(string_length, ActStrs, ActWidths),
 	max_list(KBWidths, KBMaxWidth),
 	max_list(ActWidths, ActMaxWidth),
-compat_format(string(Fmt), "~~s~~~d|~~p~~~d|~~s", [KBMaxWidth+3, KBMaxWidth+3+ActMaxWidth+3]),
+compat_format(string(Fmt), "~~s~~~d|~~q~~~d|~~s", [KBMaxWidth+3, KBMaxWidth+3+ActMaxWidth+3]),
 
 	findall(Action-Line, (   % map key (Action) to lines for later lookup
 		nth1(Idx, Keymaps, (_ -> Action)),
@@ -646,11 +646,11 @@ list_cmds :-
 	], Cmds),
 
 	findall(CmdStr,
-		(member(Cmd, Cmds),compat_format(chars(CmdStr), "~p", [Cmd])),
+		(member(Cmd, Cmds),compat_format(chars(CmdStr), "q", [Cmd])),
 		CmdStrs),
 	maplist(string_length, CmdStrs, CmdWidths),
 	max_list(CmdWidths, CmdMaxWidth),
-compat_format(string(Fmt), "~~p~~~d|~~s", [CmdMaxWidth+3]),
+compat_format(string(Fmt), "~~q~~~d|~~s", [CmdMaxWidth+3]),
 
 	findall(Cmd-Line, (   % map key (Cmd) to lines for later lookup
 		member(Cmd, Cmds),

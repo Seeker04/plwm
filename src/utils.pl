@@ -92,7 +92,7 @@ shellcmd(Cmd) :- catch(ignore((ensure_ampersand(Cmd, CmdBg), shell(CmdBg))), Ex,
 %  @arg Pred predicate that was called
 %  @arg Arg invalid argument that was supplied to Pred
 warn_invalid_arg(Pred, Arg) :-
-compat_format(string(Msg), "warning: invalid argument to ~s: ~p, ignored", [Pred, Arg]),
+compat_format(string(Msg), "warning: invalid argument to ~s: ~q, ignored", [Pred, Arg]),
 	writeln(user_error, Msg)
 .
 
