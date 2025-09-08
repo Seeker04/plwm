@@ -37,8 +37,8 @@ char_type_helper(Char, Cat) :-
 
 
 % format
-writeln_helper(String) :- format("~q~n", [String]).
-writeln_helper(Stream, String) :- format(Stream, "~q~n", [String]).
+writeln_helper(Term) :- write_term(Term, [double_quotes(true)]), nl.
+writeln_helper(Stream, Term) :- write_term(Stream, Term, [double_quotes(true)]), nl(Stream).
 
 format_helper(string(Str), Fmt, Args) :- !, phrase(format_(Fmt, Args), Str).
 format_helper(chars(Str), Fmt, Args) :- !, phrase(format_(Fmt, Args), Str).
