@@ -91,6 +91,8 @@ goal_expansion(max_member(Max, List), sys:max_member_helper(Max, List)).
 max_member(_,_,_) :- not_used.
 goal_expansion(max_member(Pred, Max, List), sys:max_member_helper(Module:Pred, Max, List)) :- prolog_load_context(module, Module).
 
+goal_expansion(string_length(String, Length), lists:length(String, Length)). 
+
 % os
 
 goal_expansion(getenv(Key, Value), sys:getenv_helper(Key, Value)).
