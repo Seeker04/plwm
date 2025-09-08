@@ -486,7 +486,7 @@ run_cmd(MenuEntries, [Selection]) :-
 list_keymaps :-
 	user:keymaps(Keymaps),
 	findall(KBStr,
-		(member((KB -> _), Keymaps),compat_format(chars(KBChars), "q", [KB]),
+		(member((KB -> _), Keymaps),compat_format(chars(KBChars), "~q", [KB]),
 		keybind_padded(KBChars, KBCharsPadded), string_chars(KBStr, KBCharsPadded)),
 		KBStrs),
 	findall(ActStr,
