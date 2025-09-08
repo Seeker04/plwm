@@ -18,7 +18,7 @@
 %  @arg Callback predicate that is called on lines selected from Entries
 spawn_menu(_, [], _) :- !.
 spawn_menu(Prompt, Entries, Callback) :-
-	(menucmd([MenuCmd|MenuArgs]) ->
+	(user:menucmd([MenuCmd|MenuArgs]) ->
 		append(MenuArgs, [Prompt], MenuArgsWithPrompt),
 
 		process:process_create(path(MenuCmd), MenuArgsWithPrompt, [stdin(pipe(MenuIn)), stdout(pipe(MenuOut))]),
@@ -44,7 +44,7 @@ spawn_menu(Prompt, Entries, Callback) :-
 %  @arg Prompt string appended as final argument to menucmd/1
 %  @arg Input string that the user wrote after the prompt
 read_from_prompt(Prompt, Input) :-  % use menucmd as a simple input prompt
-	(menucmd([MenuCmd|MenuArgs]) ->
+	(user:menucmd([MenuCmd|MenuArgs]) ->
 		(append(MenuArgs, [Prompt], MenuArgsWithPrompt),
 
 		process:process_create(path(MenuCmd), MenuArgsWithPrompt, [stdin(pipe(MenuIn)), stdout(pipe(MenuOut))]),
