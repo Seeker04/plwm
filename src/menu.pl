@@ -2,6 +2,7 @@
 
 :- module(menu, []).
 
+:- use_module(library(process)).
 :- use_module(library(lists)).
 
 :- use_module(layout).
