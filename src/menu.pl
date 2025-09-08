@@ -484,7 +484,7 @@ run_cmd(MenuEntries, [Selection]) :-
 %
 %  If a selection happens, the selected mapping's Command is executed.
 list_keymaps :-
-	keymaps(Keymaps),
+	user:keymaps(Keymaps),
 	findall(KBStr,
 		(member((KB -> _), Keymaps),compat_format(chars(KBChars), "q", [KB]),
 		keybind_padded(KBChars, KBCharsPadded), string_chars(KBStr, KBCharsPadded)),
