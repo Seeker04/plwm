@@ -83,10 +83,13 @@ goal_expansion(string_concat(A, B, C), lists:append(A, B, C)).
 
 goal_expansion(delete(Xs0, Elem, Xs1), sys:delete_helper(Xs0, Elem, Xs1)).
 
+goal_expansion(max_list(List, Max), sys:max_list_helper(List, Max)).
+
+goal_expansion(max_member(Max, List), sys:max_member_helper(Max, List)).
+
 :- meta_predicate(max_member(2,-,+)).
 max_member(_,_,_) :- not_used.
 goal_expansion(max_member(Pred, Max, List), sys:max_member_helper(Module:Pred, Max, List)) :- prolog_load_context(module, Module).
-
 
 % os
 

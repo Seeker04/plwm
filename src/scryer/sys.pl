@@ -6,6 +6,7 @@
 
 :- use_module(library(between)).
 :- use_module(library(charsio)).
+:- use_module(library(clpz)).
 :- use_module(library(dif)).
 :- use_module(library(format)).
 :- use_module(library(iso_ext)).
@@ -58,6 +59,14 @@ nb_delete_helper(Var) :- bb_put(Var, '$undefined').
 
 is_set_helper([]).
 is_set_helper([X | Xs]) :- maplist(dif(X), Xs), is_set_helper(Xs).
+
+max_list_helper(List, Max) :- max_member_helper(=<, Max, List).
+?- max_list_helper([pi, 4], Max).
+Max = 4.
+
+max_member_helper(Max, List) :- max_member_helper(@=<, Max, List).
+?- max_member_helper(Max, [pi, 4]).
+Max = pi.
 
 :- meta_predicate(max_member_helper(2, -, +)).
 
