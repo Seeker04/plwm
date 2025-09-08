@@ -16,6 +16,6 @@ fi
 
 LOG="${STATE_DIR}/plwm-scryer.log"
 
-which scryer-prolog > "${LOG}"
+which scryer-prolog >> "${LOG}"
 
 scryer-prolog -g main -g halt "${SCRIPT_DIR}/scryer/init.pl" "${SCRIPT_DIR}/plwm.pl"  -- "$@" |& tee -a "${LOG}"
