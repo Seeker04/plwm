@@ -1387,7 +1387,7 @@ handle_event(EventType, EventArgs) :- call_with_error_ctx(handle_event_(EventTyp
 
 handle_event_(keypress, [_, _, _, _, _, _, _, _, _, _, _, State, Keycode, _]) :-
 	(keymap_internal(Keycode, State, Action) ->
-		catch(ignore(Action), Ex, (writeln(Ex), true))
+		catch(ignore($Action), Ex, (writeln(Ex), true))
 	; true)
 .
 
@@ -1397,13 +1397,13 @@ handle_event_(buttonpress, [_, _, Dp, _, _, Subwin, _, _, _, Xroot, Yroot, _, Bu
 	% scrolled up
 	(Button = Button4 ->
 		(scroll_up_action(Action), Action \= none ->
-			catch(ignore(Action), Ex, (writeln(Ex), true))
+			catch(ignore($Action), Ex, (writeln(Ex), true))
 		; true)
 
 	% scrolled down
 	;Button = Button5 ->
 		(scroll_down_action(Action), Action \= none ->
-			catch(ignore(Action), Ex, (writeln(Ex), true))
+			catch(ignore($Action), Ex, (writeln(Ex), true))
 		; true)
 
 	% left or right mouse clicked
@@ -1745,7 +1745,7 @@ eventloop :-
 	plx:x_next_event(Dp, Event),
 	( Event = "unsupported_event" -> true
 	; Event = [EventType|EventArgs] ->
-		$handle_event(EventType, EventArgs)
+		handle_event(EventType, EventArgs)
 	; true),  % simply ignore "unsupported_event" cases
 
 	eventloop
