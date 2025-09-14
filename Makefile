@@ -28,31 +28,14 @@ X11PLWM_SO = $(BIN_DIR)/x11plwm.so
 
 #================================== Build =====================================
 
-run-scryer: $(X11PLWM_SO)
-	$(PLWM_SCRYER)
-
-run-swi: $(PLWM_SWI)
-	$(PLWM_SWI) -c config/config.pl
-
-debs: deb-core deb-scryer deb-swi
-
-deb-core: src/*
-	cargo deb --variant=core --no-build
-
-deb-scryer: src/scryer/* $(X11PLWM_SO)
-	cargo deb --variant=scryer --no-build
-
-deb-swi: src/scryer/* $(PLWM_SWI)
-	cargo deb --variant=swi --no-build
+$(PLWM_SWI): src/*.pl $(PLX_SO)
+	swipl $(SWIFLAGS)
 
 $(X11PLWM_SO): $(X11PLWM_O)
 	$(CC) $< $(LDFLAGS) -o $@
 
 $(X11PLWM_O): src/scryer/x11plwm.c $(BIN_DIR)
 	$(CC) -c $(CFLAGS) $< -o $@
-
-$(PLWM_SWI): src/*.pl $(PLX_SO)
-	swipl $(SWIFLAGS)
 
 $(PLX_SO): $(PLX_O)
 	$(CC) $< $(LDFLAGS) -o $@
@@ -80,7 +63,7 @@ cppcheck:
 
 clang-tidy:
 	clang-tidy --checks='clang-analyzer-*' --extra-arg="-std=$(CSTD)" \
-	--extra-arg="-I/usr/include/freetype2" \	
+	--extra-arg="-I/usr/include/freetype2" \
 	--extra-arg="-I/usr/lib/swipl/include" \
 	--extra-arg="-I/usr/lib/swi-prolog/include" \
 	--warnings-as-errors='*' \
@@ -102,3 +85,16 @@ install-debs: debs
 
 uninstall:
 	tools/uninstall.sh
+
+#============================ Build Packages ===============================
+
+debs: deb-core deb-scryer deb-swi
+
+deb-core: src/* tools/extra/Cargo.toml
+	cargo deb --manifest-path tools/extra/Cargo.toml --variant=core --no-build
+
+deb-scryer: src/scryer/* $(X11PLWM_SO) tools/extra/Cargo.toml
+	cargo deb --manifest-path tools/extra/Cargo.toml --variant=scryer --no-build
+
+deb-swi: src/scryer/* $(PLWM_SWI) tools/extra/Cargo.toml
+	cargo deb --manifest-path tools/extra/Cargo.toml --variant=swi --no-build

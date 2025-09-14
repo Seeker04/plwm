@@ -19,12 +19,12 @@ assets = []
 [package.metadata.deb.variants.core]
 merge-assets.append = [
     [
-        "img/logo.png",
+        "../../img/logo.png",
         "usr/share/pixmaps/",
         "644",
     ],
     [
-        "config/config.pl",
+        "../../config/config.pl",
         "etc/plwm/",
         "644",
     ],
@@ -35,32 +35,32 @@ depends = ["$auto", "plwm-core", "suckless-tools", "scryer-prolog"]
 preserve-symlinks = true
 merge-assets.append = [
     [
-        "src/plwm-scryer",
+        "../../src/plwm-scryer",
         "usr/share/plwm/",
         "755",
     ],
     [
-        "bin/x11plwm.so",
+        "../../bin/x11plwm.so",
         "usr/lib/",
         "644",
     ],
     [
-        "symlinks/plwm-scryer",
+        "plwm-scryer",
         "usr/bin/",
         "755",
     ],
     [
-        "src/*.pl",
+        "../../src/*.pl",
         "usr/share/plwm/",
         "644",
     ],
     [
-        "src/scryer/*.pl",
+        "../../src/scryer/*.pl",
         "usr/share/plwm/scryer",
         "644",
     ],
     [
-        "config/plwm-scryer.desktop",
+        "../../config/plwm-scryer.desktop",
         "usr/share/xsessions/",
         "644",
     ],
@@ -72,17 +72,17 @@ depends = ["$auto", "plwm-core", "suckless-tools"]
 preserve-symlinks = true
 merge-assets.append = [
     [
-        "bin/plwm-swi",
+        "../../bin/plwm-swi",
         "usr/bin/",
         "755",
     ],
     [
-        "bin/plx.so",
+        "../../bin/plx.so",
         "usr/local/lib/",
         "644",
     ],
     [
-        "config/plwm-swi.desktop",
+        "../../config/plwm-swi.desktop",
         "usr/share/xsessions/",
         "644",
     ],

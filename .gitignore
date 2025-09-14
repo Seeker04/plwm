@@ -17,7 +17,5 @@ compile_flags.txt
 # local neovim config
 .nvim.lua
 
-
-# Added by cargo
-
-/target
+# output dir when building debian packages with cargo-deb
+target/
