@@ -317,7 +317,7 @@ set_(hooks,                    Value) :- store_setting(hooks, Value), setup_hook
 %  @arg Value new value to append to the configuration
 add(Setting, Value) :-
 	member(Setting, [workspaces, layout_default_overrides, menucmd, keymaps, rules, hooks]),
-	call(Setting, PrevList),
+	call(user:Setting, PrevList),
 	append(PrevList, [Value], NewList),
 	valid_set(Setting, NewList),
 	set_(Setting, NewList)
