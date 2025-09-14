@@ -5,7 +5,7 @@ set -o pipefail
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "$(realpath "${BASH_SOURCE[0]}")" )" &> /dev/null && pwd )
 
-export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${SCRIPT_DIR}/../bin:/usr/lib"
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${SCRIPT_DIR}/../bin:/usr/lib:/usr/local/lib"
 
 STATE_DIR="${XDG_STATE_HOME-"${HOME}/.local/state"}/plwm"
 
