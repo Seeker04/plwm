@@ -1635,7 +1635,8 @@ handle_event_(rrscreenchangenotify, _) :-
 			global_key_value(monitor_geom, Output, PrevGeom),
 			(PrevGeom \= Geom ->
 				global_key_newvalue(monitor_geom, Output, Geom),
-			compat_format("Monitor \"~s\" geometry reconfigured~n", [Output])
+				compat_format(string(Msg), "Monitor \"~s\" geometry reconfigured", [Output]),
+				writeln(Msg)
 			; true)
 
 		% Add new monitor
