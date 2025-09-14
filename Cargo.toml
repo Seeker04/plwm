@@ -60,7 +60,7 @@ merge-assets.append = [
         "644",
     ],
     [
-        "plwm-scryer.desktop",
+        "config/plwm-scryer.desktop",
         "usr/share/xsessions/",
         "644",
     ],
@@ -82,7 +82,7 @@ merge-assets.append = [
         "644",
     ],
     [
-        "plwm-swi.desktop",
+        "config/plwm-swi.desktop",
         "usr/share/xsessions/",
         "644",
     ],
