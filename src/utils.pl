@@ -2,7 +2,7 @@
 
 % Generic helper utilities that any module can use
 
-:- module(utils, [global_key_value/3, global_key_newvalue/3, global_value/2, global_newvalue/2, shellcmd/1, reassert/1]).
+:- module(utils, [global_key_value/3, global_key_newvalue/3, global_value/2, global_newvalue/2, shellcmd/1]).
 %                 ^ these are used quite often, so it's worth exporting them
 
 :- use_module(library(assoc)).
@@ -298,23 +298,3 @@ pair_up_lists([X|Xs], [Y|Ys], [X-Y|Rest]) :- pair_up_lists(Xs, Ys, Rest).
 %  @arg Str input string
 %  @arg NewStr output string, i.e. Str without its last character
 str_withoutlastch(Str, NewStr) :- string_length(Str, Len), Lenm1 is Len - 1, sub_string(Str, 0, Lenm1, _, NewStr).
-
-
-%! reassert(++Callable:callable) is det
-%
-%  First, retracts all rules of the given predicate (arity is fixed),
-%  then asserts with the new arguments.
-%
-%  E.g. if foo(a, b) holds, then after reassert(foo(x, y)) only foo(x, y) will hold.
-%
-%  Note: this predicate cannot go inside the utils module, because it would
-%  automatically assert under the utils: namespace.
-%
-%  @arg Callable predicate to re-assert
-reassert(Pred) :-
-	functor(Pred, Name, Arity),
-	utils:n_item_clones(Arity, _, Placeholders),
-	compound_name_arguments(PredToRetract, Name, Placeholders), % e.g. foo(_, _)
-	retractall(PredToRetract),
-	assertz(Pred)
-.

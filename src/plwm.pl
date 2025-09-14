@@ -111,6 +111,25 @@ quit(ExitCode) :-
 	halt(ExitCode)
 .
 
+%! reassert(++Callable:callable) is det
+%
+%  First, retracts all rules of the given predicate (arity is fixed),
+%  then asserts with the new arguments.
+%
+%  E.g. if foo(a, b) holds, then after reassert(foo(x, y)) only foo(x, y) will hold.
+%
+%  Note: this predicate cannot go inside the utils module, because it would
+%  automatically assert under the utils: namespace.
+%
+%  @arg Callable predicate to re-assert
+reassert(Pred) :-
+	functor(Pred, Name, Arity),
+	utils:n_item_clones(Arity, _, Placeholders),
+	compound_name_arguments(PredToRetract, Name, Placeholders), % e.g. foo(_, _)
+	retractall(PredToRetract),
+	assertz(Pred)
+.
+
 %! alloc_colors() is det
 %
 %  Allocates Xft colors, e.g. for colored window borders.

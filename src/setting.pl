@@ -347,7 +347,7 @@ compat_format(string(Msg), "warning: invalid value: ~w for setting: ~a, ignored"
 %  @arg Value new value for the setting
 store_setting(Setting, Value) :-
 	compound_name_arguments(Config, Setting, [Value]),
-	reassert(user:Config)
+	user:reassert(Config)
 .
 
 %! geometry_spec(++X:integer, ++Y:integer, ++W:integer, ++H:integer) is semidet
