@@ -19,3 +19,5 @@ compile_flags.txt
 
 # output dir when building debian packages with cargo-deb
 target/
+
+install-test/

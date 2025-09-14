@@ -79,12 +79,21 @@ test:
 
 install:
 	tools/install.sh
-
-install-debs: debs
-	run0 apt reinstall ./target/debian/*.deb
+	
+install-with-scryer:
+	tools/install.sh --scryer
 
 uninstall:
 	tools/uninstall.sh
+
+.PHONY: install-test
+install-test:
+	INSTALL_PREFIX=./install-test tools/install.sh --scryer
+	
+.PHONY: uninstall-test
+uninstall-test:
+# check that only empty directorys and etc/plwm/config.pl remain
+	INSTALL_PREFIX=./install-test tools/uninstall.sh
 
 #============================ Build Packages ===============================
 
@@ -98,3 +107,6 @@ deb-scryer: src/scryer/* $(X11PLWM_SO) tools/extra/Cargo.toml
 
 deb-swi: src/scryer/* $(PLWM_SWI) tools/extra/Cargo.toml
 	cargo deb --manifest-path tools/extra/Cargo.toml --variant=swi --no-build
+
+install-debs: debs
+	run0 apt reinstall ./target/debian/*.deb

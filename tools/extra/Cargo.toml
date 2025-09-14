@@ -19,7 +19,7 @@ assets = []
 [package.metadata.deb.variants.core]
 merge-assets.append = [
     [
-        "../../img/logo.png",
+        "../../img/plwm-logo.png",
         "usr/share/pixmaps/",
         "644",
     ],
