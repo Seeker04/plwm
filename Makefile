@@ -109,4 +109,4 @@ deb-swi: src/scryer/* $(PLWM_SWI) tools/extra/Cargo.toml
 	cargo deb --manifest-path tools/extra/Cargo.toml --variant=swi --no-build
 
 install-debs: debs
-	run0 apt reinstall ./target/debian/*.deb
+	run0 apt reinstall ./tools/extra/target/debian/*.deb
