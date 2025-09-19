@@ -737,7 +737,6 @@ test("list_cmds", [
 		delete_file("/tmp/test-output")
 	))
 ]) :- 
-	false,
 	assertz(user:menucmd(["sh", "-c", "sed -n 1p"])),
 	assertion(menu:list_cmds),
 	sleep(0.1), % wait for file creation to complete (shellcmd runs in bg)

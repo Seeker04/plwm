@@ -657,7 +657,7 @@ compat_format(string(Fmt), "~~q~~~d|~~s", [CmdMaxWidth+3]),
 	findall(Cmd-Line, (   % map key (Cmd) to lines for later lookup
 		member(Cmd, Cmds),
 		cmd_desc(Cmd, Desc),
-		compat_format(string(Line)), Fmt, [Cmd, Desc]),
+		compat_format(string(Line), Fmt, [Cmd, Desc])),
 		MenuEntries),
 	findall(Line, member(_-Line, MenuEntries), Lines),
 	spawn_menu("commands", Lines, menu:run_cmd(MenuEntries))
