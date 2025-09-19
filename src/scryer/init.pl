@@ -79,7 +79,7 @@ goal_expansion(atom_string(Atom, Chars), sys:atom_string_helper(Atom, Chars)).
 goal_expansion(sub_string(String, Before, Len, After, SubString), sys:sub_string_helper(String, Before, Len, After, SubString)).
 
 goal_expansion(string_chars(String, Chars), (String = Chars)).
-goal_expansion(string_concat(A, B, C), lists:append(A, B, C)).
+goal_expansion(string_concat(A, B, C), sys:string_concat_helper(A, B, C)).
 
 goal_expansion(delete(Xs0, Elem, Xs1), sys:delete_helper(Xs0, Elem, Xs1)).
 

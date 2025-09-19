@@ -102,6 +102,10 @@ sub_string_helper(String, Before, Len, After, SubString) :-
     length(Prefix, Before),
     length(Suffix, After).
 
+string_concat_helper(A, B, C) :-
+    atom_string_helper(B, BS),
+    lists:append(A, BS, C).
+
 % os
 
 getenv_helper(AtomKey, AtomValue) :- atom_chars(AtomKey, Key), os:getenv(Key, Value), atom_chars(AtomValue, Value).
