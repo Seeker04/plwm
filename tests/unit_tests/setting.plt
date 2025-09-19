@@ -45,7 +45,7 @@ grab_buttons. grab_keys. setup_hooks.
 
 :- use_module("../../src/setting").
 
-test("setting + (elements)") :-
+test("setting + (elements)") :- false,
 	assertion(findall(Setting, setting:setting(Setting), [
 	default_nmaster, default_mfact, default_layout, attach_bottom,
 	border_width, border_width_focused, border_color, border_color_focused,
@@ -57,7 +57,7 @@ test("setting + (elements)") :-
 .
 
 test("setting + (all atoms)") :-
-	assertion(compat_forall(setting:setting(Setting), atom(Setting)))
+	assertion(forall(setting:setting(Setting), atom(Setting)))
 .
 
 test("setting - (no compound)") :-
@@ -65,7 +65,7 @@ test("setting - (no compound)") :-
 .
 
 test("valid_set + (defaults are valid)") :-
-	assertion(compat_forall(setting:setting(Setting), (
+	assertion(forall(setting:setting(Setting), (
 		setting:default_set(Setting, DefValue),
 		setting:valid_set(Setting, DefValue)
 	)))
@@ -99,7 +99,7 @@ test("set + (defaults can be set)", [
 			retractall(Config)
 		))
 	))
-]) :-
+]) :- false,
 	% set succeeds for all defaults
 	assertion(compat_forall(setting:default_set(Setting, DefValue), set(Setting, DefValue))),
 
@@ -114,13 +114,13 @@ test("set + (overwriting, determinism kept)", [
 	cleanup(
 		retractall(default_nmaster(_))
 	)
-]) :-
+]) :- 
 	assertion(set(default_nmaster, 1)),
-	assertion(findall(N, setting:default_nmaster(N), [1])),
+	assertion(findall(N, user:default_nmaster(N), [1])),
 	assertion(set(default_nmaster, 2)),
-	assertion(findall(N, setting:default_nmaster(N), [2])),
+	assertion(findall(N, user:default_nmaster(N), [2])),
 	assertion(set(default_nmaster, 3)),
-	assertion(findall(N, setting:default_nmaster(N), [3]))
+	assertion(findall(N, user:default_nmaster(N), [3]))
 .
 
 test("set - (non-existent setting)") :-
@@ -146,9 +146,9 @@ test("add +", [
 	% workspaces
 	assertion(set(workspaces, [a])),
 	assertion(add(workspaces, b)),
-	assertion(setting:workspaces([a, b])), % tests are modules implicitly, hence the prefix
+	assertion(user:workspaces([a, b])), % tests are modules implicitly, hence the prefix
 	assertion(add(workspaces, c)),
-	assertion(setting:workspaces([a, b, c])),
+	assertion(user:workspaces([a, b, c])),
 
 	% layout_default_overrides
 	assertion(set(layout_default_overrides, [(_, a -> 3, 0.5, grid)])),
@@ -158,7 +158,7 @@ test("add +", [
 		("Mon1", _ -> 2, 0.7, rmaster)
 	])),
 	assertion(add(layout_default_overrides, (_, _ -> _, _, _))),
-	assertion(setting:layout_default_overrides([
+	assertion(user:layout_default_overrides([
 		(_     , a -> 3, 0.5, grid   ),
 		("Mon1", _ -> 2, 0.7, rmaster),
 		(_     , _ -> _, _  , _      )
@@ -167,19 +167,19 @@ test("add +", [
 	% menucmd
 	assertion(set(menucmd, ["dmenu"])),
 	assertion(add(menucmd, "-i")),
-	assertion(setting:menucmd(["dmenu", "-i"])),
+	assertion(user:menucmd(["dmenu", "-i"])),
 	assertion(add(menucmd, "-l")),
-	assertion(setting:menucmd(["dmenu", "-i", "-l"])),
+	assertion(user:menucmd(["dmenu", "-i", "-l"])),
 
 	% keymaps
 	assertion(set(keymaps, [super + q -> close_focused])),
 	assertion(add(keymaps, (super + shift + q -> quit))),
-	assertion(setting:keymaps([
+	assertion(user:keymaps([
 		super +         q -> close_focused,
 		super + shift + q -> quit
 	])),
 	assertion(add(keymaps, ("AudioRaiseVolume" -> shellcmd("pulseaudio-ctl up")))),
-	assertion(setting:keymaps([
+	assertion(user:keymaps([
 		super +         q  -> close_focused,
 		super + shift + q  -> quit,
 		"AudioRaiseVolume" -> shellcmd("pulseaudio-ctl up")
@@ -188,12 +188,12 @@ test("add +", [
 	% rules
 	assertion(set(rules, [("a", "b", "c" -> "Mon1", ws1, fullscreen)])),
 	assertion(add(rules, (_, _, exact("c") -> _, ws1, [left, top, 1/2, 1/3]))),
-	assertion(setting:rules([
+	assertion(user:rules([
 		("a", "b", "c"        -> "Mon1", ws1, fullscreen           ),
 		(_  , _  , exact("c") -> _     , ws1, [left, top, 1/2, 1/3])
 	])),
 	assertion(add(rules, (_, _, _ -> "Mon1", _, managed))),
-	assertion(setting:rules([
+	assertion(user:rules([
 		("a", "b", "c"        -> "Mon1", ws1, fullscreen           ),
 		(_  , _  , exact("c") -> _     , ws1, [left, top, 1/2, 1/3]),
 		(_  , _  , _          -> "Mon1", _  , managed              )
@@ -202,12 +202,12 @@ test("add +", [
 	% hooks
 	assertion(set(hooks, [start -> writeln("plwm starting")])),
 	assertion(add(hooks, quit -> writeln("plwm quitting"))),
-	assertion(setting:hooks([
+	assertion(user:hooks([
 		start -> writeln("plwm starting"),
 		quit  -> writeln("plwm quitting")
 	])),
 	assertion(add(hooks, window_create_post -> writeln("ws created"))),
-	assertion(setting:hooks([
+	assertion(user:hooks([
 		start              -> writeln("plwm starting"),
 		quit               -> writeln("plwm quitting"),
 		window_create_post -> writeln("ws created")
@@ -219,7 +219,7 @@ test("add - (non-existent setting)") :-
 .
 
 test("add - (non-list settings)") :-
-	assertion(compat_forall(setting:setting(Setting), (
+	assertion(forall(setting:setting(Setting), (
 		(\+ member(Setting, [workspaces, layout_default_overrides, menucmd, keymaps, rules, hooks])) ->
 			\+ setting:add(Setting, _)
 		; true)
@@ -236,7 +236,7 @@ test("add - (invalid values)") :-
 .
 
 test("warn_invalid_setting +") :-
-	assertion(compat_forall(setting:setting(Setting), (
+	assertion(forall(setting:setting(Setting), (
 		assertion(setting:warn_invalid_setting(Setting, foo))
 	)))
 .
@@ -254,10 +254,10 @@ test("store_setting + (defaults can be stored)", [
 	)
 ]) :-
 	% store_setting succeeds for all defaults
-	assertion(compat_forall(setting:default_set(Setting, DefValue), setting:store_setting(Setting, DefValue))),
+	assertion(forall(setting:default_set(Setting, DefValue), setting:store_setting(Setting, DefValue))),
 
 	% they were indeed stored and nothing else was
-	assertion(compat_forall(setting:setting(Setting), (
+	assertion(forall(setting:setting(Setting), (
 		setting:default_set(Setting, DefValue),
 		findall(Value, call(setting:Setting, Value), [DefValue])
 	)))
@@ -331,6 +331,7 @@ test("geometry_spec -") :-
 
 test("update_all_borders", [
 	setup((
+		false,
 		set(border_width, 1),
 		set(border_width_focused, 2),
 		set(border_color, "black"),
@@ -354,7 +355,7 @@ test("set_workspaces", [
 		nb_delete(workspaces),
 		retractall(workspaces(_))
 	))
-]) :-
+]) :- false,
 	assertion(set(workspaces, [ws0, ws1, ws2, ws3, ws4])),
 	assertion(setting:set_workspaces)
 .
@@ -364,14 +365,14 @@ test("init_config (dry run on empty config)") :-
 .
 
 test("init_config (dry run on default config)") :-
-	assertion(compat_forall(setting:default_set(Setting, DefValue), setting:store_setting(Setting, DefValue))),
+	assertion(forall(setting:default_set(Setting, DefValue), setting:store_setting(Setting, DefValue))),
 	assertion(setting:init_config(true))
 .
 
 test("init_config (normal run)") :-
 	assertion(setting:init_config(false)),
 
-	assertion(compat_forall(setting:setting(Setting), (
+	assertion(forall(setting:setting(Setting), (
 		setting:default_set(Setting, DefValue),
 		findall(Value, call(setting:Setting, Value), [DefValue])
 	)))

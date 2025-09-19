@@ -29,7 +29,7 @@ spawn_menu(Prompt, Entries, Callback) :-
 		(1 < Len ->
 			split_string(MenuOutStr, "\n", "\n", SelectedLines),
 			(compat_forall(member(Line, SelectedLines), member(Line, Entries)) ->
-				ignore(call(Callback, SelectedLines))
+				ignore(call(user:Callback, SelectedLines))
 			; true)
 			% don't accept arbitrary input from menu prompt, only proper selection
 		; true)
@@ -141,9 +141,9 @@ goto_workspace :-
 .
 goto_workspace_(MenuEntries, [Selection]) :-
 	(member(Mon-Ws-Selection, MenuEntries) ->
-		switch_monitor(Mon),
-		switch_workspace(Ws)
-	; true)
+		user:switch_monitor(Mon),
+		user:switch_workspace(Ws)
+	; true) 
 .
 
 %! goto_window() is det
@@ -156,8 +156,8 @@ goto_window :-
 goto_window_(MenuInput, [Selection]) :-
 	(member(Win-Selection, MenuInput) ->
 		win_mon_ws(Win, TargetMon, TargetWs),
-		switch_monitor(TargetMon),
-		switch_workspace(TargetWs),
+		user:switch_monitor(TargetMon),
+		user:switch_workspace(TargetWs),
 		unfocus_onlyvisual(false), focus(Win), raise(Win)
 	; true)
 .
@@ -646,6 +646,7 @@ list_cmds :-
 		]
 	], Cmds),
 
+
 	findall(CmdStr,
 		(member(Cmd, Cmds),compat_format(chars(CmdStr), "~q", [Cmd])),
 		CmdStrs),
@@ -656,7 +657,7 @@ compat_format(string(Fmt), "~~q~~~d|~~s", [CmdMaxWidth+3]),
 	findall(Cmd-Line, (   % map key (Cmd) to lines for later lookup
 		member(Cmd, Cmds),
 		cmd_desc(Cmd, Desc),
-	compat_format(string(Line)), Fmt, [Cmd, Desc]),
+		compat_format(string(Line)), Fmt, [Cmd, Desc]),
 		MenuEntries),
 	findall(Line, member(_-Line, MenuEntries), Lines),
 	spawn_menu("commands", Lines, menu:run_cmd(MenuEntries))

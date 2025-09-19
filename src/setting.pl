@@ -372,6 +372,7 @@ geometry_spec(X, Y, W, H) :-
 update_all_borders :-
 	user:monws_keys(Keys),
 	compat_forall(member(Mon-Ws, Keys), (
+		format("UAB ~q~n", [Mon-Ws]),
 		global_key_value(windows, Mon-Ws, Wins),
 		compat_forall(member(Win, Wins), (
 			set_border(Win)
