@@ -100,6 +100,10 @@ goal_expansion(getenv(Key, Value), sys:getenv_helper(Key, Value)).
 goal_expansion(shell(Command), sys:shell_helper(Command)).
 goal_expansion(shell(Command, ExitCode), sys:shell_helper(Command, ExitCode)).
 
+% process 
+
+goal_expansion(process_create(Exe, Args, Options), sys:process_create_helper(Exe, Args, Options)).
+
 % 
 :- initialization((
    compat_format(string(Str), "scryer/init.pl initialized", []),

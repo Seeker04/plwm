@@ -112,3 +112,7 @@ getenv_helper(AtomKey, AtomValue) :- atom_chars(AtomKey, Key), os:getenv(Key, Va
 
 shell_helper(Command) :- os:shell(Command).
 shell_helper(Command, ExitCode) :- os:shell(Command, ExitCode).
+
+% process
+
+process_create_helper(Exe, Args, Options) :- (path(Exe2) = Exe -> true ; Exe2 = Exe), process:process_create(Exe2, Args, Options).
