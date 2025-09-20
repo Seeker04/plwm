@@ -106,6 +106,40 @@ string_concat_helper(A, B, C) :-
     atom_string_helper(B, BS),
     lists:append(A, BS, C).
 
+split_string_helper(Src, Seps, Pads, Parts) :- 
+    trim_prefix(Src, Pads, Trimmed0),
+    trim_suffix(Trimmed0, Pads, Trimmed1), 
+    split_string_helper_(Trimmed1, Seps, Pads, Parts).
+
+split_string_helper_(Src, Seps, Pads, [First | Rest]) :- 
+    ((member(Sep, Seps), member(Sep, Src)) -> 
+            once(append([P, [Sep], S], Src)),
+            trim_suffix(P, Pads, First),
+            trim_prefix(S, Pads, Rem),
+            (Rem = "" -> 
+                Rest = [] 
+            ;   split_string_helper_(Rem, Seps, Pads, Rest))
+        ;   First = Src, Rest = []
+    ).
+
+trim_prefix([], _, []).
+trim_prefix([X0|Xs0], Pads, Xs) :- 
+    member(X0, Pads) -> 
+        trim_prefix(Xs0, Pads, Xs) 
+    ;   Xs = [X0 | Xs0]. 
+
+trim_suffix(Xs, Pads, Res) :- trim_suffix_(Xs, Heads, Heads, Pads, Res).
+
+trim_suffix_([], _,_ , _, []).
+trim_suffix_([X0 | Xs0], Heads0, HeadsTail0, Pads, Res) :- 
+    HeadsTail0 = [X0 | HeadsTail1],
+    (member(X0, Pads) ->
+        trim_suffix_(Xs0, Heads0, HeadsTail1, Pads, Res)
+    ;   Res = Heads0, 
+        trim_suffix_(Xs0, Heads1, Heads1, Pads, HeadsTail1)
+    )
+.
+
 % os
 
 getenv_helper(AtomKey, AtomValue) :- atom_chars(AtomKey, Key), os:getenv(Key, Value), atom_chars(AtomValue, Value).

@@ -97,6 +97,8 @@ goal_expansion(max_member(Pred, Max, List), sys:max_member_helper(Module:Pred, M
 
 goal_expansion(string_length(String, Length), lists:length(String, Length)). 
 
+goal_expansion(split_string(Src, Seps, Pads, Dest), sys:split_string_helper(Src, Seps, Pads, Dest)).
+
 % os
 
 goal_expansion(getenv(Key, Value), sys:getenv_helper(Key, Value)).
