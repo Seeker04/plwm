@@ -22,7 +22,7 @@ spawn_menu(Prompt, Entries, Callback) :-
 	(user:menucmd([MenuCmd|MenuArgs]) ->
 		append(MenuArgs, [Prompt], MenuArgsWithPrompt),
 
-		process:process_create(path(MenuCmd), MenuArgsWithPrompt, [stdin(pipe(MenuIn)), stdout(pipe(MenuOut))]),
+		process_create(path(MenuCmd), MenuArgsWithPrompt, [stdin(pipe(MenuIn)), stdout(pipe(MenuOut))]),
 
 		compat_forall(member(Entry, Entries), writeln(MenuIn, Entry)), close(MenuIn),
 		read_string(MenuOut, Len, MenuOutStr),
