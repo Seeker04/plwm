@@ -3,6 +3,7 @@
 
 :- use_module(library(assoc), []).
 :- use_module(library(between), []).
+:- use_module(library(charsio), []).
 :- use_module(library(error), []).
 :- use_module(library(format), []).
 :- use_module(library(iso_ext), []).
@@ -35,6 +36,9 @@ goal_expansion(between(Min, Max, Val), sys:between_helper(Min, Max, Val)).
 % charsio
 
 goal_expansion(char_type(Char, Cat), sys:char_type_helper(Char, Cat)).
+
+goal_expansion(read_string(Stream, Length, String), charsio:get_n_chars(Stream, Length, String)).
+
 
 % error
 goal_expansion(call_with_error_ctx(Goal, Ctx), error:call_with_error_context(Module:Goal, Ctx)) :- prolog_load_context(module, Module).
