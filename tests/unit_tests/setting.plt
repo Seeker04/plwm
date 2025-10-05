@@ -2,6 +2,9 @@
 
 :- use_module(library(lists)).
 
+
+:- use_module("../../src/utils").
+
 % mocks (and some essential definitions)
 is_float(X) :- float(X), ! ; (X = N/D, integer(N), integer(D)).
 is_layout(L) :- member(L, [floating, monocle, stack, hstack, nrows(N), ncols(N),
@@ -32,8 +35,10 @@ reassert(Pred) :-
 	assertz(Pred)
 .
 monws_keys(["Mon1"-ws1, "Mon1"-ws2]).
-global_key_value(windows, "Mon1"-ws1, [1, 2]).
-global_key_value(windows, "Mon1"-ws2, [3, 4, 5]).
+
+utils:global_key_value(windows, "Mon1"-ws1, [1, 2]).
+utils:global_key_value(windows, "Mon1"-ws2, [3, 4, 5]).
+
 delete_workspace(Ws) :- nb_getval(workspaces, Wss), member(Ws, Wss).
 create_workspace(Ws) :- atom(Ws).
 set_border(N) :- integer(N).
@@ -67,7 +72,7 @@ grab_buttons. grab_keys. setup_hooks.
 
 :- use_module("../../src/setting").
 
-test("setting + (elements)") :- false,
+test("setting + (elements)") :-
 	assertion(findall(Setting, setting:setting(Setting), [
 	default_nmaster, default_mfact, default_layout, attach_bottom,
 	border_width, border_width_focused, border_color, border_color_focused,
@@ -353,7 +358,6 @@ test("geometry_spec -") :-
 
 test("update_all_borders", [
 	setup((
-		false,
 		set(border_width, 1),
 		set(border_width_focused, 2),
 		set(border_color, "black"),
@@ -377,7 +381,7 @@ test("set_workspaces", [
 		nb_delete(workspaces),
 		retractall(workspaces(_))
 	))
-]) :- false,
+]) :- 
 	assertion(set(workspaces, [ws0, ws1, ws2, ws3, ws4])),
 	assertion(setting:set_workspaces)
 .
