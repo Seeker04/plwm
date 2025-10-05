@@ -374,7 +374,7 @@ update_all_borders :-
 	compat_forall(member(Mon-Ws, Keys), (
 		global_key_value(windows, Mon-Ws, Wins),
 		compat_forall(member(Win, Wins), (
-			set_border(Win)
+			user:set_border(Win)
 		))
 	)),
 	layout:relayout
