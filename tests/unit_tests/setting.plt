@@ -37,7 +37,29 @@ global_key_value(windows, "Mon1"-ws2, [3, 4, 5]).
 delete_workspace(Ws) :- nb_getval(workspaces, Wss), member(Ws, Wss).
 create_workspace(Ws) :- atom(Ws).
 set_border(N) :- integer(N).
-switch_workspace(next). switch_workspace(prev).
+switch_workspace(next). switch_workspace(prev). 
+shift_focus(down). shift_focus(up).
+move_focused(down). move_focused(up).
+focused_to_top.
+close_focused.
+toggle_floating. 
+toggle_fullscreen.
+quit.
+change_nmaster(N) :- integer(N).
+change_mfact(_).
+layout:set_layout(_).
+toggle_workspace. toggle_hide_empty_workspaces.
+move_focused_to_workspace(_).
+switch_monitor(prev). switch_monitor(next).
+move_focused_to_monitor(prev). move_focused_to_monitor(next).
+menu:goto_window.
+menu:goto_workspace.
+menu:pull_from. menu:push_to.
+menu:close_windows.
+menu:keep_windows.
+menu:list_keymaps.
+menu:list_cmds.
+menu:create_workspace. menu:rename_workspace. menu:reindex_workspace. menu:delete_workspaces.
 alloc_colors. update_free_win_space. layout:relayout. set_workspaces. user:update_ws_atoms.
 grab_buttons. grab_keys. setup_hooks.
 
