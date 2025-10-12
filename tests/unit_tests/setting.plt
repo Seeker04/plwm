@@ -36,9 +36,6 @@ reassert(Pred) :-
 .
 monws_keys(["Mon1"-ws1, "Mon1"-ws2]).
 
-utils:global_key_value(windows, "Mon1"-ws1, [1, 2]).
-utils:global_key_value(windows, "Mon1"-ws2, [3, 4, 5]).
-
 delete_workspace(Ws) :- nb_getval(workspaces, Wss), member(Ws, Wss).
 create_workspace(Ws) :- atom(Ws).
 set_border(N) :- integer(N).
@@ -358,6 +355,8 @@ test("geometry_spec -") :-
 
 test("update_all_borders", [
 	setup((
+		list_to_assoc([("Mon1"-ws1)-[1,2], ("Mon1"-ws2)-[3,4,5]], Assoc)
+		nb_setval(windows, Assoc),
 		set(border_width, 1),
 		set(border_width_focused, 2),
 		set(border_color, "black"),
@@ -367,7 +366,8 @@ test("update_all_borders", [
 		retractall(border_width(_)),
 		retractall(border_width_focused(_)),
 		retractall(border_color(_)),
-		retractall(border_color_focused(_))
+		retractall(border_color_focused(_)),
+		nb_delete(windows)
 	))
 ]) :-
 	assertion(setting:update_all_borders) % note: we mock set_border as a fact
