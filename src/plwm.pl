@@ -1422,8 +1422,7 @@ handle_event(buttonpress, [_, _, Dp, _, _, Subwin, _, _, _, Xroot, Yroot, _, But
 
 	% left or right mouse clicked
 	;(Button = Button1 ; Button = Button3) ->
-		nb_getval(bars, Bars),
-		(Subwin =\= 0, \+ member(Subwin, Bars) ->
+		(Subwin =\= 0, win_mon_ws(Subwin, _, _) ->
 			focus(Subwin),
 			raise(Subwin),
 			(plx:x_get_window_attributes(Dp, Subwin, [X, Y, W, H], Status), Status =\= 0,
