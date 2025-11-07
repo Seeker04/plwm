@@ -37,6 +37,8 @@ Main goals of the project are: high code & documentation quality; powerful yet e
 
 Powered by [SWI-Prolog](https://www.swi-prolog.org/)
 
+Porting to [Scryer Prolog](https://www.scryer.pl/), a Rust-powered ISO Prolog implementation, is underway too! ([discussion](https://github.com/Seeker04/plwm/discussions/102), [PR](https://github.com/Seeker04/plwm/pull/114))
+
 # Feature highlights
 
 * Easy to hack on, great way to introduce yourself to the logic programming paradigm and Prolog
