@@ -1427,8 +1427,7 @@ handle_event_(buttonpress, [_, _, Dp, _, _, Subwin, _, _, _, Xroot, Yroot, _, Bu
 
 	% left or right mouse clicked
 	;(Button = Button1 ; Button = Button3) ->
-		nb_getval(bars, Bars),
-		(Subwin =\= 0, \+ member(Subwin, Bars) ->
+		(Subwin =\= 0, win_mon_ws(Subwin, _, _) ->
 			focus(Subwin),
 			raise(Subwin),
 			(plx:x_get_window_attributes(Dp, Subwin, [X, Y, W, H], Status), Status =\= 0,
@@ -1653,9 +1652,16 @@ handle_event_(rrscreenchangenotify, _) :-
 			% Update geometry if it changed
 			global_key_value(monitor_geom, Output, PrevGeom),
 			(PrevGeom \= Geom ->
-				global_key_newvalue(monitor_geom, Output, Geom),
-				compat_format(string(Msg), "Monitor \"~s\" geometry reconfigured", [Output]),
-				writeln(Msg)
+				(nb_getval(monitor_geom, AMonGeom), gen_assoc(OldMon, AMonGeom, Geom) ->
+					% If a previous monitor has this geom, this one became a mirror, unmanage it
+					delete_monitor(Output),
+					compat_format(string(Msg), "Monitor \"~s\" is a mirror to \"~s\", unmanaging it", [Output, OldMon]),
+					writeln(Msg)
+				;
+					global_key_newvalue(monitor_geom, Output, Geom),
+					compat_format(string(Msg), "Monitor \"~s\" geometry reconfigured", [Output]),
+					writeln(Msg)
+				)
 			; true)
 
 		% Add new monitor
@@ -2046,8 +2052,8 @@ init_monitors([Mon-[X, Y, W, H]|Rest]) :-
 init_monitor(Mon, Geom) :-
 	% A monitor with this geometry is already managed, don't register mirror
 	nb_getval(monitor_geom, AMonGeom), gen_assoc(OldMon, AMonGeom, Geom) ->
-		compat_format(string(Msg), "Monitor \"~s\" has same geometry as \"~s\", ignoring it", [Mon, OldMon]),
-	writeln(Msg)
+		compat_format(string(Msg), "Monitor \"~s\" is a mirror to \"~s\", ignoring it", [Mon, OldMon]),
+		writeln(Msg)
 	;
 
 	default_nmaster(Nmaster), default_mfact(Mfact), default_layout(Layout),
