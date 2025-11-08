@@ -355,7 +355,7 @@ test("geometry_spec -") :-
 
 test("update_all_borders", [
 	setup((
-		list_to_assoc([("Mon1"-ws1)-[1,2], ("Mon1"-ws2)-[3,4,5]], Assoc)
+		list_to_assoc([("Mon1"-ws1)-[1,2], ("Mon1"-ws2)-[3,4,5]], Assoc),
 		nb_setval(windows, Assoc),
 		set(border_width, 1),
 		set(border_width_focused, 2),
