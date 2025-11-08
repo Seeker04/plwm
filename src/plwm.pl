@@ -2294,8 +2294,10 @@ main :-
 	opt_arguments(OptsSpec, Opts, _),
 	compat_forall(member(Opt, Opts), parse_opt(Opt)),
 
+    writeln("loading configs"),
 	load_config,
 	setting:init_config(false),
+    writeln("config loading completed"),
 	
 	init_x,
 	init_state,
