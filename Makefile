@@ -11,25 +11,36 @@ OFLAGS  = -O2
 CFLAGS  = -std=$(CSTD) $(IFLAGS) $(WFLAGS) $(OFLAGS) -fpic
 LDFLAGS = -shared -lX11 -lXft -lXrandr
 
-LIB_PATH = /usr/local/lib
+LIB_PATH = /usr/local/lib:$(BIN_DIR)
 
 BIN_DIR = bin
-PLWM = $(BIN_DIR)/plwm
+
+PLWM_SWI = $(BIN_DIR)/plwm-swi
 PLX_O = $(BIN_DIR)/plx.o
 PLX_SO = $(BIN_DIR)/plx.so
 
 SWIFLAGS = -p foreign=$(LIB_PATH) \
-           --goal=main --toplevel=halt --stand_alone=true -O -o $(PLWM) -c src/plwm.pl
+	--goal=main --toplevel=halt --stand_alone=true -O -o $(PLWM_SWI) -c src/swi/init.pl src/plwm.pl 
+
+PLWM_SCRYER = src/plwm-scryer
+X11PLWM_O = $(BIN_DIR)/x11plwm.o
+X11PLWM_SO = $(BIN_DIR)/x11plwm.so
 
 #================================== Build =====================================
 
-$(PLWM): src/*.pl $(PLX_SO)
+$(PLWM_SWI): src/*.pl $(PLX_SO)
 	swipl $(SWIFLAGS)
+
+$(X11PLWM_SO): $(X11PLWM_O)
+	$(CC) $< $(LDFLAGS) -o $@
+
+$(X11PLWM_O): src/scryer/x11plwm.c $(BIN_DIR)
+	$(CC) -c $(CFLAGS) $< -o $@
 
 $(PLX_SO): $(PLX_O)
 	$(CC) $< $(LDFLAGS) -o $@
 
-$(PLX_O): src/plx.c $(BIN_DIR)
+$(PLX_O): src/swi/plx.c $(BIN_DIR)
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BIN_DIR):
@@ -38,7 +49,7 @@ $(BIN_DIR):
 clean:
 	rm -f $(BIN_DIR)/*
 
-rebuild: clean $(PLWM)
+rebuild: clean $(PLWM_SWI)
 
 #============================== Static checks =================================
 
@@ -47,7 +58,8 @@ cppcheck:
 	--suppress=missingIncludeSystem --inline-suppr \
 	--check-level=exhaustive --inconclusive \
 	--error-exitcode=1 \
-	src/plx.c
+	src/swi/plx.c \
+	src/scryer/x11plwm.c
 
 clang-tidy:
 	clang-tidy --checks='clang-analyzer-*' --extra-arg="-std=$(CSTD)" \
@@ -55,7 +67,8 @@ clang-tidy:
 	--extra-arg="-I/usr/lib/swipl/include" \
 	--extra-arg="-I/usr/lib/swi-prolog/include" \
 	--warnings-as-errors='*' \
-	src/plx.c --
+	src/swi/plx.c \
+	src/scryer/x11plwm.c --
 
 #=============================== Unit tests ===================================
 
@@ -66,7 +79,34 @@ test:
 
 install:
 	tools/install.sh
+	
+install-with-scryer:
+	tools/install.sh --scryer
 
 uninstall:
 	tools/uninstall.sh
 
+.PHONY: install-test
+install-test:
+	INSTALL_PREFIX=./install-test tools/install.sh --scryer
+	
+.PHONY: uninstall-test
+uninstall-test:
+# check that only empty directorys and etc/plwm/config.pl remain
+	INSTALL_PREFIX=./install-test tools/uninstall.sh
+
+#============================ Build Packages ===============================
+
+debs: deb-core deb-scryer deb-swi
+
+deb-core: src/* tools/extra/Cargo.toml
+	cargo deb --manifest-path tools/extra/Cargo.toml --variant=core --no-build
+
+deb-scryer: src/scryer/* $(X11PLWM_SO) tools/extra/Cargo.toml
+	cargo deb --manifest-path tools/extra/Cargo.toml --variant=scryer --no-build
+
+deb-swi: src/scryer/* $(PLWM_SWI) tools/extra/Cargo.toml
+	cargo deb --manifest-path tools/extra/Cargo.toml --variant=swi --no-build
+
+install-debs: debs
+	run0 apt reinstall ./tools/extra/target/debian/*.deb

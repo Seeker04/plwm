@@ -7,6 +7,9 @@
 version(0.5).
 
 :- use_module(library(assoc)).
+:- use_module(library(lists)).
+
+:- use_module(library(debug)).
 
 :- use_module(fifo).
 :- use_module(layout).
@@ -15,49 +18,49 @@ version(0.5).
 :- use_module(utils).
 :- use_module(xf86names).
 
-:- dynamic display/1.          % Stores Display pointer returned by XOpenDisplay(3)
-:- dynamic screen/1.           % Stores Screen returned by DefaultScreen(3)
-:- dynamic rootwin/1.          % Stores Window returned by DefaultRootWindow(3)
-:- dynamic xrandr_available/0. % Fact if XRRQueryExtension(3) returns true
-:- dynamic config_flag/1.      % Custom config path specified with --config (if any)
-:- dynamic keymap_internal/3.  % Holds (KeyCode, ModMask, Action) triples parsed from keymaps/1
-:- dynamic wmatom/2.           % Holds interned WM atoms, e.g. query WM_STATE with wmatom(wmstate, WmState)
-:- dynamic netatom/2.          % Holds interned NET atoms, e.g. query _NET_WM_STATE with netatom(wmstate, NetWMState)
-:- dynamic hook/2.             % Holds (Event, Action) pairs parsed from hooks/1
-:- dynamic jobs/1 as shared.   % Holds pending list of command terms waiting for execution
+:- dynamic(display/1).          % Stores Display pointer returned by XOpenDisplay(3)
+:- dynamic(screen/1).           % Stores Screen returned by DefaultScreen(3)
+:- dynamic(rootwin/1).          % Stores Window returned by DefaultRootWindow(3)
+:- dynamic(xrandr_available/0). % Fact if XRRQueryExtension(3) returns true
+:- dynamic(config_flag/1).      % Custom config path specified with --config (if any)
+:- dynamic(keymap_internal/3).  % Holds (KeyCode, ModMask, Action) triples parsed from keymaps/1
+:- dynamic(wmatom/2).           % Holds interned WM atoms, e.g. query WM_STATE with wmatom(wmstate, WmState)
+:- dynamic(netatom/2).          % Holds interned NET atoms, e.g. query _NET_WM_STATE with netatom(wmstate, NetWMState)
+:- dynamic(hook/2).             % Holds (Event, Action) pairs parsed from hooks/1
+:- dynamic(jobs/1).             % Holds pending list of command terms waiting for execution
 
 % Configuration predicates
-:- dynamic default_nmaster/1.
-:- dynamic default_mfact/1.
-:- dynamic default_layout/1.
-:- dynamic attach_bottom/1.
-:- dynamic border_width/1.
-:- dynamic border_width_focused/1.
-:- dynamic border_color/1.
-:- dynamic border_color_focused/1.
-:- dynamic snap_threshold/1.
-:- dynamic outer_gaps/1.
-:- dynamic inner_gaps/1.
-:- dynamic workspaces/1.
-:- dynamic starting_workspace/1.
-:- dynamic hide_empty_workspaces/1.
-:- dynamic ws_format/1.
-:- dynamic ws_format_occupied/1.
-:- dynamic layout_default_overrides/1.
-:- dynamic bar_classes/1.
-:- dynamic bar_placement/1.
-:- dynamic fifo_enabled/1.
-:- dynamic fifo_path/1.
-:- dynamic menucmd/1.
-:- dynamic animation_enabled/1.
-:- dynamic animation_time/1.
-:- dynamic animation_granularity/1.
-:- dynamic modkey/1.
-:- dynamic scroll_up_action/1.
-:- dynamic scroll_down_action/1.
-:- dynamic keymaps/1.
-:- dynamic rules/1.
-:- dynamic hooks/1.
+:- dynamic(default_nmaster/1).
+:- dynamic(default_mfact/1).
+:- dynamic(default_layout/1).
+:- dynamic(attach_bottom/1).
+:- dynamic(border_width/1).
+:- dynamic(border_width_focused/1).
+:- dynamic(border_color/1).
+:- dynamic(border_color_focused/1).
+:- dynamic(snap_threshold/1).
+:- dynamic(outer_gaps/1).
+:- dynamic(inner_gaps/1).
+:- dynamic(workspaces/1).
+:- dynamic(starting_workspace/1).
+:- dynamic(hide_empty_workspaces/1).
+:- dynamic(ws_format/1).
+:- dynamic(ws_format_occupied/1).
+:- dynamic(layout_default_overrides/1).
+:- dynamic(bar_classes/1).
+:- dynamic(bar_placement/1).
+:- dynamic(fifo_enabled/1).
+:- dynamic(fifo_path/1).
+:- dynamic(menucmd/1).
+:- dynamic(animation_enabled/1).
+:- dynamic(animation_time/1).
+:- dynamic(animation_granularity/1).
+:- dynamic(modkey/1).
+:- dynamic(scroll_up_action/1).
+:- dynamic(scroll_down_action/1).
+:- dynamic(keymaps/1).
+:- dynamic(rules/1).
+:- dynamic(hooks/1).
 
 %*********************************  Globals  **********************************
 %
@@ -90,10 +93,10 @@ version(0.5).
 %                        State can be: managed, floating
 %
 
-%! quit() is det
+%! quit is det
 %
 %  Terminates plwm by calling quit/1 with exit code 0 (no error).
-quit() :- quit(0).
+quit :- quit(0).
 
 %! quit(++ExitCode:integer) is det
 %
@@ -130,7 +133,7 @@ reassert(Pred) :-
 %! alloc_colors() is det
 %
 %  Allocates Xft colors, e.g. for colored window borders.
-alloc_colors() :-
+alloc_colors :-
 	display(Dp), screen(Screen),
 
 	border_color(BorderColor),
@@ -150,7 +153,7 @@ alloc_colors() :-
 %  Initializes WM atoms (e.g. WM_STATE) for ICCCM compilance.
 %
 %  See: https://www.x.org/releases/X11R7.7/doc/xorg-docs/icccm/icccm.html
-setup_wmatoms() :-
+setup_wmatoms :-
 	display(Dp),
 	plx:x_intern_atom(Dp, "WM_STATE",         false, WmState),
 	plx:x_intern_atom(Dp, "WM_PROTOCOLS",     false, WmProtocols),
@@ -171,7 +174,7 @@ setup_wmatoms() :-
 %
 %  Static atoms like _NET_WM_NAME will be set once.
 %  Dynamic atoms like _NET_CLIENT_LIST are asserted as dynamic predicates for later use.
-setup_netatoms() :-
+setup_netatoms :-
 	display(Dp), rootwin(Rootwin),
 	plx:x_intern_atom(Dp, "UTF8_STRING"             , false, Utf8string),
 	plx:x_intern_atom(Dp, "_NET_SUPPORTED"          , false, NetSupported),
@@ -315,7 +318,7 @@ keybind_to_keylist(L + R, List) :-
 %  message for any invalid mapping.
 %  For all successfully registered mappings, grabs its keys with XGrabKey(3),
 %  i.e. these key combinations will be listened to and handled in XNextEvent(3).
-grab_keys() :-
+grab_keys :-
 	display(Dp), rootwin(Rootwin), GrabModeAsync is 1, AnyKey is 0, AnyModifier is 1 << 15,
 
 	% ungrab first, because grab_keys/0 can be re-run when the keymaps/1 setting gets changed
@@ -323,16 +326,16 @@ grab_keys() :-
 	plx:x_ungrab_key(Dp, AnyKey, AnyModifier, Rootwin),
 
 	keymaps(Keymaps),
-	forall(member(Keybind -> Action, Keymaps), (
+	compat_forall(member((Keybind -> Action), Keymaps), (
 		keybind_to_keylist(Keybind, KeyList), length(KeyList, N), Nm1 is N - 1,
-		utils:split_at(Nm1, KeyList, Mods, [Key]),
+			utils:split_at(Nm1, KeyList, Mods, [Key]),
 		atom_string(Key, KeyStr), maplist(atom_string, ModAtoms, Mods),
-		(\+ translate_keymap(KeyStr, ModAtoms, Action) ->
-			format(string(Msg), "warning: invalid key: ~p in keymap, ignored", [Key]),
+			(\+ translate_keymap(KeyStr, ModAtoms, Action) ->
+			compat_format(string(Msg), "warning: invalid key: ~q in keymap, ignored", [Key]),
 			writeln(user_error, Msg)
 		; true)
 	)),
-	forall(keymap_internal(Kcode, ModMask, _),
+	compat_forall(keymap_internal(Kcode, ModMask, _),
 		plx:x_grab_key(Dp, Kcode, ModMask, Rootwin, true, GrabModeAsync, GrabModeAsync)
 	)
 .
@@ -343,7 +346,7 @@ grab_keys() :-
 %  XGrabButton(3) to handle mouse events (e.g. window movement, resizing,
 %  focus by hover) in XNextEvent(3).
 %  Also grabs the scroll button to support running custom logic on scroll
-grab_buttons() :-
+grab_buttons :-
 	display(Dp), rootwin(Rootwin),
 	modkey(ModKey),
 	modkey_mask_newmask(ModKey, 0, ModKeyVal),
@@ -372,7 +375,7 @@ grab_buttons() :-
 %  Constructs the event mask for all X11 events the wm uses (e.g. ButtonPress, PointerMotion).
 %  The mask is then used to initialize X using XChangeWindowAttributes(3) and XSelectInput(3).
 %  Also initializes the default mouse cursor.
-setup_root_win() :-
+setup_root_win :-
 	CWEventMask is 1 << 11,
 	ButtonPressMask          is 1 << 2,
 	EnterWindowMask          is 1 << 4,
@@ -572,7 +575,7 @@ close_window(Win) :-
 %! close_focused() is det
 %
 %  Closes the currently focused window with close_window/1.
-close_focused() :-
+close_focused :-
 	global_value(focused, FocusedWin),
 	close_window(FocusedWin)
 .
@@ -597,7 +600,7 @@ win_fullscreen(Win, Fullscr) :-
 %
 %  Toggles the floating status of the focused window.
 %  Floating = unmanaged, i.e. does not follow the tiling layout.
-toggle_floating() :-
+toggle_floating :-
 	global_value(focused, FocusedWin),
 	(FocusedWin =\= 0 ->
 		win_properties(FocusedWin, [OldState|Rest]),
@@ -610,7 +613,7 @@ toggle_floating() :-
 %! toggle_fullscreen() is det
 %
 %  Toggles the fullscreen status of the focused window with win_fullscreen/2.
-toggle_fullscreen() :-
+toggle_fullscreen :-
 	global_value(focused, FocusedWin),
 	(FocusedWin =\= 0 ->
 		win_properties(FocusedWin, [_, Fullscr, _]),
@@ -622,7 +625,7 @@ toggle_fullscreen() :-
 %! toggle_workspace() is det
 %
 %  Switches between the current and the previously active (if any) workspace.
-toggle_workspace() :-
+toggle_workspace :-
 	nb_getval(active_mon, ActMon), global_key_value(prev_ws, ActMon, PrevWs),
 	switch_workspace(PrevWs)
 .
@@ -630,7 +633,7 @@ toggle_workspace() :-
 %! toggle_hide_empty_workspaces() is det
 %
 %  Toggles between hiding and showing empty workspaces.
-toggle_hide_empty_workspaces() :-
+toggle_hide_empty_workspaces :-
 	hide_empty_workspaces(State),
 	utils:bool_negated(State, NState),
 	set(hide_empty_workspaces, NState)
@@ -755,8 +758,8 @@ switch_workspace(Mon, Selector) :-
 			global_key_value(windows, Mon-NewWs, NewWins),
 			global_key_value(windows, Mon-OldWs, OldWins),
 
-			forall(member(Win, OldWins), hide(Win)),
-			forall(member(Win, NewWins), show(Win)),
+			compat_forall(member(Win, OldWins), hide(Win)),
+			compat_forall(member(Win, NewWins), show(Win)),
 			layout:relayout,
 
 			% focused window was remembered, restore it (if any)
@@ -822,7 +825,7 @@ switch_monitor(To) :-
 
 			(bar_placement(follow_focus) ->
 				nb_getval(bars, Bars),
-				forall(member(Bar, Bars), shiftcoord_win_from_to(Bar, ActMon, ToMon))
+				compat_forall(member(Bar, Bars), shiftcoord_win_from_to(Bar, ActMon, ToMon))
 				% move the bar(s) to the newly active monitor
 			; true),
 			update_ws_atoms,
@@ -928,7 +931,7 @@ nonempty_workspaces(NonEmptyWss, IncludeAct) :-
 	nb_getval(workspaces, Wss), active_mon_ws(ActMon, ActWs),
 	findall(Ws,
 	        (member(Ws, Wss),
-		once((IncludeAct = true, Ws = ActWs) ; (global_key_value(windows, ActMon-Ws, [_|_])))),
+		once(((IncludeAct = true, Ws = ActWs) ; (global_key_value(windows, ActMon-Ws, [_|_]))))),
 	        NonEmptyWss)
 .
 
@@ -940,8 +943,8 @@ nonempty_workspaces(NonEmptyWss, IncludeAct) :-
 nonempty_monitors(NonEmptyMons) :- % also includes the active one, even if it's empty
 	monitors(Mons), active_mon_ws(ActMon, _),
 	findall(Mon,
-	        (member(Mon, Mons), once(Mon = ActMon ;
-	        (global_key_value(active_ws, Mon, ActWs), global_key_value(windows, Mon-ActWs, [_|_])))),
+	        (member(Mon, Mons), once((Mon = ActMon ;
+	        (global_key_value(active_ws, Mon, ActWs), global_key_value(windows, Mon-ActWs, [_|_]))))),
 	        NonEmptyMons)
 .
 
@@ -956,7 +959,7 @@ create_workspace(Ws) :-
 	nb_getval(workspaces, Wss),
 	(\+ member(Ws, Wss) -> % ws with this name must not already exist
 		monitors(Mons),
-		forall(member(Mon, Mons), (
+		compat_forall(member(Mon, Mons), (
 			default_nmaster(Nmaster), default_mfact(Mfact), default_layout(Layout),
 			nb_getval(nmaster, ANmaster), nb_getval(mfact, AMfact), nb_getval(layout, ALayout),
 			nb_getval(focused, AFocused), nb_getval(windows, AWins),
@@ -969,7 +972,7 @@ create_workspace(Ws) :-
 			nb_setval(focused, NewAFocused), nb_setval(windows, NewAWins),
 
 			layout_default_overrides(LDefOverrides),
-			forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
+			compat_forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
 				(ground(NmasterOR) -> global_key_newvalue(nmaster, Mon-Ws, NmasterOR) ; true),
 				(ground(MfactOR)   -> global_key_newvalue(mfact,   Mon-Ws, MfactOR)   ; true),
 				(ground(LayoutOR)  -> global_key_newvalue(layout,  Mon-Ws, LayoutOR)  ; true)
@@ -1018,7 +1021,7 @@ rename_workspace(OldName, NewName) :-
 		map_assoc(replace_value(OldName, NewName), AActiveWs, NewAActiveWs),
 		map_assoc(replace_value(OldName, NewName), APrevWs,   NewAPrevWs),
 		monitors(Mons),
-		forall(member(Mon, Mons), (
+		compat_forall(member(Mon, Mons), (
 			nb_getval(nmaster, ANmaster), nb_getval(mfact, AMfact), nb_getval(layout, ALayout),
 			nb_getval(focused, AFocused), nb_getval(windows, AWins),
 			replace_key(ANmaster, Mon-OldName, Mon-NewName, NewANmaster),
@@ -1082,14 +1085,14 @@ delete_workspace(Ws) :-
 	monitors(Mons), nb_getval(workspaces, Wss),
 	(Wss \= [_] ->  % don't allow deleting if there is only one ws left
 		(nextto(Ws, NWs, Wss) -> NextWs = NWs ; Wss = [NextWs|_]),
-		forall(member(Mon, Mons), (
+		compat_forall(member(Mon, Mons), (
 			global_key_value(active_ws, Mon, ActWs),
 			global_key_value(prev_ws, Mon, PrevWs),
 			(Ws = ActWs -> switch_workspace(Mon, NextWs) ; true),
 			(Ws = PrevWs -> global_key_newvalue(prev_ws, Mon, ActWs) ; true),
 
 			global_key_value(windows, Mon-Ws, Wins),
-			forall(member(Win, Wins), win_tomon_toworkspace_top(Win, Mon, NextWs, false)),
+			compat_forall(member(Win, Wins), win_tomon_toworkspace_top(Win, Mon, NextWs, false)),
 
 			delete_ws_assocs(Mon, Ws)
 		)),
@@ -1115,9 +1118,9 @@ delete_monitor(Mon) :-
 		(nextto(Mon, NMon, Mons) -> NextMon = NMon ; Mons = [NextMon|_]),
 
 		nb_getval(workspaces, Wss), % move windows to next monitor
-		forall(member(Ws, Wss), (
-			forall(global_key_value(windows, Mon-Ws, Wins), (
-				forall(member(Win, Wins), win_tomon_toworkspace_top(Win, NextMon, Ws, false))
+		compat_forall(member(Ws, Wss), (
+			compat_forall(global_key_value(windows, Mon-Ws, Wins), (
+				compat_forall(member(Win, Wins), win_tomon_toworkspace_top(Win, NextMon, Ws, false))
 		)))),
 
 		nb_getval(active_mon, ActMon), % focus next monitor if this was the focused one
@@ -1130,9 +1133,9 @@ delete_monitor(Mon) :-
 		nb_setval(monitor_geom, NewAMonGeom),  nb_setval(free_win_space, NewAFreeWinSpace),
 		nb_setval(active_ws,    NewAActiveWs), nb_setval(prev_ws,        NewAPrevWs),
 
-		forall(member(Ws, Wss), delete_ws_assocs(Mon, Ws)),
+		compat_forall(member(Ws, Wss), delete_ws_assocs(Mon, Ws)),
 
-		format(string(Msg), "Monitor \"~s\" unmanaged", [Mon]),
+	compat_format(string(Msg), "Monitor \"~s\" unmanaged", [Mon]),
 		writeln(Msg)
 	; true)
 .
@@ -1147,15 +1150,15 @@ delete_monitor(Mon) :-
 %  @arg Ws workspace name (atom)
 %  @arg Formatted formatted output
 format_ws_name(Fmt, [Idx, Ws], Formatted) :-
-	(sub_string(Fmt, _, _, _, "~d") -> format(atom(Formatted), Fmt, [Idx, Ws]) ;
-	                                   format(atom(Formatted), Fmt, [Ws]))
+	(sub_string(Fmt, _, _, _, "~d") ->compat_format(atom(Formatted), Fmt, [Idx, Ws]) ;	
+	                                  compat_format(atom(Formatted), Fmt, [Ws]))
 .
 
 %! update_ws_atoms() is det
 %
 %  Updates the workspace related netatoms (e.g. _NET_CURRENT_DESKTOP).
 %    see: https://specifications.freedesktop.org/wm-spec/latest/
-update_ws_atoms() :-
+update_ws_atoms :-
 	display(Dp), rootwin(Rootwin), active_mon_ws(_, ActWs), nb_getval(workspaces, Wss),
 	netatom(numberofdesktops, NetNumberOfDesktops),
 	netatom(desktopnames,     NetDesktopNames),
@@ -1191,12 +1194,12 @@ update_ws_atoms() :-
 %
 %  Updates the _NET_WORKAREA netatom.
 %    see: https://specifications.freedesktop.org/wm-spec/latest/
-update_workarea() :-
+update_workarea :-
 	display(Dp), rootwin(Rootwin), nb_getval(active_mon, ActMon),
 	global_key_value(free_win_space, ActMon, Geom),
 	nb_getval(workspaces, Wss), length(Wss, WsCnt),
 
-	utils:n_item_clones(WsCnt, Geom, Geoms), flatten(Geoms, Geoms1D),
+	utils:n_item_clones(WsCnt, Geom, Geoms), append(Geoms, Geoms1D),
 
 	netatom(workarea, NetWorkArea),
 	XA_CARDINAL is 6, PropModeReplace is 0, DataCnt is WsCnt * 4,
@@ -1399,25 +1402,27 @@ unmanage(Win) :-
 %
 %  @arg EventType type of the X11 event (e.g. keypress, enternotify, propertynotify)
 %  @arg EventArgs arguments from the X11 event, different for each event type
-handle_event(keypress, [_, _, _, _, _, _, _, _, _, _, _, State, Keycode, _]) :-
+handle_event(EventType, EventArgs) :- call_with_error_ctx(handle_event_(EventType, EventArgs), predicate-handle_event/2).
+
+handle_event_(keypress, [_, _, _, _, _, _, _, _, _, _, _, State, Keycode, _]) :-
 	(keymap_internal(Keycode, State, Action) ->
-		catch(ignore(Action), Ex, (writeln(Ex), true))
+		catch(ignore($Action), Ex, (writeln(Ex), true))
 	; true)
 .
 
-handle_event(buttonpress, [_, _, Dp, _, _, Subwin, _, _, _, Xroot, Yroot, _, Button, _]) :-
+handle_event_(buttonpress, [_, _, Dp, _, _, Subwin, _, _, _, Xroot, Yroot, _, Button, _]) :-
 	Button1 is 1, Button3 is 3, Button4 is 4, Button5 is 5,
 
 	% scrolled up
 	(Button = Button4 ->
 		(scroll_up_action(Action), Action \= none ->
-			catch(ignore(Action), Ex, (writeln(Ex), true))
+			catch(ignore($Action), Ex, (writeln(Ex), true))
 		; true)
 
 	% scrolled down
 	;Button = Button5 ->
 		(scroll_down_action(Action), Action \= none ->
-			catch(ignore(Action), Ex, (writeln(Ex), true))
+			catch(ignore($Action), Ex, (writeln(Ex), true))
 		; true)
 
 	% left or right mouse clicked
@@ -1434,16 +1439,16 @@ handle_event(buttonpress, [_, _, Dp, _, _, Subwin, _, _, _, Xroot, Yroot, _, But
 	; true)
 .
 
-handle_event(buttonrelease, _) :-
+handle_event_(buttonrelease, _) :-
 	nb_setval(dragged, none)
 .
 
-handle_event(enternotify, [_, _, _, _, Win, _, _, _, _, _, _, _, _, _, _, _, _]) :-
+handle_event_(enternotify, [_, _, _, _, Win, _, _, _, _, _, _, _, _, _, _, _, _]) :-
 	rootwin(Rootwin),
 	(Win =\= Rootwin -> focus(Win) ; true)
 .
 
-handle_event(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
+handle_event_(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
 	(nb_getval(dragged, [Win, SXroot, SYroot, SButton]), Win =\= 0,
 	plx:x_get_window_attributes(Dp, Win, WinGeom, Status), Status =\= 0 ->
 		rect_inmon(WinGeom, Mon),
@@ -1502,9 +1507,9 @@ handle_event(motionnotify, [_, _, Dp, _, _, _, _, _, _, Xroot, Yroot |_]) :-
 	)
 .
 
-handle_event(keyrelease, _).
+handle_event_(keyrelease, _).
 
-handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
+handle_event_(maprequest, [_, _, _, Dp, _, Win]) :-
 	active_mon_ws(ActMon, ActWs),
 	(plx:x_get_window_attributes(Dp, Win, Geom, Status), Status =\= 0 ->
 	(plx:x_get_class_hint(Dp, Win, Name, Class),
@@ -1569,7 +1574,7 @@ handle_event(maprequest, [_, _, _, Dp, _, Win]) :-
 	; true)
 .
 
-handle_event(unmapnotify, [_, _, SendEvent, Dp, _, Win, _]) :-
+handle_event_(unmapnotify, [_, _, SendEvent, Dp, _, Win, _]) :-
 	% Set withdrawn state
 	wmatom(wmstate, WMState), PropModeReplace is 0, WithdrawnState is 0, None is 0,
 	plx:x_change_property(Dp, Win, WMState, WMState, 32, PropModeReplace, [WithdrawnState, None], 2),
@@ -1580,7 +1585,7 @@ handle_event(unmapnotify, [_, _, SendEvent, Dp, _, Win, _]) :-
 	; true)
 .
 
-handle_event(destroynotify, [_, _, _, _, _, Win]) :-
+handle_event_(destroynotify, [_, _, _, _, _, Win]) :-
 	nb_getval(bars, Bars),
 	(selectchk(Win, Bars, RemainingBars) ->  % bar is removed, get back its space
 		nb_setval(bars, RemainingBars),
@@ -1592,7 +1597,7 @@ handle_event(destroynotify, [_, _, _, _, _, Win]) :-
 	)
 .
 
-handle_event(propertynotify, [_, _, _, Win, Atom, _, _]) :-
+handle_event_(propertynotify, [_, _, _, Win, Atom, _, _]) :-
 	XA_WM_TRANSIENT_FOR is 86,
 	netatom(wmwindowtype, NetWMWindowType), netatom(wmstate, NetWMState),
 
@@ -1605,7 +1610,7 @@ handle_event(propertynotify, [_, _, _, Win, Atom, _, _]) :-
 	; true)
 .
 
-handle_event(clientmessage, [_, _, _, _, Win, MessageType, _, DataL0, DataL1, DataL2]) :-
+handle_event_(clientmessage, [_, _, _, _, Win, MessageType, _, DataL0, DataL1, DataL2]) :-
 	netatom(currentdesktop, NetCurrentDesktop),
 	netatom(wmstate, NetWMState),
 	netatom(wmstatefullscreen, NetWMStateFullscreen),
@@ -1623,12 +1628,12 @@ handle_event(clientmessage, [_, _, _, _, Win, MessageType, _, DataL0, DataL1, Da
 	; true)
 .
 
-handle_event(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
+handle_event_(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
 	rootwin(Rootwin),
 	(Win == Rootwin ->
 		% Notice of pending jobs is implemented with a ConfigureNotify
 		(utils:jobs(Jobs) ->
-			forall(member(Job, Jobs),
+			compat_forall(member(Job, Jobs),
 				ignore(catch(call(Job), Ex, (writeln(Ex), true)))
 			),
 			retract(utils:jobs(_))
@@ -1636,10 +1641,10 @@ handle_event(configurenotify, [_, _, _, _, _, Win, _, _, _, _, _, _, _]) :-
 	; true)
 .
 
-handle_event(rrscreenchangenotify, _) :-
+handle_event_(rrscreenchangenotify, _) :-
 	monitors(Mons),
 	query_outputs(OutputInfos),
-	forall(member(Output-Geom, OutputInfos), (
+	compat_forall(member(Output-Geom, OutputInfos), (
 
 		% Monitor already managed
 		(member(Output, Mons) ->
@@ -1650,11 +1655,11 @@ handle_event(rrscreenchangenotify, _) :-
 				(nb_getval(monitor_geom, AMonGeom), gen_assoc(OldMon, AMonGeom, Geom) ->
 					% If a previous monitor has this geom, this one became a mirror, unmanage it
 					delete_monitor(Output),
-					format(string(Msg), "Monitor \"~s\" is a mirror to \"~s\", unmanaging it", [Output, OldMon]),
+					compat_format(string(Msg), "Monitor \"~s\" is a mirror to \"~s\", unmanaging it", [Output, OldMon]),
 					writeln(Msg)
 				;
 					global_key_newvalue(monitor_geom, Output, Geom),
-					format(string(Msg), "Monitor \"~s\" geometry reconfigured", [Output]),
+					compat_format(string(Msg), "Monitor \"~s\" geometry reconfigured", [Output]),
 					writeln(Msg)
 				)
 			; true)
@@ -1666,7 +1671,7 @@ handle_event(rrscreenchangenotify, _) :-
 	)),
 
 	% Remove no longer connected monitors
-	forall((member(Mon, Mons), \+ member(Mon-_, OutputInfos)), (
+	compat_forall((member(Mon, Mons), \+ member(Mon-_, OutputInfos)), (
 		delete_monitor(Mon)
 	)),
 
@@ -1760,11 +1765,12 @@ win_newproperties(Win, Properties) :- term_to_atom(Win, WinAtom), nb_setval(WinA
 %  After the event is handled, eventloop/0 calls itself recursively.
 %
 %  Note: the recursive call is the tail of the term, so we get last call optimization.
-eventloop() :-
+eventloop :-
 	display(Dp),
 
 	plx:x_next_event(Dp, Event),
-	(Event = [EventType|EventArgs] ->
+	( Event = "unsupported_event" -> true
+	; Event = [EventType|EventArgs] ->
 		handle_event(EventType, EventArgs)
 	; true),  % simply ignore "unsupported_event" cases
 
@@ -1812,7 +1818,7 @@ change_mfact(F) :-
 %! focused_to_top() is det
 %
 %  Moves the currently focused window to the top of window stack.
-focused_to_top() :-
+focused_to_top :-
 	global_value(focused, FocusedWin),
 	(FocusedWin =\= 0 ->
 		global_value(windows, Wins),
@@ -1891,14 +1897,14 @@ trim_bar_space(Mon, [BarX, BarY, BarW, BarH]) :-
 %
 %  Calculates and sets the free space for managed windows with the following formula:
 %    monitor resolution - outer gaps - space reserved for status bars
-update_free_win_space() :-
+update_free_win_space :-
 	display(Dp), monitors(Mons),
-	forall(member(Mon, Mons), (
+	compat_forall(member(Mon, Mons), (
 		global_key_value(monitor_geom, Mon, MonGeom),
 		global_key_newvalue(free_win_space, Mon, MonGeom),
 
 		nb_getval(bars, Bars),
-		forall(member(Bar, Bars), (
+		compat_forall(member(Bar, Bars), (
 			(plx:x_get_window_attributes(Dp, Bar, BarGeom, Status), Status =\= 0 ->
 				rect_inmon(BarGeom, InMon),
 				(bar_placement(static) ->
@@ -1930,13 +1936,13 @@ update_free_win_space() :-
 %
 %  Updates the _NET_CLIENT_LIST netatom.
 %    see: https://specifications.freedesktop.org/wm-spec/latest/
-update_clientlist() :-
+update_clientlist :-
 	display(Dp), rootwin(Rootwin),
 	netatom(clientlist, NetClientList),
 	PropModeAppend is 2, XA_WINDOW is 33,
 
 	plx:x_delete_property(Dp, Rootwin, NetClientList),
-	forall((global_key_value(windows, _, Wins), member(Win, Wins)), (
+	compat_forall((global_key_value(windows, _, Wins), member(Win, Wins)), (
 		plx:x_change_property(Dp, Rootwin, NetClientList, XA_WINDOW, 32, PropModeAppend, [Win], 1)
 	))
 .
@@ -1944,10 +1950,10 @@ update_clientlist() :-
 %! setup_hooks() is det
 %
 %  Registers actions to events parsed from hooks/1.
-setup_hooks() :-
+setup_hooks :-
 	retractall(hook(_, _)),
 	hooks(Hooks),
-	forall(member((Event -> Action), Hooks), (
+	compat_forall(member((Event -> Action), Hooks), (
 		assertz(hook(Event, Action))
 	))
 .
@@ -1968,7 +1974,7 @@ run_hook(Event) :-
 %
 %  Initializes the window manager base state, i.e. the global, per-monitor and
 %  per-workspace states with defaults.
-init_state() :-
+init_state :-
 	workspaces(Wss),
 
 	empty_assoc(EmptyAMonGeom),      nb_setval(monitor_geom,   EmptyAMonGeom),
@@ -2009,8 +2015,8 @@ query_outputs(OutputInfos) :-
 			RR_Connected is 0,
 			findall(Output-[X, Y, W, H], (
 				nth0(Idx, Outputs, _),
-				(plx:xrr_get_output_info(Dp, ScreenResources, Idx, [Output, Connection, Crtc]) ->
-					Connection = RR_Connected ->
+					(plx:xrr_get_output_info(Dp, ScreenResources, Idx, [Output, Connection, Crtc]) ->
+						Connection = RR_Connected ->
 						plx:xrr_get_crtc_info(Dp, ScreenResources, Crtc, [X, Y, W, H]))
 				),
 				OutputInfos
@@ -2046,7 +2052,7 @@ init_monitors([Mon-[X, Y, W, H]|Rest]) :-
 init_monitor(Mon, Geom) :-
 	% A monitor with this geometry is already managed, don't register mirror
 	nb_getval(monitor_geom, AMonGeom), gen_assoc(OldMon, AMonGeom, Geom) ->
-		format(string(Msg), "Monitor \"~s\" is a mirror to \"~s\", ignoring it", [Mon, OldMon]),
+		compat_format(string(Msg), "Monitor \"~s\" is a mirror to \"~s\", ignoring it", [Mon, OldMon]),
 		writeln(Msg)
 	;
 
@@ -2083,15 +2089,15 @@ init_monitor(Mon, Geom) :-
 
 	% Apply per-monitor, per-workspace overrides
 	layout_default_overrides(LDefOverrides),
-	forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
+	compat_forall(member((Mon, Ws -> NmasterOR, MfactOR, LayoutOR), LDefOverrides), (
 		(ground(Ws) -> ForWss = [Ws] ; ForWss = Wss),
-		forall(member(ForWs, ForWss), (
+		compat_forall(member(ForWs, ForWss), (
 			(ground(NmasterOR) -> global_key_newvalue(nmaster, Mon-ForWs, NmasterOR) ; true),
 			(ground(MfactOR)   -> global_key_newvalue(mfact,   Mon-ForWs, MfactOR)   ; true),
 			(ground(LayoutOR)  -> global_key_newvalue(layout,  Mon-ForWs, LayoutOR)  ; true)
 		))
 	)),
-	format(string(Msg), "Monitor \"~s\" managed", [Mon]),
+	compat_format(string(Msg), "Monitor \"~s\" managed", [Mon]),
 	writeln(Msg)
 .
 
@@ -2100,7 +2106,7 @@ init_monitor(Mon, Geom) :-
 %  Initializes X: connects to Xorg with XOpenDisplay(3), queries base values like
 %  the display pointer or the root window.
 %  Also queries the XRandR extension.
-init_x() :-
+init_x :-
 	plx:x_open_display("", Dp),           assertz(display(Dp)),
 	plx:default_root_window(Dp, Rootwin), assertz(rootwin(Rootwin)),
 	plx:default_screen(Dp, Screen),       assertz(screen(Screen)),
@@ -2117,7 +2123,7 @@ init_x() :-
 %
 %  Attempts to load the configuration module from a custom path provided by the user.
 %  Fails if the file does not exist.
-load_custom_config() :-
+load_custom_config :-
 	config_flag(UserC) ->
 		exists_file(UserC) ->
 			consult(UserC)
@@ -2172,13 +2178,13 @@ load_etc_config(PathSuffix) :-
 %
 %  Note: even if none of the above works, the predicate simply succeeds since
 %  the config is optional.
-load_config() :-
+load_config :-
 	PathSuffix = '/plwm/config.pl',
 	(load_custom_config            -> writeln("-c user config loaded")
 	; load_xdg_config(PathSuffix)  -> writeln("xdg config loaded")
 	; load_home_config(PathSuffix) -> writeln("home config loaded")
 	; load_etc_config(PathSuffix)  -> writeln("etc config loaded")
-	; true)
+	; writeln("no config loaded"))
 .
 
 %! reload_config() is det
@@ -2187,12 +2193,12 @@ load_config() :-
 %  - settings absent from the config will retrain their current values
 %  - settings in the config which are invalid are defaulted with settings:default_set/2
 %  - settings in the config which are valid are applied
-reload_config() :-
+reload_config :-
 	% Retract all settings after making a snapshot of them
 	empty_assoc(SettigValueMap0),
 	nb_setval(settings_snapshot, SettigValueMap0),
-	forall(setting:setting(Setting), (
-		call(Setting, Value),
+	compat_forall(setting:setting(Setting), (
+		call(user:Setting, Value),
 		global_key_newvalue(settings_snapshot, Setting, Value),
 		compound_name_arguments(Config, Setting, [_]),
 		retractall(Config)
@@ -2202,7 +2208,7 @@ reload_config() :-
 	load_config,
 
 	% Restore previous values of those settings which were absent from the user config
-	forall(setting:setting(Setting), (
+	compat_forall(setting:setting(Setting), (
 		(\+ call(Setting, Value) ->
 			global_key_value(settings_snapshot, Setting, Value),
 			compound_name_arguments(Config, Setting, [Value]),
@@ -2215,7 +2221,7 @@ reload_config() :-
 
 	% init_config assumes it's run during initialization, so it does not trigger
 	% post-set actions (e.g. relayout). Trigger those manually
-	forall(setting:setting(Setting), (
+	compat_forall(setting:setting(Setting), (
 		call(Setting, Value),
 		set(Setting, Value)
 	)),
@@ -2231,7 +2237,7 @@ reload_config() :-
 %  @arg OnlyChanged whether to only dump settings that differ from their default values
 dump_settings(FilePath, OnlyChanged) :-
 	open(FilePath, write, DumpFile),
-	forall(setting:setting(Setting), (
+	compat_forall(setting:setting(Setting), (
 		call(Setting, Value),
 		((OnlyChanged = false ; \+ setting:default_set(Setting, Value)) ->
 			compound_name_arguments(Config, Setting, [Value]),
@@ -2278,7 +2284,7 @@ parse_opt(help(false)). parse_opt(version(false)). parse_opt(check(false)).
 %! main() is det
 %
 %  Entry point of plwm.
-main() :-
+main :-
 	on_signal(term, _, quit),
 
 	% plx.so is only available locally when compiling before the first installation
@@ -2286,11 +2292,13 @@ main() :-
 
 	opts_spec(OptsSpec),
 	opt_arguments(OptsSpec, Opts, _),
-	forall(member(Opt, Opts), parse_opt(Opt)),
+	compat_forall(member(Opt, Opts), parse_opt(Opt)),
 
+    writeln("loading configs"),
 	load_config,
 	setting:init_config(false),
-
+    writeln("config loading completed"),
+	
 	init_x,
 	init_state,
 	alloc_colors,
@@ -2307,6 +2315,5 @@ main() :-
 	setup_hooks,
 	run_hook(start),
 
-	eventloop
+	catch(eventloop, E,compat_format("eventloop crashed: ~q~n", [E]))
 .
-

@@ -5,6 +5,9 @@
 :- module(utils, [global_key_value/3, global_key_newvalue/3, global_value/2, global_newvalue/2, shellcmd/1]).
 %                 ^ these are used quite often, so it's worth exporting them
 
+:- use_module(library(assoc)).
+:- use_module(library(lists)).
+
 %! valid_callable(++Callable:callable) is det
 %
 %  Checks whether the predicate in the specified callable
@@ -43,7 +46,7 @@ is_float(X) :- float(X), ! ; (X = N/D, integer(N), integer(D)).
 %! dumpstack() is det
 %
 %  Prints the current prolog stack to /tmp/plwm_stack.log, only used for debugging.
-dumpstack() :- % for debugging
+dumpstack :- % for debugging
 	open('/tmp/plwm_stack.log', append, S),
 	get_prolog_backtrace(128, Backtrace),
 	print_prolog_backtrace(S, Backtrace),
@@ -89,7 +92,7 @@ shellcmd(Cmd) :- catch(ignore((ensure_ampersand(Cmd, CmdBg), shell(CmdBg))), Ex,
 %  @arg Pred predicate that was called
 %  @arg Arg invalid argument that was supplied to Pred
 warn_invalid_arg(Pred, Arg) :-
-	format(string(Msg), "warning: invalid argument to ~s: ~p, ignored", [Pred, Arg]),
+compat_format(string(Msg), "warning: invalid argument to ~s: ~q, ignored", [Pred, Arg]),
 	writeln(user_error, Msg)
 .
 
@@ -241,7 +244,7 @@ n_item_clones(N, T, [T|Ts]) :-
 %  The resulting list will contain N elements.
 %  E.g.
 %    ?- utils:n_step_list(4, plus(5), [10|L]).
-%    L = [15, 20, 25] 
+%    L = [15, 20, 25]
 %
 %  @arg N number of values L must contain, meaning N-1 executions of Step
 %  @arg Step predicate that takes and returns an integer, e.g. plus(1)
@@ -295,4 +298,3 @@ pair_up_lists([X|Xs], [Y|Ys], [X-Y|Rest]) :- pair_up_lists(Xs, Ys, Rest).
 %  @arg Str input string
 %  @arg NewStr output string, i.e. Str without its last character
 str_withoutlastch(Str, NewStr) :- string_length(Str, Len), Lenm1 is Len - 1, sub_string(Str, 0, Lenm1, _, NewStr).
-

@@ -4,6 +4,9 @@
 
 # executable
 plwm
+!src/plwm
+!symlinks/plwm
+bin/plwm-swi
 
 # tag file
 tags
@@ -14,3 +17,7 @@ compile_flags.txt
 # local neovim config
 .nvim.lua
 
+# output dir when building debian packages with cargo-deb
+target/
+
+install-test/
