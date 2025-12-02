@@ -39,6 +39,8 @@ Powered by [SWI-Prolog](https://www.swi-prolog.org/)
 
 Porting to [Scryer Prolog](https://www.scryer.pl/), a Rust-powered ISO Prolog implementation, is underway too! ([discussion](https://github.com/Seeker04/plwm/discussions/102), [PR](https://github.com/Seeker04/plwm/pull/114))
 
+**2025.11.14:** plwm was presented at [Scryer Prolog Meetup 2025](https://hsd-pbsa.de/veranstaltung/scryer-prolog-meetup-2025/). Slides are uploaded in [ODP](scryer-meetup-2025/plwm.odp) and [PDF](scryer-meetup-2025/plwm.pdf).
+
 # Feature highlights
 
 * Easy to hack on, great way to introduce yourself to the logic programming paradigm and Prolog
