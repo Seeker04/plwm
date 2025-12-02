@@ -1,5 +1,7 @@
 % MIT License, Copyright (c) 2023-2025 Barnabás Zahorán, see LICENSE
 
+:- use_module(library(lists)).
+
 % mocks
 border_width(1).
 border_width_focused(2).
@@ -9,10 +11,10 @@ global_key_value(windows, _, [1, 2, 3, 4]).
 global_key_value(monitor_geom, _, [0, 0, 1920, 1080]).
 global_key_value(free_win_space, _, [0, 0, 1920, 1080]).
 global_key_newvalue(layout, _, Layout) :- layout:is_layout(Layout).
-win_properties(1, [managed,  false, false, [200, 200, 300, 600]]).
-win_properties(2, [floating, false, false, [0, 30, 50, 50]]).
-win_properties(3, [managed,  false, false, [800, 440, 300, 200]]).
-win_properties(4, [managed,  true,  false, [1100, 300, 450, 700]]).
+user:win_properties(1, [managed,  false, false, [200, 200, 300, 600]]).
+user:win_properties(2, [floating, false, false, [0, 30, 50, 50]]).
+user:win_properties(3, [managed,  false, false, [800, 440, 300, 200]]).
+user:win_properties(4, [managed,  true,  false, [1100, 300, 450, 700]]).
 plx:x_move_resize_window(Dp, Win, ToX, ToY, ToW, ToH) :-
 	integer(Dp), integer(Win),
 	integer(ToX), integer(ToY), integer(ToW), integer(ToH),

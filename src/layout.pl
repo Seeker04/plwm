@@ -2,6 +2,8 @@
 
 :- module(layout, []).
 
+:- use_module(library(lists)).
+
 :- use_module(animation).
 :- use_module(utils).
 
@@ -32,7 +34,7 @@ is_layout(Layout) :- member(Layout, [
 %  Sets the layout of the active monitor-workspace.
 %
 %  @arg Layout layout to set
-set_layout(Layout) :- active_mon_ws(ActMon, ActWs), set_layout(ActMon-ActWs, Layout).
+set_layout(Layout) :- user:active_mon_ws(ActMon, ActWs), set_layout(ActMon-ActWs, Layout).
 
 %! set_layout(++Mon-Ws:string-atom, ++Layout:term) is det
 %
@@ -42,11 +44,11 @@ set_layout(Layout) :- active_mon_ws(ActMon, ActWs), set_layout(ActMon-ActWs, Lay
 %  @arg Layout layout to set
 set_layout(Mon-Ws, Layout) :-
 	(is_layout(Layout) ->
-		display(Dp), global_key_value(windows, Mon-Ws, Wins),
+		user:display(Dp), global_key_value(windows, Mon-Ws, Wins),
 		(Layout \= floating ->
 			global_key_value(free_win_space, Mon, Bounds),
 			findall(Win,               % skip unmanaged and fullscreen windows
-			       (member(Win, Wins), win_properties(Win, [managed, false|_])),
+			       (member(Win, Wins), user:win_properties(Win, [managed, false|_])),
 			       ManagedWins),
 			length(ManagedWins, WinCnt),
 			calculate_layout(Layout, Mon, WinCnt, Bounds, Geoms),
@@ -55,7 +57,7 @@ set_layout(Mon-Ws, Layout) :-
 		global_key_newvalue(layout, Mon-Ws, Layout),
 
 		% This is needed for restoring sizes of floating wins that exited fullscreen
-		forall((member(Win, Wins), win_properties(Win, [State, false, [X, Y, W, H]])), (
+		compat_forall((member(Win, Wins), user:win_properties(Win, [State, false, [X, Y, W, H]])), (
 			((Layout = floating ; State = floating) ->
 				plx:x_move_resize_window(Dp, Win, X, Y, W, H)
 			; true)
@@ -63,7 +65,7 @@ set_layout(Mon-Ws, Layout) :-
 
 		% Make fullscreen windows max size (covering bars too) and also raise them
 		global_key_value(monitor_geom, Mon, [MX, MY, MW, MH]),
-		forall((member(Win, Wins), win_properties(Win, [_, true|_])), (
+		compat_forall((member(Win, Wins), user:win_properties(Win, [_, true|_])), (
 			plx:x_move_resize_window(Dp, Win, MX, MY, MW, MH),
 			CWStackMode is 1 << 6, Above is 0,
 			plx:x_configure_window(Dp, Win, CWStackMode, 0, 0, 0, 0, 0, 0, Above)
@@ -75,7 +77,7 @@ set_layout(Mon-Ws, Layout) :-
 %! relayout() is det
 %
 %  Recalculates and redraws the layout on the active monitor-workspace.
-relayout() :- global_value(layout, Layout), set_layout(Layout).
+relayout :- global_value(layout, Layout), set_layout(Layout).
 
 %! relayout(++Mon-Ws:string-atom) is det
 %
@@ -114,7 +116,7 @@ calculate_layout(stack, _, WinCnt, [BX, BY, BW, BH], Geoms) :-
 	SP is BHminusBorders - WinH * WinCnt,
 	fill_spare_pixels_v(SP, 0, [[BX, BY, WinW, WinH]|GeomsTail], AdjustedGeoms),
 
-	inner_gaps(GapPixel),
+	user:inner_gaps(GapPixel),
 	(GapPixel = 0 ->
 		Geoms = AdjustedGeoms
 	;
@@ -135,7 +137,7 @@ calculate_layout(hstack, _, WinCnt, [BX, BY, BW, BH], Geoms) :-
 	SP is BWminusBorders - WinW * WinCnt,
 	fill_spare_pixels_h(SP, 0, [[BX, BY, WinW, WinH]|GeomsTail], AdjustedGeoms),
 
-	inner_gaps(GapPixel),
+	user:inner_gaps(GapPixel),
 	(GapPixel = 0 ->
 		Geoms = AdjustedGeoms
 	;
@@ -182,10 +184,10 @@ calculate_layout(ncols(N), Mon, WinCnt, Bounds, Geoms) :-
 .
 
 calculate_layout(grid, Mon, WinCnt, Bounds, Geoms) :-
-	Dimension is ceil(sqrt(WinCnt)),
+	Dimension is ceiling(sqrt(WinCnt)),
 	calculate_layout(nrows(Dimension), Mon, WinCnt, Bounds, Geoms)
 
-	% Note: one can play with rewriting the above ceil to floor or nrows to ncols, to their liking,
+	% Note: one can play with rewriting the above ceiling to floor or nrows to ncols, to their liking,
 	% getting another from the 4 slightly different grid layout sequences
 .
 
@@ -194,14 +196,14 @@ calculate_layout(cmaster, Mon, WinCnt, [BX, BY, BW, BH], Geoms) :- !,
 	global_key_value(nmaster, Mon-ActWs, Nmaster),
 	global_key_value(mfact, Mon-ActWs, Mfact),
 	StackWinCnt is max(0, WinCnt - Nmaster),
-	RStackWinCnt is ceil(StackWinCnt / 2),  % right stack will have 1 more win in odd cases
+	RStackWinCnt is ceiling(StackWinCnt / 2),  % right stack will have 1 more win in odd cases
 	LStackWinCnt is StackWinCnt - RStackWinCnt,
 	% Only two peer stacks are needed
 	(Nmaster == 0  ->
 		LW is floor(BW / 2),
-		inner_gaps(GapPixel),
+		user:inner_gaps(GapPixel),
 		FinalLW is LW - floor(GapPixel / 2),
-		RX is BX + LW + ceil(GapPixel / 2),
+		RX is BX + LW + ceiling(GapPixel / 2),
 		RW is BW - LW,
 		calculate_layout(stack, Mon, LStackWinCnt, [BX, BY, FinalLW, BH], LGeoms),
 		calculate_layout(stack, Mon, RStackWinCnt, [RX, BY, RW,      BH], RGeoms),
@@ -215,10 +217,10 @@ calculate_layout(cmaster, Mon, WinCnt, [BX, BY, BW, BH], Geoms) :- !,
 		MasterW is floor(BW * Mfact),
 		StackW is BW - MasterW,
 		StackX is BX + MasterW,
-		inner_gaps(GapPixel),
+		user:inner_gaps(GapPixel),
 		FinalMasterW is MasterW - floor(GapPixel / 2),
-		FinalStackX  is StackX  + ceil(GapPixel / 2),
-		FinalStackW  is StackW  - ceil(GapPixel / 2),
+		FinalStackX  is StackX  + ceiling(GapPixel / 2),
+		FinalStackW  is StackW  - ceiling(GapPixel / 2),
 		MasterBounds = [BX,          BY, FinalMasterW, BH],
 		StackBounds  = [FinalStackX, BY, FinalStackW,  BH],
 		calculate_layout(stack, Mon, Nmaster,     MasterBounds, CGeoms),
@@ -230,12 +232,12 @@ calculate_layout(cmaster, Mon, WinCnt, [BX, BY, BW, BH], Geoms) :- !,
 		StackW is floor((BW - MasterW) / 2),
 		MasterX is BX + StackW,
 		RStackX is MasterX + MasterW,
-		inner_gaps(GapPixel),
-		LStackW      is StackW - ceil(GapPixel / 2),
+		user:inner_gaps(GapPixel),
+		LStackW      is StackW - ceiling(GapPixel / 2),
 		FinalMasterX is MasterX + floor(GapPixel / 2),
 		FinalMasterW is MasterW - floor(GapPixel / 2) * 2,
-		FinalRStackX is RStackX + ceil(GapPixel / 2),
-		FinalRStackW is StackW - ceil(GapPixel / 2),
+		FinalRStackX is RStackX + ceiling(GapPixel / 2),
+		FinalRStackW is StackW - ceiling(GapPixel / 2),
 		LStackBounds = [BX,           BY, LStackW,      BH],
 		MasterBounds = [FinalMasterX, BY, FinalMasterW, BH],
 		RStackBounds = [FinalRStackX, BY, FinalRStackW, BH],
@@ -264,16 +266,16 @@ calculate_layout(MasterType, Mon, WinCnt, [BX, BY, BW, BH], Geoms) :-
 		MasterW is floor(BW * Mfact),
 		StackW is BW - MasterW,
 		(MasterType = lmaster ->
-			inner_gaps(GapPixel),
-			StackX       is BX + MasterW + ceil(GapPixel / 2),
-			FinalStackW  is StackW - ceil(GapPixel / 2),
+			user:inner_gaps(GapPixel),
+			StackX       is BX + MasterW + ceiling(GapPixel / 2),
+			FinalStackW  is StackW - ceiling(GapPixel / 2),
 			FinalMasterW is MasterW - floor(GapPixel / 2),
 			StackBounds  = [StackX, BY, FinalStackW,  BH],
 			MasterBounds = [BX,     BY, FinalMasterW, BH]
 		;MasterType = rmaster ->
-			inner_gaps(GapPixel),
-			MasterX      is BX + StackW + ceil(GapPixel / 2),
-			FinalMasterW is MasterW - ceil(GapPixel / 2),
+			user:inner_gaps(GapPixel),
+			MasterX      is BX + StackW + ceiling(GapPixel / 2),
+			FinalMasterW is MasterW - ceiling(GapPixel / 2),
 			FinalStackW  is StackW - floor(GapPixel / 2),
 			MasterBounds = [MasterX, BY, FinalMasterW, BH],
 			StackBounds  = [BX     , BY, FinalStackW , BH]),
@@ -284,16 +286,16 @@ calculate_layout(MasterType, Mon, WinCnt, [BX, BY, BW, BH], Geoms) :-
 		MasterH is floor(BH * Mfact),
 		StackH is BH - MasterH,
 		(MasterType = tmaster ->
-			inner_gaps(GapPixel),
-			StackY       is BY + MasterH + ceil(GapPixel / 2),
-			FinalStackH  is StackH - ceil(GapPixel / 2),
+			user:inner_gaps(GapPixel),
+			StackY       is BY + MasterH + ceiling(GapPixel / 2),
+			FinalStackH  is StackH - ceiling(GapPixel / 2),
 			FinalMasterH is MasterH - floor(GapPixel / 2),
 			MasterBounds = [BX, BY    , BW, FinalMasterH],
 			StackBounds  = [BX, StackY, BW, FinalStackH]
 		;MasterType = bmaster ->
-			inner_gaps(GapPixel),
-			MasterY     is BY + StackH + ceil(GapPixel / 2),
-			FinalMasterH is MasterH - ceil(GapPixel / 2),
+			user:inner_gaps(GapPixel),
+			MasterY     is BY + StackH + ceiling(GapPixel / 2),
+			FinalMasterH is MasterH - ceiling(GapPixel / 2),
 			FinalStackH  is StackH - floor(GapPixel / 2),
 			MasterBounds = [BX, MasterY, BW, FinalMasterH],
 			StackBounds  = [BX, BY     , BW, FinalStackH]),
@@ -314,8 +316,8 @@ calculate_layout(MasterType, Mon, WinCnt, [BX, BY, BW, BH], Geoms) :-
 %
 %  @arg MaxBorderW the largest configured border width
 max_border_width(MaxBorderW) :-
-	border_width(BorderW),
-	border_width_focused(BorderWF),
+	user:border_width(BorderW),
+	user:border_width_focused(BorderWF),
 	MaxBorderW is max(BorderW, BorderWF)
 .
 
@@ -426,23 +428,22 @@ apply_inner_gaps_h(I, SizeSub, WinCnt, [[X, Y, W, H]|Gs], [[NewX, Y, NewW, H]|Ne
 apply_geoms(Wins, Geoms) :-
 	utils:pair_up_lists(Wins, Geoms, WinGeomMap),
 
-	(animation_enabled(true) ->
+	(user:animation_enabled(true) ->
 		animation_time(AnimT), animation_granularity(AnimG),
 		findall(ThreadId, (
 			member(Win-[NewX, NewY, NewW, NewH], WinGeomMap),
-			win_properties(Win, [_, _, [X, Y, W, H]]),
+			user:win_properties(Win, [_, _, [X, Y, W, H]]),
 			thread_create(
 				animation:interpolate_geom(Win, X, Y, W, H, NewX, NewY, NewW, NewH, AnimG, AnimT)
 			, ThreadId),
-			win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])
+			user:win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])
 		), ThreadIds),
-		forall(member(ThreadId, ThreadIds), thread_join(ThreadId))
+		compat_forall(member(ThreadId, ThreadIds), thread_join(ThreadId))
 	;
-		forall(member(Win-[NewX, NewY, NewW, NewH], WinGeomMap), (
-			display(Dp),
+		compat_forall(member(Win-[NewX, NewY, NewW, NewH], WinGeomMap), (
+			user:display(Dp),
 			plx:x_move_resize_window(Dp, Win, NewX, NewY, NewW, NewH),
-			win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])
+			user:win_newproperties(Win, [managed, false, [NewX, NewY, NewW, NewH]])
 		))
 	)
 .
-

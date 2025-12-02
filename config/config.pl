@@ -155,64 +155,64 @@ scroll_down_action(switch_workspace(prev)).
 %     Action: a predicate or a list of them in parentheses, e.g., (Pred1, Pred2, Pred3)
 %
 keymaps([
-  super +         j         ->  shift_focus(down)               ,
-  super +         k         ->  shift_focus(up)                 ,
-  super + shift + k         ->  move_focused(up)                ,
-  super + shift + j         ->  move_focused(down)              ,
-  super +         "Return"  ->  focused_to_top                  ,
-  super +         q         ->  close_focused                   ,
-  super + shift + space     ->  toggle_floating                 ,
-  super +         f         ->  toggle_fullscreen               ,
-  super + shift + q         ->  quit                            ,
+  (super +         j         ->  shift_focus(down))               ,
+  (super +         k         ->  shift_focus(up))                 ,
+  (super + shift + k         ->  move_focused(up))                ,
+  (super + shift + j         ->  move_focused(down))              ,
+  (super +         "Return"  ->  focused_to_top)                  ,
+  (super +         q         ->  close_focused)                   ,
+  (super + shift + space     ->  toggle_floating)                 ,
+  (super +         f         ->  toggle_fullscreen)               ,
+  (super + shift + q         ->  quit)                            ,
 
-  super + i                 ->  change_nmaster(+1)              ,
-  super + d                 ->  change_nmaster(-1)              ,
-  super + h                 ->  change_mfact(-0.05)             ,
-  super + l                 ->  change_mfact(+0.05)             ,
+  (super + i                 ->  change_nmaster(+1))              ,
+  (super + d                 ->  change_nmaster(-1))              ,
+  (super + h                 ->  change_mfact(-0.05))             ,
+  (super + l                 ->  change_mfact(+0.05))             ,
 
   % Omit the + and - prefixes to make an exact assignment instead of a delta change
 
   % Layouts
-  super + shift + f         ->  layout:set_layout(floating)     ,
-  super + shift + m         ->  layout:set_layout(monocle)      ,
-  super + shift + s         ->  layout:set_layout(stack)        ,
-  super + shift + h         ->  layout:set_layout(hstack)       ,
-  super + shift + g         ->  layout:set_layout(grid)         ,
-  super + shift + l         ->  layout:set_layout(lmaster)      ,
-  super + shift + r         ->  layout:set_layout(rmaster)      ,
-  super + shift + t         ->  layout:set_layout(tmaster)      ,
-  super + shift + b         ->  layout:set_layout(bmaster)      ,
-  super + shift + c         ->  layout:set_layout(cmaster)      ,
+  (super + shift + f         ->  layout:set_layout(floating))     ,
+  (super + shift + m         ->  layout:set_layout(monocle))      ,
+  (super + shift + s         ->  layout:set_layout(stack))        ,
+  (super + shift + h         ->  layout:set_layout(hstack))       ,
+  (super + shift + g         ->  layout:set_layout(grid))         ,
+  (super + shift + l         ->  layout:set_layout(lmaster))      ,
+  (super + shift + r         ->  layout:set_layout(rmaster))      ,
+  (super + shift + t         ->  layout:set_layout(tmaster))      ,
+  (super + shift + b         ->  layout:set_layout(bmaster))      ,
+  (super + shift + c         ->  layout:set_layout(cmaster))      ,
 
   % You can use nrows(N) and ncols(N) for layouts with fixed number of rows/columns, e.g.:
   %super + shift + "T"       -> layout:set_layout(ncols(3))      ,
 
   % Workspaces
-  super +         "Tab"     ->  toggle_workspace                ,
-  super + shift + "Tab"     ->  toggle_hide_empty_workspaces    ,
+  (super +         "Tab"     ->  toggle_workspace)                ,
+  (super + shift + "Tab"     ->  toggle_hide_empty_workspaces)    ,
 
-  super + 1                 ->  switch_workspace('1')           ,
-  super + 2                 ->  switch_workspace('2')           ,
-  super + 3                 ->  switch_workspace('3')           ,
-  super + 4                 ->  switch_workspace('4')           ,
-  super + 5                 ->  switch_workspace('5')           ,
-  super + 6                 ->  switch_workspace('6')           ,
-  super + 7                 ->  switch_workspace('7')           ,
-  super + 8                 ->  switch_workspace('8')           ,
-  super + 9                 ->  switch_workspace('9')           ,
-  super + p                 ->  switch_workspace(prev)          ,
-  super + n                 ->  switch_workspace(next)          ,
-  super + shift + 1         ->  move_focused_to_workspace('1')  ,
-  super + shift + 2         ->  move_focused_to_workspace('2')  ,
-  super + shift + 3         ->  move_focused_to_workspace('3')  ,
-  super + shift + 4         ->  move_focused_to_workspace('4')  ,
-  super + shift + 5         ->  move_focused_to_workspace('5')  ,
-  super + shift + 6         ->  move_focused_to_workspace('6')  ,
-  super + shift + 7         ->  move_focused_to_workspace('7')  ,
-  super + shift + 8         ->  move_focused_to_workspace('8')  ,
-  super + shift + 9         ->  move_focused_to_workspace('9')  ,
-  super + shift + p         ->  move_focused_to_workspace(prev) ,
-  super + shift + n         ->  move_focused_to_workspace(next) ,
+  (super + 1                 ->  switch_workspace('1'))           ,
+  (super + 2                 ->  switch_workspace('2'))           ,
+  (super + 3                 ->  switch_workspace('3'))           ,
+  (super + 4                 ->  switch_workspace('4'))           ,
+  (super + 5                 ->  switch_workspace('5'))           ,
+  (super + 6                 ->  switch_workspace('6'))           ,
+  (super + 7                 ->  switch_workspace('7'))           ,
+  (super + 8                 ->  switch_workspace('8'))           ,
+  (super + 9                 ->  switch_workspace('9'))           ,
+  (super + p                 ->  switch_workspace(prev))          ,
+  (super + n                 ->  switch_workspace(next))          ,
+  (super + shift + 1         ->  move_focused_to_workspace('1'))  ,
+  (super + shift + 2         ->  move_focused_to_workspace('2'))  ,
+  (super + shift + 3         ->  move_focused_to_workspace('3'))  ,
+  (super + shift + 4         ->  move_focused_to_workspace('4'))  ,
+  (super + shift + 5         ->  move_focused_to_workspace('5'))  ,
+  (super + shift + 6         ->  move_focused_to_workspace('6'))  ,
+  (super + shift + 7         ->  move_focused_to_workspace('7'))  ,
+  (super + shift + 8         ->  move_focused_to_workspace('8'))  ,
+  (super + shift + 9         ->  move_focused_to_workspace('9'))  ,
+  (super + shift + p         ->  move_focused_to_workspace(prev)) ,
+  (super + shift + n         ->  move_focused_to_workspace(next)) ,
 
   % For both switch_workspace and move_focused_to_workspace, you can pass:
   %   workspace names (use single quotes)
@@ -220,10 +220,10 @@ keymaps([
   %   prev / next / prev_nonempty / next_nonempty (these wrap)
 
   % Monitors
-  super +         comma     ->  switch_monitor(prev)            ,
-  super +         period    ->  switch_monitor(next)            ,
-  super + shift + comma     ->  move_focused_to_monitor(prev)   ,
-  super + shift + period    ->  move_focused_to_monitor(next)   ,
+  (super +         comma     ->  switch_monitor(prev))            ,
+  (super +         period    ->  switch_monitor(next))            ,
+  (super + shift + comma     ->  move_focused_to_monitor(prev))   ,
+  (super + shift + period    ->  move_focused_to_monitor(next))   ,
 
   % For both switch_monitor and move_focused_to_monitor, you can pass:
   %   prev / next / prev_nonempty / next_nonempty (these wrap)
@@ -232,27 +232,28 @@ keymaps([
   %   monitor indices starting from 1
 
   % Menus
-  alt +         w           ->  menu:goto_window                ,
-  alt + shift + w           ->  menu:goto_workspace             ,
-  alt +         p           ->  menu:pull_from                  ,
-  alt + shift + p           ->  menu:push_to                    ,
+  (alt +         w           ->  menu:goto_window)                ,
+  (alt + shift + w           ->  menu:goto_workspace)             ,
+  (alt +         p           ->  menu:pull_from)                  ,
+  (alt + shift + p           ->  menu:push_to)                    ,
 
-  alt + q                   ->  menu:close_windows              ,
-  alt + shift + q           ->  menu:keep_windows               ,
+  (alt + q                   ->  menu:close_windows)              ,
+  (alt + shift + q           ->  menu:keep_windows)               ,
 
-  alt + c                   ->  menu:create_workspace           ,
-  alt + r                   ->  menu:rename_workspace           ,
-  alt + i                   ->  menu:reindex_workspace          ,
-  alt + d                   ->  menu:delete_workspaces          ,
+  (alt + c                   ->  menu:create_workspace)           ,
+  (alt + r                   ->  menu:rename_workspace)           ,
+  (alt + i                   ->  menu:reindex_workspace)          ,
+  (alt + d                   ->  menu:delete_workspaces)          ,
 
-  alt + shift + k           ->  menu:list_keymaps               ,
-  alt + shift + c           ->  menu:list_cmds                  ,
+  (alt + shift + k           ->  menu:list_keymaps)               ,
+  (alt + shift + c           ->  menu:list_cmds)                  ,
 
   %%%%% Custom mapping examples %%%%%
 
   % Launch applications
-  ctrl + shift + space      ->  shellcmd("alacritty")           ,
-  alt + a                   ->  shellcmd("dmenu_run -l 20 -p run")
+  (ctrl + shift + space      ->  shellcmd("alacritty"))           ,
+  (alt + a                   ->  shellcmd("dmenu_run -l 20 -p run")),
+  (ctrl + alt + t            ->  shellcmd("x-terminal-emulator"))
 
   % Toggle status bar
  %alt + b                   ->  shellcmd("pkill polybar || polybar top") ,
@@ -324,12 +325,10 @@ rules([
 %
 % Tip: you can run multiple predicates as Action by writing a comma separated list in parentheses
 hooks([
-  start -> (
+  (start -> (
     writeln("plwm starting")
-  ),
-
-  quit -> (
+  )),
+  (quit -> (
     writeln("plwm quitting")
-  )
+  ))
 ]).
-

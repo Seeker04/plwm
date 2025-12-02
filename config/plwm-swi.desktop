@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=plwm-swi
+Comment=This session logs you into plwm using swi-prolog
+Exec=plwm-swi
+Icon=plwm-logo
+Type=Application

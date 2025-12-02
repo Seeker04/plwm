@@ -10,6 +10,10 @@
 
 :- module(setting, [set/2, add/2]).
 
+:- use_module(library(lists)).
+
+:- use_module(utils).
+
 %! setting(+Setting:atom) is semidet
 %  setting(-Setting:atom) is nondet
 %
@@ -35,8 +39,8 @@ setting(Setting) :- member(Setting, [
 %
 %  @arg Dryrun if true, only the validation is executed
 init_config(Dryrun) :-
-	forall(setting(Setting), (
-		(call(Setting, Value) ->
+	compat_forall(setting(Setting), (
+		(call(user:Setting, Value) ->
 			(\+ valid_set(Setting, Value) ->
 				(Dryrun = false ->
 					default_set(Setting, DefaultValue),
@@ -52,8 +56,8 @@ init_config(Dryrun) :-
 	)),
 
 	% Check some cross-setting validity, e.g. that starting_workspace/1 is contained in workspaces/1
-	(starting_workspace(StartingWs), workspaces([WssHead|WssTail]), \+ member(StartingWs, [WssHead|WssTail]) ->
-		format(string(Msg), "warning: starting_workspace: ~a is not a workspace, defaulting to ~a",
+	(user:starting_workspace(StartingWs), user:workspaces([WssHead|WssTail]), \+ member(StartingWs, [WssHead|WssTail]) ->
+	compat_format(string(Msg), "warning: starting_workspace: ~a is not a workspace, defaulting to ~a",
 		[StartingWs, WssHead]),
 		writeln(user_error, Msg),
 		(Dryrun = false ->
@@ -87,26 +91,26 @@ valid_set_(border_color_focused,     Value) :- string(Value).
 valid_set_(snap_threshold,           Value) :- integer(Value), 0 =< Value.
 valid_set_(outer_gaps,               Value) :- integer(Value), 0 =< Value.
 valid_set_(inner_gaps,               Value) :- integer(Value), 0 =< Value.
-valid_set_(workspaces,               Value) :- Value \= [], lists:is_set(Value), forall(member(Ws, Value), atom(Ws)).
+valid_set_(workspaces,               Value) :- Value \= [], is_set(Value), compat_forall(member(Ws, Value), atom(Ws)).
 valid_set_(starting_workspace,       Value) :- atom(Value).
 valid_set_(hide_empty_workspaces,    Value) :- Value = true ; Value = false.
-valid_set_(ws_format,                Value) :- catch(format_ws_name(Value, [1, a], _), _, fail).
-valid_set_(ws_format_occupied,       Value) :- catch(format_ws_name(Value, [1, a], _), _, fail).
-valid_set_(bar_classes,              Value) :- is_list(Value), forall(member(Pair, Value),
+valid_set_(ws_format,                Value) :- catch(user:format_ws_name(Value, [1, a], _), _, fail).
+valid_set_(ws_format_occupied,       Value) :- catch(user:format_ws_name(Value, [1, a], _), _, fail).
+valid_set_(bar_classes,              Value) :- is_list(Value), compat_forall(member(Pair, Value),
                                                (Pair = N-C, (string(N) ; var(N)), (string(C) ; var(C)))).
 valid_set_(bar_placement,            Value) :- Value = follow_focus ; Value = static.
 valid_set_(fifo_enabled,             Value) :- Value = true ; Value = false.
 valid_set_(fifo_path,                Value) :- string(Value).
-valid_set_(menucmd,                  Value) :- is_list(Value), forall(member(Arg, Value), string(Arg)).
+valid_set_(menucmd,                  Value) :- is_list(Value), compat_forall(member(Arg, Value), string(Arg)).
 valid_set_(animation_enabled,        Value) :- Value = true ; Value = false.
 valid_set_(animation_time,           Value) :- utils:is_float(Value), 0.0 < Value.
 valid_set_(animation_granularity,    Value) :- integer(Value), 1 =< Value.
-valid_set_(modkey,                   Value) :- modifier(Value).
+valid_set_(modkey,                   Value) :- user:modifier(Value).
 valid_set_(scroll_up_action,         Value) :- utils:valid_callable(Value) ; Value = none.
 valid_set_(scroll_down_action,       Value) :- utils:valid_callable(Value) ; Value = none.
 valid_set_(layout_default_overrides, Value) :-
 	is_list(Value),
-	forall(member(Override, Value), (
+	compat_forall(member(Override, Value), (
 		Override = (MonOR, WsOR -> NmasterOR, MfactOR, LayoutOR),
 		(var(MonOR)     ; string(MonOR)),
 		(var(WsOR)      ; atom(WsOR)),
@@ -117,7 +121,7 @@ valid_set_(layout_default_overrides, Value) :-
 .
 valid_set_(rules, Value) :-
 	is_list(Value),
-	forall(member(Rule, Value), (
+	compat_forall(member(Rule, Value), (
 		Rule = (RName, RClass, RTitle -> RMon, RWs, RMode),
 		(var(RName)  ; string(RName)  ; (RName  = exact(Str), string(Str))),
 		(var(RClass) ; string(RClass) ; (RClass = exact(Str), string(Str))),
@@ -130,7 +134,7 @@ valid_set_(rules, Value) :-
 .
 valid_set_(hooks, Value) :-
 	is_list(Value),
-	forall(member(Hook, Value), (
+	compat_forall(member(Hook, Value), (
 		Hook = (Event -> Action),
 		member(Event, [
 			start, quit, switch_workspace_pre, switch_workspace_post,
@@ -141,10 +145,10 @@ valid_set_(hooks, Value) :-
 .
 valid_set_(keymaps, Value) :-
 	is_list(Value),
-	forall(member(Keymap, Value), (
+	compat_forall(member(Keymap, Value), (
 		Keymap = (Keybind -> Action),
-		keybind_to_keylist(Keybind, KeyList),
-		forall(member(Key, KeyList), (modifier(Key) ; last(KeyList, Key))),
+		user:keybind_to_keylist(Keybind, KeyList),
+		compat_forall(member(Key, KeyList), (user:modifier(Key) ; last(KeyList, Key))),
 		(utils:valid_callable(Action) ; Action = none)
 	))
 .
@@ -185,73 +189,73 @@ default_set(modkey,                   super).
 default_set(scroll_up_action,         switch_workspace(next)).
 default_set(scroll_down_action,       switch_workspace(prev)).
 default_set(rules,                    []).
-default_set(hooks,                    [start -> writeln("plwm starting"), quit -> writeln("plwm quitting")]).
+default_set(hooks,                    [(start -> writeln("plwm starting")), (quit -> writeln("plwm quitting"))]).
 default_set(keymaps, [
-  super +         j         ->  shift_focus(down)               ,
-  super +         k         ->  shift_focus(up)                 ,
-  super + shift + k         ->  move_focused(up)                ,
-  super + shift + j         ->  move_focused(down)              ,
-  super +         "Return"  ->  focused_to_top                  ,
-  super +         q         ->  close_focused                   ,
-  super + shift + space     ->  toggle_floating                 ,
-  super +         f         ->  toggle_fullscreen               ,
-  super + shift + q         ->  quit                            ,
-  super + i                 ->  change_nmaster(+1)              ,
-  super + d                 ->  change_nmaster(-1)              ,
-  super + h                 ->  change_mfact(-0.05)             ,
-  super + l                 ->  change_mfact(+0.05)             ,
-  super + shift + f         ->  layout:set_layout(floating)     ,
-  super + shift + m         ->  layout:set_layout(monocle)      ,
-  super + shift + s         ->  layout:set_layout(stack)        ,
-  super + shift + h         ->  layout:set_layout(hstack)       ,
-  super + shift + g         ->  layout:set_layout(grid)         ,
-  super + shift + l         ->  layout:set_layout(lmaster)      ,
-  super + shift + r         ->  layout:set_layout(rmaster)      ,
-  super + shift + t         ->  layout:set_layout(tmaster)      ,
-  super + shift + b         ->  layout:set_layout(bmaster)      ,
-  super + shift + c         ->  layout:set_layout(cmaster)      ,
-  super +         "Tab"     ->  toggle_workspace                ,
-  super + shift + "Tab"     ->  toggle_hide_empty_workspaces    ,
-  super + 1                 ->  switch_workspace('1')           ,
-  super + 2                 ->  switch_workspace('2')           ,
-  super + 3                 ->  switch_workspace('3')           ,
-  super + 4                 ->  switch_workspace('4')           ,
-  super + 5                 ->  switch_workspace('5')           ,
-  super + 6                 ->  switch_workspace('6')           ,
-  super + 7                 ->  switch_workspace('7')           ,
-  super + 8                 ->  switch_workspace('8')           ,
-  super + 9                 ->  switch_workspace('9')           ,
-  super + p                 ->  switch_workspace(prev)          ,
-  super + n                 ->  switch_workspace(next)          ,
-  super + shift + 1         ->  move_focused_to_workspace('1')  ,
-  super + shift + 2         ->  move_focused_to_workspace('2')  ,
-  super + shift + 3         ->  move_focused_to_workspace('3')  ,
-  super + shift + 4         ->  move_focused_to_workspace('4')  ,
-  super + shift + 5         ->  move_focused_to_workspace('5')  ,
-  super + shift + 6         ->  move_focused_to_workspace('6')  ,
-  super + shift + 7         ->  move_focused_to_workspace('7')  ,
-  super + shift + 8         ->  move_focused_to_workspace('8')  ,
-  super + shift + 9         ->  move_focused_to_workspace('9')  ,
-  super + shift + p         ->  move_focused_to_workspace(prev) ,
-  super + shift + n         ->  move_focused_to_workspace(next) ,
-  super +         comma     ->  switch_monitor(prev)            ,
-  super +         period    ->  switch_monitor(next)            ,
-  super + shift + comma     ->  move_focused_to_monitor(prev)   ,
-  super + shift + period    ->  move_focused_to_monitor(next)   ,
-  alt +         w           ->  menu:goto_window                ,
-  alt + shift + w           ->  menu:goto_workspace             ,
-  alt +         p           ->  menu:pull_from                  ,
-  alt + shift + p           ->  menu:push_to                    ,
-  alt + q                   ->  menu:close_windows              ,
-  alt + shift + q           ->  menu:keep_windows               ,
-  alt + c                   ->  menu:create_workspace           ,
-  alt + r                   ->  menu:rename_workspace           ,
-  alt + i                   ->  menu:reindex_workspace          ,
-  alt + d                   ->  menu:delete_workspaces          ,
-  alt + shift + k           ->  menu:list_keymaps               ,
-  alt + shift + c           ->  menu:list_cmds                  ,
-  ctrl + shift + space      ->  shellcmd("alacritty")           ,
-  alt + a                   ->  shellcmd("dmenu_run -l 20 -p run")
+  (super +         j         ->  shift_focus(down))              ,
+  (super +         k         ->  shift_focus(up))                ,
+  (super + shift + k         ->  move_focused(up))                ,
+  (super + shift + j         ->  move_focused(down))              ,
+  (super +         "Return"  ->  focused_to_top)                  ,
+  (super +         q         ->  close_focused)                   ,
+  (super + shift + space     ->  toggle_floating)                 ,
+  (super +         f         ->  toggle_fullscreen)               ,
+  (super + shift + q         ->  quit)                            ,
+  (super + i                 ->  change_nmaster(+1))              ,
+  (super + d                 ->  change_nmaster(-1))              ,
+  (super + h                 ->  change_mfact(-0.05))             ,
+  (super + l                 ->  change_mfact(+0.05))             ,
+  (super + shift + f         ->  layout:set_layout(floating))     ,
+  (super + shift + m         ->  layout:set_layout(monocle))      ,
+  (super + shift + s         ->  layout:set_layout(stack))        ,
+  (super + shift + h         ->  layout:set_layout(hstack))       ,
+  (super + shift + g         ->  layout:set_layout(grid))         ,
+  (super + shift + l         ->  layout:set_layout(lmaster))      ,
+  (super + shift + r         ->  layout:set_layout(rmaster))      ,
+  (super + shift + t         ->  layout:set_layout(tmaster))      ,
+  (super + shift + b         ->  layout:set_layout(bmaster))      ,
+  (super + shift + c         ->  layout:set_layout(cmaster))      ,
+  (super +         "Tab"     ->  toggle_workspace)                ,
+  (super + shift + "Tab"     ->  toggle_hide_empty_workspaces)    ,
+  (super + 1                 ->  switch_workspace('1'))           ,
+  (super + 2                 ->  switch_workspace('2'))           ,
+  (super + 3                 ->  switch_workspace('3'))           ,
+  (super + 4                 ->  switch_workspace('4'))           ,
+  (super + 5                 ->  switch_workspace('5'))           ,
+  (super + 6                 ->  switch_workspace('6'))           ,
+  (super + 7                 ->  switch_workspace('7'))           ,
+  (super + 8                 ->  switch_workspace('8'))           ,
+  (super + 9                 ->  switch_workspace('9'))           ,
+  (super + p                 ->  switch_workspace(prev))          ,
+  (super + n                 ->  switch_workspace(next))          ,
+  (super + shift + 1         ->  move_focused_to_workspace('1'))  ,
+  (super + shift + 2         ->  move_focused_to_workspace('2'))  ,
+  (super + shift + 3         ->  move_focused_to_workspace('3'))  ,
+  (super + shift + 4         ->  move_focused_to_workspace('4'))  ,
+  (super + shift + 5         ->  move_focused_to_workspace('5'))  ,
+  (super + shift + 6         ->  move_focused_to_workspace('6'))  ,
+  (super + shift + 7         ->  move_focused_to_workspace('7'))  ,
+  (super + shift + 8         ->  move_focused_to_workspace('8'))  ,
+  (super + shift + 9         ->  move_focused_to_workspace('9'))  ,
+  (super + shift + p         ->  move_focused_to_workspace(prev)) ,
+  (super + shift + n         ->  move_focused_to_workspace(next)) ,
+  (super +         comma     ->  switch_monitor(prev))            ,
+  (super +         period    ->  switch_monitor(next))            ,
+  (super + shift + comma     ->  move_focused_to_monitor(prev))   ,
+  (super + shift + period    ->  move_focused_to_monitor(next))   ,
+  (alt +         w           ->  menu:goto_window)                ,
+  (alt + shift + w           ->  menu:goto_workspace)             ,
+  (alt +         p           ->  menu:pull_from)                  ,
+  (alt + shift + p           ->  menu:push_to)                    ,
+  (alt + q                   ->  menu:close_windows)              ,
+  (alt + shift + q           ->  menu:keep_windows)               ,
+  (alt + c                   ->  menu:create_workspace)           ,
+  (alt + r                   ->  menu:rename_workspace)           ,
+  (alt + i                   ->  menu:reindex_workspace)          ,
+  (alt + d                   ->  menu:delete_workspaces)          ,
+  (alt + shift + k           ->  menu:list_keymaps)               ,
+  (alt + shift + c           ->  menu:list_cmds)                  ,
+  (ctrl + shift + space      ->  shellcmd("alacritty"))           ,
+  (alt + a                   ->  shellcmd("dmenu_run -l 20 -p run"))
 ]).
 
 %! set(++Setting:atom, ++Value:term) is semidet
@@ -285,9 +289,9 @@ set_(outer_gaps,               Value) :- store_setting(outer_gaps, Value), updat
 set_(inner_gaps,               Value) :- store_setting(inner_gaps, Value), layout:relayout.
 set_(workspaces,               Value) :- store_setting(workspaces, Value), set_workspaces.
 set_(starting_workspace,       Value) :- store_setting(starting_workspace, Value). % no sense to change, but we allow it
-set_(hide_empty_workspaces,    Value) :- store_setting(hide_empty_workspaces, Value), update_ws_atoms.
-set_(ws_format,                Value) :- store_setting(ws_format, Value),             update_ws_atoms.
-set_(ws_format_occupied,       Value) :- store_setting(ws_format_occupied, Value),    update_ws_atoms.
+set_(hide_empty_workspaces,    Value) :- store_setting(hide_empty_workspaces, Value), user:update_ws_atoms.
+set_(ws_format,                Value) :- store_setting(ws_format, Value),             user:update_ws_atoms.
+set_(ws_format_occupied,       Value) :- store_setting(ws_format_occupied, Value),    user:update_ws_atoms.
 set_(layout_default_overrides, Value) :- store_setting(layout_default_overrides, Value).
 set_(bar_classes,              Value) :- store_setting(bar_classes, Value).
 set_(bar_placement,            Value) :- store_setting(bar_placement, Value), update_free_win_space.
@@ -313,7 +317,7 @@ set_(hooks,                    Value) :- store_setting(hooks, Value), setup_hook
 %  @arg Value new value to append to the configuration
 add(Setting, Value) :-
 	member(Setting, [workspaces, layout_default_overrides, menucmd, keymaps, rules, hooks]),
-	call(Setting, PrevList),
+	call(user:Setting, PrevList),
 	append(PrevList, [Value], NewList),
 	valid_set(Setting, NewList),
 	set_(Setting, NewList)
@@ -328,7 +332,7 @@ add(Setting, Value) :-
 %  @arg Setting setting that got invalid value
 %  @arg Value invalid value
 warn_invalid_setting(Setting, Value) :-
-	format(string(Msg), "warning: invalid value: ~p for setting: ~a, ignored", [Value, Setting]),
+compat_format(string(Msg), "warning: invalid value: ~w for setting: ~a, ignored", [Value, Setting]),
 	writeln(user_error, Msg)
 .
 
@@ -343,7 +347,7 @@ warn_invalid_setting(Setting, Value) :-
 %  @arg Value new value for the setting
 store_setting(Setting, Value) :-
 	compound_name_arguments(Config, Setting, [Value]),
-	reassert(Config)
+	user:reassert(Config)
 .
 
 %! geometry_spec(++X:integer, ++Y:integer, ++W:integer, ++H:integer) is semidet
@@ -365,12 +369,12 @@ geometry_spec(X, Y, W, H) :-
 %
 %  Applies border_width/1 and border_width_focused/1 on all windows.
 %  Also redraws layout to make changes immediately visible.
-update_all_borders() :-
-	monws_keys(Keys),
-	forall(member(Mon-Ws, Keys), (
+update_all_borders :-
+	user:monws_keys(Keys),
+	compat_forall(member(Mon-Ws, Keys), (
 		global_key_value(windows, Mon-Ws, Wins),
-		forall(member(Win, Wins), (
-			set_border(Win)
+		compat_forall(member(Win, Wins), (
+			user:set_border(Win)
 		))
 	)),
 	layout:relayout
@@ -385,17 +389,16 @@ update_all_borders() :-
 %  Note: workspaces present in both the old and new workspaces/1 will keep their windows,
 %        otherwise the usual semantics will "shift windows to the right",
 %        [a, b, c] -> [x, y, z] will result in all windows being on x.
-set_workspaces() :-
-	workspaces(NewWss), nb_getval(workspaces, OldWss),
+set_workspaces :-
+	user:workspaces(NewWss), nb_getval(workspaces, OldWss),
 
 	subtract(OldWss, NewWss, ToDelete), % delete workspaces no longer in workspaces/1
-	forall(member(Ws, ToDelete), delete_workspace(Ws)),
+	compat_forall(member(Ws, ToDelete), delete_workspace(Ws)),
 
-	forall(member(Ws, NewWss), create_workspace(Ws)),
+	compat_forall(member(Ws, NewWss), create_workspace(Ws)),
 
 	(OldWss = ToDelete ->               % cleanup last survivor if all old wss were to be deleted
 		last(ToDelete, SurvivorWs), % (because we refuse to remove the final ws if only 1 is left)
 		delete_workspace(SurvivorWs)
 	; true)
 .
-

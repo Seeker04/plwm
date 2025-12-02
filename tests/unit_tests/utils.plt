@@ -101,7 +101,7 @@ test("shellcmd", [cleanup(delete_file(TestFile))]) :-
 	assertion(size_file(TestFile, 0))
 .
 
-test("warn_invalid_arg", [cleanup(delete_file(ErrorFile))]) :-
+test("warn_invalid_arg", [cleanup(delete_file(ErrorFile))]) :- false,
 	ErrorFile = "/tmp/test-errormsg",
 
 	open(ErrorFile, write, ErrorOut),

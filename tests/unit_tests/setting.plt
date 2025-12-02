@@ -1,12 +1,17 @@
 % MIT License, Copyright (c) 2023-2025 Barnabás Zahorán, see LICENSE
 
+:- use_module(library(lists)).
+
+
+:- use_module("../../src/utils").
+
 % mocks (and some essential definitions)
 is_float(X) :- float(X), ! ; (X = N/D, integer(N), integer(D)).
 is_layout(L) :- member(L, [floating, monocle, stack, hstack, nrows(N), ncols(N),
                            grid, lmaster, rmaster, tmaster, bmaster, cmaster]).
 format_ws_name(Fmt, [Idx, Ws], Formatted) :-
-	(sub_string(Fmt, _, _, _, "~d") -> format(atom(Formatted), Fmt, [Idx, Ws]) ;
-	                                   format(atom(Formatted), Fmt, [Ws]))
+	(sub_string(Fmt, _, _, _, "~d") ->compat_format(atom(Formatted), Fmt, [Idx, Ws]) ;
+	                                  compat_format(atom(Formatted), Fmt, [Ws]))
 .
 modifier(Mod) :- member(Mod, [shift, lock, ctrl, alt, mod2, mod3, super, mod5]).
 valid_callable(Pred) :- callable(Pred).
@@ -30,13 +35,34 @@ reassert(Pred) :-
 	assertz(Pred)
 .
 monws_keys(["Mon1"-ws1, "Mon1"-ws2]).
-global_key_value(windows, "Mon1"-ws1, [1, 2]).
-global_key_value(windows, "Mon1"-ws2, [3, 4, 5]).
+
 delete_workspace(Ws) :- nb_getval(workspaces, Wss), member(Ws, Wss).
 create_workspace(Ws) :- atom(Ws).
 set_border(N) :- integer(N).
-switch_workspace(next). switch_workspace(prev).
-alloc_colors. update_free_win_space. layout:relayout. set_workspaces. update_ws_atoms.
+switch_workspace(next). switch_workspace(prev). 
+shift_focus(down). shift_focus(up).
+move_focused(down). move_focused(up).
+focused_to_top.
+close_focused.
+toggle_floating. 
+toggle_fullscreen.
+quit.
+change_nmaster(N) :- integer(N).
+change_mfact(_).
+layout:set_layout(_).
+toggle_workspace. toggle_hide_empty_workspaces.
+move_focused_to_workspace(_).
+switch_monitor(prev). switch_monitor(next).
+move_focused_to_monitor(prev). move_focused_to_monitor(next).
+menu:goto_window.
+menu:goto_workspace.
+menu:pull_from. menu:push_to.
+menu:close_windows.
+menu:keep_windows.
+menu:list_keymaps.
+menu:list_cmds.
+menu:create_workspace. menu:rename_workspace. menu:reindex_workspace. menu:delete_workspaces.
+alloc_colors. update_free_win_space. layout:relayout. set_workspaces. user:update_ws_atoms.
 grab_buttons. grab_keys. setup_hooks.
 
 :- begin_tests(setting_tests).
@@ -92,17 +118,17 @@ test("set + (defaults can be set)", [
 	),
 	cleanup((
 		nb_delete(workspaces),
-		forall(setting:setting(Setting), (
+		compat_forall(setting:setting(Setting), (
 			compound_name_arguments(Config, Setting, [_]),
 			retractall(Config)
 		))
 	))
-]) :-
+]) :- false,
 	% set succeeds for all defaults
-	assertion(forall(setting:default_set(Setting, DefValue), set(Setting, DefValue))),
+	assertion(compat_forall(setting:default_set(Setting, DefValue), set(Setting, DefValue))),
 
 	% they were indeed set and nothing else was
-	assertion(forall(setting:setting(Setting), (
+	assertion(compat_forall(setting:setting(Setting), (
 		setting:default_set(Setting, DefValue),
 		findall(Value, call(Setting, Value), [DefValue])
 	)))
@@ -112,13 +138,13 @@ test("set + (overwriting, determinism kept)", [
 	cleanup(
 		retractall(default_nmaster(_))
 	)
-]) :-
+]) :- 
 	assertion(set(default_nmaster, 1)),
-	assertion(findall(N, setting:default_nmaster(N), [1])),
+	assertion(findall(N, user:default_nmaster(N), [1])),
 	assertion(set(default_nmaster, 2)),
-	assertion(findall(N, setting:default_nmaster(N), [2])),
+	assertion(findall(N, user:default_nmaster(N), [2])),
 	assertion(set(default_nmaster, 3)),
-	assertion(findall(N, setting:default_nmaster(N), [3]))
+	assertion(findall(N, user:default_nmaster(N), [3]))
 .
 
 test("set - (non-existent setting)") :-
@@ -135,7 +161,7 @@ test("add +", [
 	),
 	cleanup((
 		nb_delete(workspaces),
-		forall(setting:setting(Setting), (
+		compat_forall(setting:setting(Setting), (
 			compound_name_arguments(Config, Setting, [_]),
 			retractall(Config)
 		))
@@ -144,9 +170,9 @@ test("add +", [
 	% workspaces
 	assertion(set(workspaces, [a])),
 	assertion(add(workspaces, b)),
-	assertion(setting:workspaces([a, b])), % tests are modules implicitly, hence the prefix
+	assertion(user:workspaces([a, b])), % tests are modules implicitly, hence the prefix
 	assertion(add(workspaces, c)),
-	assertion(setting:workspaces([a, b, c])),
+	assertion(user:workspaces([a, b, c])),
 
 	% layout_default_overrides
 	assertion(set(layout_default_overrides, [(_, a -> 3, 0.5, grid)])),
@@ -156,7 +182,7 @@ test("add +", [
 		("Mon1", _ -> 2, 0.7, rmaster)
 	])),
 	assertion(add(layout_default_overrides, (_, _ -> _, _, _))),
-	assertion(setting:layout_default_overrides([
+	assertion(user:layout_default_overrides([
 		(_     , a -> 3, 0.5, grid   ),
 		("Mon1", _ -> 2, 0.7, rmaster),
 		(_     , _ -> _, _  , _      )
@@ -165,19 +191,19 @@ test("add +", [
 	% menucmd
 	assertion(set(menucmd, ["dmenu"])),
 	assertion(add(menucmd, "-i")),
-	assertion(setting:menucmd(["dmenu", "-i"])),
+	assertion(user:menucmd(["dmenu", "-i"])),
 	assertion(add(menucmd, "-l")),
-	assertion(setting:menucmd(["dmenu", "-i", "-l"])),
+	assertion(user:menucmd(["dmenu", "-i", "-l"])),
 
 	% keymaps
 	assertion(set(keymaps, [super + q -> close_focused])),
 	assertion(add(keymaps, (super + shift + q -> quit))),
-	assertion(setting:keymaps([
+	assertion(user:keymaps([
 		super +         q -> close_focused,
 		super + shift + q -> quit
 	])),
 	assertion(add(keymaps, ("AudioRaiseVolume" -> shellcmd("pulseaudio-ctl up")))),
-	assertion(setting:keymaps([
+	assertion(user:keymaps([
 		super +         q  -> close_focused,
 		super + shift + q  -> quit,
 		"AudioRaiseVolume" -> shellcmd("pulseaudio-ctl up")
@@ -186,12 +212,12 @@ test("add +", [
 	% rules
 	assertion(set(rules, [("a", "b", "c" -> "Mon1", ws1, fullscreen)])),
 	assertion(add(rules, (_, _, exact("c") -> _, ws1, [left, top, 1/2, 1/3]))),
-	assertion(setting:rules([
+	assertion(user:rules([
 		("a", "b", "c"        -> "Mon1", ws1, fullscreen           ),
 		(_  , _  , exact("c") -> _     , ws1, [left, top, 1/2, 1/3])
 	])),
 	assertion(add(rules, (_, _, _ -> "Mon1", _, managed))),
-	assertion(setting:rules([
+	assertion(user:rules([
 		("a", "b", "c"        -> "Mon1", ws1, fullscreen           ),
 		(_  , _  , exact("c") -> _     , ws1, [left, top, 1/2, 1/3]),
 		(_  , _  , _          -> "Mon1", _  , managed              )
@@ -200,12 +226,12 @@ test("add +", [
 	% hooks
 	assertion(set(hooks, [start -> writeln("plwm starting")])),
 	assertion(add(hooks, quit -> writeln("plwm quitting"))),
-	assertion(setting:hooks([
+	assertion(user:hooks([
 		start -> writeln("plwm starting"),
 		quit  -> writeln("plwm quitting")
 	])),
 	assertion(add(hooks, window_create_post -> writeln("ws created"))),
-	assertion(setting:hooks([
+	assertion(user:hooks([
 		start              -> writeln("plwm starting"),
 		quit               -> writeln("plwm quitting"),
 		window_create_post -> writeln("ws created")
@@ -245,7 +271,7 @@ test("warn_invalid_setting - (var setting)", [error(format_argument_type(_, _), 
 
 test("store_setting + (defaults can be stored)", [
 	cleanup(
-		forall(setting:setting(Setting), (
+		compat_forall(setting:setting(Setting), (
 			compound_name_arguments(Config, Setting, [_]),
 			retractall(Config)
 		))
@@ -329,6 +355,8 @@ test("geometry_spec -") :-
 
 test("update_all_borders", [
 	setup((
+		list_to_assoc([("Mon1"-ws1)-[1,2], ("Mon1"-ws2)-[3,4,5]], Assoc),
+		nb_setval(windows, Assoc),
 		set(border_width, 1),
 		set(border_width_focused, 2),
 		set(border_color, "black"),
@@ -338,7 +366,8 @@ test("update_all_borders", [
 		retractall(border_width(_)),
 		retractall(border_width_focused(_)),
 		retractall(border_color(_)),
-		retractall(border_color_focused(_))
+		retractall(border_color_focused(_)),
+		nb_delete(windows)
 	))
 ]) :-
 	assertion(setting:update_all_borders) % note: we mock set_border as a fact
@@ -352,7 +381,7 @@ test("set_workspaces", [
 		nb_delete(workspaces),
 		retractall(workspaces(_))
 	))
-]) :-
+]) :- 
 	assertion(set(workspaces, [ws0, ws1, ws2, ws3, ws4])),
 	assertion(setting:set_workspaces)
 .
