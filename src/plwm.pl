@@ -1299,7 +1299,9 @@ apply_rules(Win) :-
 			global_key_value(free_win_space, ActMon, [MX, MY, MW, MH]),
 			win_properties(Win, [_, Fullscr, [OldX, OldY, OldW, OldH]]),
 			(nonvar(Mode) ->
-				(Mode = floating ->
+				(Mode = managed ->
+					win_newproperties(Win, [managed, Fullscr, [OldX, OldY, OldW, OldH]])
+				; Mode = floating ->
 					win_newproperties(Win, [floating, Fullscr, [OldX, OldY, OldW, OldH]])
 				; Mode = [X, Y, W, H] ->
 					(var(W) -> NewW is OldW
