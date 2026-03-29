@@ -1,0 +1,44 @@
+name: Build Nightly
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set version
+        run: |
+          sed -i "s/^version(\([0-9.]\+\))\.$/version(\"nightly $(date +%Y-%m-%d) from $(git rev-parse --short HEAD)\")./" src/plwm.pl
+          sed -i "s/plwm\\\-\([0-9.]\+\)/plwm\\\-nightly/" docs/plwm.1
+
+      - name: Build Docker image
+        run:
+          DOCKER_BUILDKIT=1 docker build -t plwm:latest .
+
+      - name: Run tests
+        run:
+          docker run plwm:latest
+
+      - name: Fetch generated release
+        run:
+          docker cp $(docker ps -lq):/home/testuser/workspace/plwm-nightly-linux-x86_64.tar.gz .
+
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: plwm nightly
+          tag_name: nightly
+          files:
+            plwm-nightly-linux-x86_64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

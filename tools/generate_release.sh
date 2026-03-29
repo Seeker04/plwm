@@ -6,7 +6,11 @@ set -e # stop immediately if any command fails
 
 trap 'echo "An error occured!"' ERR
 
-version="v$(sed -n 's/^version(\([0-9.]\+\))\.$/\1/p' src/plwm.pl)"
+if grep -q '^version("nightly' src/plwm.pl; then
+	version="nightly"
+else
+	version="v$(sed -n 's/^version(\([0-9.]\+\))\.$/\1/p' src/plwm.pl)"
+fi
 commit=$(git rev-parse --short HEAD)
 arch="$(uname | tr A-Z a-z)-$(uname -m | tr A-Z a-z)"
 

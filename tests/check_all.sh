@@ -4,7 +4,11 @@
 
 set -e # stop immediately if any command fails
 
-version="v$(sed -n 's/^version(\([0-9.]\+\))\.$/\1/p' src/plwm.pl)"
+if grep -q '^version("nightly' src/plwm.pl; then
+	version="nightly"
+else
+	version="v$(sed -n 's/^version(\([0-9.]\+\))\.$/\1/p' src/plwm.pl)"
+fi
 commit=$(git rev-parse --short HEAD)
 arch="$(uname | tr A-Z a-z)-$(uname -m | tr A-Z a-z)"
 
@@ -69,8 +73,14 @@ echo "----------------------------------------------------------------------"
 echo "Checking version info"
 echo "----------------------------------------------------------------------"
 
-[ "$(plwm -v        2>&1)" = "plwm version $version" ] && echo "plwm -v OK"        || false
-[ "$(plwm --version 2>&1)" = "plwm version $version" ] && echo "plwm --version OK" || false
+if [ "$version" = "nightly" ]; then
+	expected_version="v$(sed -n 's/^version(\"\([^)]*\)\")\.$/\1/p' src/plwm.pl)"
+else
+	expected_version="$version"
+fi
+
+[ "$(plwm -v        2>&1)" = "plwm version $expected_version" ] && echo "plwm -v OK"        || false
+[ "$(plwm --version 2>&1)" = "plwm version $expected_version" ] && echo "plwm --version OK" || false
 
 echo
 echo "----------------------------------------------------------------------"
