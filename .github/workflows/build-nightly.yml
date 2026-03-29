@@ -42,3 +42,8 @@ jobs:
             plwm-nightly-linux-x86_64.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Move nightly tag to HEAD
+        run: |
+          git tag -f nightly
+          git push -f origin nightly
