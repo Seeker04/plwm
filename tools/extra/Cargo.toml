@@ -1,0 +1,89 @@
+[package]
+name = "plwm"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+path = "/dev/null"
+
+[dependencies]
+
+[package.metadata.deb]
+maintainer = "plwm Maintainers"
+depends = []
+section = "x11"
+priority = "optional"
+assets = []
+
+[package.metadata.deb.variants.core]
+merge-assets.append = [
+    [
+        "../../img/plwm-logo.png",
+        "usr/share/pixmaps/",
+        "644",
+    ],
+    [
+        "../../config/config.pl",
+        "etc/plwm/",
+        "644",
+    ],
+]
+
+[package.metadata.deb.variants.scryer]
+depends = ["$auto", "plwm-core", "suckless-tools", "scryer-prolog"]
+preserve-symlinks = true
+merge-assets.append = [
+    [
+        "../../src/plwm-scryer",
+        "usr/share/plwm/",
+        "755",
+    ],
+    [
+        "../../bin/x11plwm.so",
+        "usr/lib/",
+        "644",
+    ],
+    [
+        "plwm-scryer",
+        "usr/bin/",
+        "755",
+    ],
+    [
+        "../../src/*.pl",
+        "usr/share/plwm/",
+        "644",
+    ],
+    [
+        "../../src/scryer/*.pl",
+        "usr/share/plwm/scryer",
+        "644",
+    ],
+    [
+        "../../config/plwm-scryer.desktop",
+        "usr/share/xsessions/",
+        "644",
+    ],
+]
+
+
+[package.metadata.deb.variants.swi]
+depends = ["$auto", "plwm-core", "suckless-tools"]
+preserve-symlinks = true
+merge-assets.append = [
+    [
+        "../../bin/plwm-swi",
+        "usr/bin/",
+        "755",
+    ],
+    [
+        "../../bin/plx.so",
+        "usr/local/lib/",
+        "644",
+    ],
+    [
+        "../../config/plwm-swi.desktop",
+        "usr/share/xsessions/",
+        "644",
+    ],
+]

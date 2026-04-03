@@ -1,7 +1,7 @@
 <!-- MIT License, Copyright (c) 2023-2025 Barnabás Zahorán, see LICENSE -->
 
 <p align="center">
-  <img alt="plwm logo" src="../img/logo.png">
+  <img alt="plwm logo" src="../img/plwm-logo.png">
 </p>
 
 # plwm - An X11 window manager written in Prolog
@@ -104,7 +104,7 @@ For most modern display managers, you'll have to create a `/usr/share/xsessions/
 Name=plwm
 Comment=This session logs you into plwm
 Exec=plwm
-Icon=path-to-this-repo/plwm/img/logo.png
+Icon=path-to-this-repo/plwm/img/plwm-logo.png
 Type=Application
 ```
 

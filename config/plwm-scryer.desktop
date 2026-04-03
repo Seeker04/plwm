@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=plwm-scryer
+Comment=This session logs you into plwm using scryer-prolog
+Exec=plwm-scryer
+Icon=plwm-logo
+Type=Application

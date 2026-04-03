@@ -10,10 +10,10 @@ dump_to_file(_, Selection) :- open("/tmp/test-output", write, S), writeln(S, Sel
 
 test("spawn_menu", [
 	setup(
-		assertz(menu:menucmd(["tail"])) % select last line(s)
+		assertz(user:menucmd(["tail"])) % select last line(s)
 	),
 	cleanup((
-		retract(menu:menucmd(_)),
+		retract(user:menucmd(_)),
 		delete_file("/tmp/test-output")
 	))
 ]) :-
@@ -28,10 +28,10 @@ test("spawn_menu", [
 
 test("read_from_prompt", [
 	setup(
-		assertz(menu:menucmd(["echo", "test_input"]))
+		assertz(user:menucmd(["echo", "test_input"]))
 	),
 	cleanup((
-		retract(menu:menucmd(_))
+		retract(user:menucmd(_))
 	))
 ]) :-
 	% prompt is appended as last argument to `echo test_input` (menucmd/1 is mocked)
@@ -40,11 +40,11 @@ test("read_from_prompt", [
 
 test("mon_ws_format + (1 mon, 1 ws)", [
 	setup((
-		assertz(menu:monitors(["eDP-1"])),
+		assertz(user:monitors(["eDP-1"])),
 		nb_setval(workspaces, [foo])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -53,11 +53,11 @@ test("mon_ws_format + (1 mon, 1 ws)", [
 
 test("mon_ws_format + (1 mon, 1< ws)", [
 	setup((
-		assertz(menu:monitors(["eDP-1"])),
+		assertz(user:monitors(["eDP-1"])),
 		nb_setval(workspaces, [foo, bar, baz])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -68,11 +68,11 @@ test("mon_ws_format + (1 mon, 1< ws)", [
 
 test("mon_ws_format + (1< mon, 1 ws)", [
 	setup((
-		assertz(menu:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
+		assertz(user:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
 		nb_setval(workspaces, [foo])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -83,11 +83,11 @@ test("mon_ws_format + (1< mon, 1 ws)", [
 
 test("mon_ws_format + (1< mon, 1< ws)", [
 	setup((
-		assertz(menu:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
+		assertz(user:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
 		nb_setval(workspaces, [foo, bar, baz])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -104,11 +104,11 @@ test("mon_ws_format + (1< mon, 1< ws)", [
 
 test("mon_ws_format - (empty monitors)", [
 	setup((
-		assertz(menu:monitors([])),
+		assertz(user:monitors([])),
 		nb_setval(workspaces, [foo])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -117,11 +117,11 @@ test("mon_ws_format - (empty monitors)", [
 
 test("mon_ws_format - (empty workspaces)", [
 	setup((
-		assertz(menu:monitors(["eDP-1"])),
+		assertz(user:monitors(["eDP-1"])),
 		nb_setval(workspaces, [])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -130,11 +130,11 @@ test("mon_ws_format - (empty workspaces)", [
 
 test("mon_ws_format - (empty monitors & empty workspaces)", [
 	setup((
-		assertz(menu:monitors([])),
+		assertz(user:monitors([])),
 		nb_setval(workspaces, [])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -154,10 +154,10 @@ test("mon_ws_format - (monitors undefined)", [
 
 test("mon_ws_format - (workspaces undefined)", [
 	setup((
-		assertz(menu:monitors(["eDP-1"]))
+		assertz(user:monitors(["eDP-1"]))
 	)),
 	cleanup((
-		retract(menu:monitors(_))
+		retract(user:monitors(_))
 	)),
 	throws(_)
 ]) :-
@@ -170,11 +170,11 @@ test("mon_ws_format - (monitors & workspaces undefined)") :-
 
 test("mon_ws_wint_format + (1 mon, 1 ws)", [
 	setup((
-		assertz(menu:monitors(["eDP-1"])),
+		assertz(user:monitors(["eDP-1"])),
 		nb_setval(workspaces, [foo])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -183,11 +183,11 @@ test("mon_ws_wint_format + (1 mon, 1 ws)", [
 
 test("mon_ws_wint_format + (1 mon, 1< ws)", [
 	setup((
-		assertz(menu:monitors(["eDP-1"])),
+		assertz(user:monitors(["eDP-1"])),
 		nb_setval(workspaces, [foo, bar, baz])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -198,11 +198,11 @@ test("mon_ws_wint_format + (1 mon, 1< ws)", [
 
 test("mon_ws_wint_format + (1< mon, 1 ws)", [
 	setup((
-		assertz(menu:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
+		assertz(user:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
 		nb_setval(workspaces, [foo])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -213,11 +213,11 @@ test("mon_ws_wint_format + (1< mon, 1 ws)", [
 
 test("mon_ws_wint_format + (1< mon, 1< ws)", [
 	setup((
-		assertz(menu:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
+		assertz(user:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
 		nb_setval(workspaces, [foo, bar, baz])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -234,11 +234,11 @@ test("mon_ws_wint_format + (1< mon, 1< ws)", [
 
 test("mon_ws_wint_format - (empty monitors)", [
 	setup((
-		assertz(menu:monitors([])),
+		assertz(user:monitors([])),
 		nb_setval(workspaces, [foo])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -247,11 +247,11 @@ test("mon_ws_wint_format - (empty monitors)", [
 
 test("mon_ws_wint_format - (empty workspaces)", [
 	setup((
-		assertz(menu:monitors(["eDP-1"])),
+		assertz(user:monitors(["eDP-1"])),
 		nb_setval(workspaces, [])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -260,11 +260,11 @@ test("mon_ws_wint_format - (empty workspaces)", [
 
 test("mon_ws_wint_format - (empty monitors & empty workspaces)", [
 	setup((
-		assertz(menu:monitors([])),
+		assertz(user:monitors([])),
 		nb_setval(workspaces, [])
 	)),
 	cleanup((
-		retract(menu:monitors(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces)
 	))
 ]) :-
@@ -284,10 +284,10 @@ test("mon_ws_wint_format - (monitors undefined)", [
 
 test("mon_ws_wint_format - (workspaces undefined)", [
 	setup((
-		assertz(menu:monitors(["eDP-1"]))
+		assertz(user:monitors(["eDP-1"]))
 	)),
 	cleanup((
-		retract(menu:monitors(_))
+		retract(user:monitors(_))
 	)),
 	throws(_)
 ]) :-
@@ -301,9 +301,9 @@ test("mon_ws_wint_format - (monitors & workspaces undefined)") :-
 test("spawn_winlist_menu", [
 	setup((
 		XA_WM_NAME is 39,
-		assertz(menu:menucmd(["tail"])), % select last line(s)
-		assertz(menu:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
-		assertz(menu:monws_keys([
+		assertz(user:menucmd(["tail"])), % select last line(s)
+		assertz(user:monitors(["eDP-1", "HDMI-1", "HDMI-2"])),
+		assertz(user:monws_keys([
 			 "eDP-1"-foo,  "eDP-1"-bar,  "eDP-1"-baz,
 			"HDMI-1"-foo, "HDMI-1"-bar, "HDMI-1"-baz,
 			"HDMI-2"-foo, "HDMI-2"-bar, "HDMI-2"-baz
@@ -316,9 +316,9 @@ test("spawn_winlist_menu", [
 		nb_setval(windows, Assoc)
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retract(menu:monitors(_)),
-		retract(menu:monws_keys(_)),
+		retract(user:menucmd(_)),
+		retract(user:monitors(_)),
+		retract(user:monws_keys(_)),
 		retractall(plx:x_get_text_property(_, _, _, _, _)),
 		nb_delete(workspaces),
 		nb_delete(windows),
@@ -337,30 +337,30 @@ test("spawn_winlist_menu", [
 test("goto_workspace", [
 	setup((
 		nb_setval(workspaces, [foo, bar]),
-		assertz(menu:monitors(["eDP-1", "HDMI-1"])),
-		assertz(menu:monws_keys(["eDP-1"-foo, "eDP-1"-bar, "HDMI-1"-foo, "HDMI-1"-bar])),
-		assertz(menu:active_mon_ws("eDP-1", foo)),
-		assertz(menu:menucmd(["sh", "-c", "sed -n 1p"])),
-		assertz(menu:switch_monitor(Mon) :- (
-			format(string(Cmd), "echo 'switch_monitor(~s)' >> /tmp/test-output", [Mon]),
+		assertz(user:monitors(["eDP-1", "HDMI-1"])),
+		assertz(user:monws_keys(["eDP-1"-foo, "eDP-1"-bar, "HDMI-1"-foo, "HDMI-1"-bar])),
+		assertz(user:active_mon_ws("eDP-1", foo)),
+		assertz(user:menucmd(["sh", "-c", "sed -n 1p"])),
+		assertz(user:switch_monitor(Mon) :- (
+		format(string(Cmd), "echo 'switch_monitor(~s)' >> /tmp/test-output", [Mon]),
 			shell(Cmd)
 		)),
-		assertz(menu:switch_workspace(Ws) :- (
-			format(string(Cmd), "echo 'switch_workspace(~a)' >> /tmp/test-output", [Ws]),
+		assertz(user:switch_workspace(Ws) :- (
+		format(string(Cmd),"echo 'switch_workspace(~a)' >> /tmp/test-output", [Ws]),
 			shell(Cmd)
 		))
 	)),
 	cleanup((
 		nb_delete(workspaces),
-		retract(menu:monitors(_)),
-		retractall(menu:monws_keys(_)),
-		retractall(menu:active_mon_ws(_)),
-		retract(menu:menucmd(_)),
-		retractall(menu:switch_monitor(_)),
-		retractall(menu:switch_workspace(_)),
+		retract(user:monitors(_)),
+		retractall(user:monws_keys(_)),
+		retractall(user:active_mon_ws(_)),
+		retract(user:menucmd(_)),
+		retractall(user:switch_monitor(_)),
+		retractall(user:switch_workspace(_)),
 		delete_file("/tmp/test-output")
 	))
-]) :-
+]) :- 
 	% Active mon-ws is mocked to be 1-foo, so its absent from the list, so
 	% 1-bar must become the first which we select (see `sed -n 1p` above)
 	assertion(menu:goto_workspace),
@@ -422,27 +422,27 @@ test("keybind_padded -") :-
 test("change_nmaster_prompt + (set)", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "5"])),
+		assertz(user:menucmd(["sh", "-c", "echo $0", "5"])),
 		% change_nmaster_prompt ignores result of change_nmaster, so simulate issue with throw
-		assertz(menu:change_nmaster(N) :- \+ (integer(N) ; (N = +M, integer(M))) -> throw(err))
+		assertz(user:change_nmaster(N) :- \+ (integer(N) ; (N = +M, integer(M))) -> throw(err))
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retractall(menu:change_nmaster(_))
+		retract(user:menucmd(_)),
+		retractall(user:change_nmaster(_))
 	))
-]) :-
+]) :- 
 	assertion(menu:change_nmaster_prompt)
 .
 
 test("change_nmaster_prompt + (increment)", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "+5"])),
+		assertz(user:menucmd(["sh", "-c", "echo $0", "+5"])),
 		% change_nmaster_prompt ignores result of change_nmaster, so simulate issue with throw
-		assertz(menu:change_nmaster(N) :- \+ (integer(N) ; (N = +M, integer(M))) -> throw(err))
+		assertz(user:change_nmaster(N) :- \+ (integer(N) ; (N = +M, integer(M))) -> throw(err))
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
+		retract(user:menucmd(_)),
 		retractall(menu:change_nmaster(_))
 	))
 ]) :-
@@ -452,13 +452,13 @@ test("change_nmaster_prompt + (increment)", [
 test("change_nmaster_prompt + (decrement)", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "-5"])),
+		assertz(user:menucmd(["sh", "-c", "echo $0", "-5"])),
 		% change_nmaster_prompt ignores result of change_nmaster, so simulate issue with throw
-		assertz(menu:change_nmaster(N) :- \+ (integer(N) ; (N = +M, integer(M))) -> throw(err))
+		assertz(user:change_nmaster(N) :- \+ (integer(N) ; (N = +M, integer(M))) -> throw(err))
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retractall(menu:change_nmaster(_))
+		retract(user:menucmd(_)),
+		retractall(user:change_nmaster(_))
 	))
 ]) :-
 	assertion(menu:change_nmaster_prompt)
@@ -467,13 +467,13 @@ test("change_nmaster_prompt + (decrement)", [
 test("change_nmaster_prompt -", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "foo"])),
+		assertz(user:menucmd(["sh", "-c", "echo $0", "foo"])),
 		% change_nmaster_prompt ignores result of change_nmaster, so simulate issue with throw
-		assertz(menu:change_nmaster(N) :- \+ (integer(N) ; (N = +M, integer(M))) -> throw(err))
+		assertz(user:change_nmaster(N) :- \+ (integer(N) ; (N = +M, integer(M))) -> throw(err))
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retractall(menu:change_nmaster(_))
+		retract(user:menucmd(_)),
+		retractall(user:change_nmaster(_))
 	)),
 	throws(err)
 ]) :-
@@ -483,15 +483,15 @@ test("change_nmaster_prompt -", [
 test("change_mfact_prompt + (set - decimal form)", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "0.5"])),
+		assertz(user:menucmd(["sh", "-c", "echo $0", "0.5"])),
 		% change_mfact_prompt ignores result of change_mfact, so simulate issue with throw
-		assertz(menu:change_mfact(F) :-
+		assertz(user:change_mfact(F) :-
 			\+ (float(F) ; (F = +G, float(G)) ; (F = N/D, integer(N), integer(D))) -> throw(err)
 		)
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retractall(menu:change_mfact(_))
+		retract(user:menucmd(_)),
+		retractall(user:change_mfact(_))
 	))
 ]) :-
 	assertion(menu:change_mfact_prompt)
@@ -500,15 +500,15 @@ test("change_mfact_prompt + (set - decimal form)", [
 test("change_mfact_prompt + (set - fraction form)", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "1/2"])),
+		assertz(user:menucmd(["sh", "-c", "echo $0", "1/2"])),
 		% change_mfact_prompt ignores result of change_mfact, so simulate issue with throw
-		assertz(menu:change_mfact(F) :-
+		assertz(user:change_mfact(F) :-
 			\+ (float(F) ; (F = +G, float(G)) ; (F = N/D, integer(N), integer(D))) -> throw(err)
 		)
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retractall(menu:change_mfact(_))
+		retract(user:menucmd(_)),
+		retractall(user:change_mfact(_))
 	))
 ]) :-
 	assertion(menu:change_mfact_prompt)
@@ -517,15 +517,15 @@ test("change_mfact_prompt + (set - fraction form)", [
 test("change_mfact_prompt + (increment)", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "+0.5"])),
+		assertz(user:menucmd(["sh", "-c", "echo $0", "+0.5"])),
 		% change_mfact_prompt ignores result of change_mfact, so simulate issue with throw
-		assertz(menu:change_mfact(F) :-
+		assertz(user:change_mfact(F) :-
 			\+ (float(F) ; (F = +G, float(G)) ; (F = N/D, integer(N), integer(D))) -> throw(err)
 		)
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retractall(menu:change_mfact(_))
+		retract(user:menucmd(_)),
+		retractall(user:change_mfact(_))
 	))
 ]) :-
 	assertion(menu:change_mfact_prompt)
@@ -534,15 +534,15 @@ test("change_mfact_prompt + (increment)", [
 test("change_mfact_prompt + (decrement)", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "-0.5"])),
+		assertz(user:menucmd(["sh", "-c", "echo $0", "-0.5"])),
 		% change_mfact_prompt ignores result of change_mfact, so simulate issue with throw
-		assertz(menu:change_mfact(F) :-
+		assertz(user:change_mfact(F) :-
 			\+ (float(F) ; (F = +G, float(G)) ; (F = N/D, integer(N), integer(D))) -> throw(err)
 		)
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retractall(menu:change_mfact(_))
+		retract(user:menucmd(_)),
+		retractall(user:change_mfact(_))
 	))
 ]) :-
 	assertion(menu:change_mfact_prompt)
@@ -551,15 +551,15 @@ test("change_mfact_prompt + (decrement)", [
 test("change_mfact_prompt -", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "foo"])),
+		assertz(user:menucmd(["sh", "-c", "echo $0", "foo"])),
 		% change_mfact_prompt ignores result of change_mfact, so simulate issue with throw
-		assertz(menu:change_mfact(F) :-
+		assertz(user:change_mfact(F) :-
 			\+ (float(F) ; (F = +G, float(G)) ; (F = N/D, integer(N), integer(D))) -> throw(err)
 		)
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retractall(menu:change_mfact(_))
+		retract(user:menucmd(_)),
+		retractall(user:change_mfact(_))
 	)),
 	throws(err)
 ]) :-
@@ -569,10 +569,10 @@ test("change_mfact_prompt -", [
 test("shellcmd_prompt +", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "echo foo > /tmp/test-output"]))
+		assertz(user:menucmd(["sh", "-c", "echo $0", "echo foo > /tmp/test-output"]))
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
+		retract(user:menucmd(_)),
 		delete_file("/tmp/test-output")
 	))
 ]) :-
@@ -586,10 +586,10 @@ test("shellcmd_prompt +", [
 test("shellcmd_prompt - (invalid shell command)", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "echooo 2>/dev/null"]))
+		assertz(user:menucmd(["sh", "-c", "echo $0", "echooo 2>/dev/null"]))
 	)),
 	cleanup((
-		retract(menu:menucmd(_))
+		retract(user:menucmd(_))
 	))
 ]) :-
 	assertion(menu:shellcmd_prompt)
@@ -598,13 +598,13 @@ test("shellcmd_prompt - (invalid shell command)", [
 test("change_setting_prompt + (set)", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "3"])),
+		assertz(user:menucmd(["sh", "-c", "echo $0", "3"])),
 		% change_setting_prompt ignores result of set, so simulate issue with throw
-		assertz(menu:set(border_width, N) :- \+ integer(N) -> throw(err))
+		assertz(user:set(border_width, N) :- \+ integer(N) -> throw(err))
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retract(menu:set(_, _))
+		retract(user:menucmd(_)),
+		retract(user:set(_, _))
 	))
 ]) :-
 	assertion(menu:change_setting_prompt(border_width, false))
@@ -613,13 +613,13 @@ test("change_setting_prompt + (set)", [
 test("change_setting_prompt - (set)", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "foo"])),
+		assertz(user:menucmd(["sh", "-c", "echo $0", "foo"])),
 		% change_setting_prompt ignores result of set, so simulate issue with throw
-		assertz(menu:set(border_width, N) :- \+ integer(N) -> throw(err))
+		assertz(user:set(border_width, N) :- \+ integer(N) -> throw(err))
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retract(menu:set(_, _))
+		retract(user:menucmd(_)),
+		retract(user:set(_, _))
 	)),
 	throws(err)
 ]) :-
@@ -629,13 +629,13 @@ test("change_setting_prompt - (set)", [
 test("change_setting_prompt + (add)", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "start -> writeln(foo)"])),
+		assertz(user:menucmd(["sh", "-c", "echo $0", "start -> writeln(foo)"])),
 		% change_setting_prompt ignores result of add, so simulate issue with throw
-		assertz(menu:add(hooks, H) :- \+ (H = (Event -> _), atom(Event)) -> throw(err))
+		assertz(user:add(hooks, H) :- \+ (H = (Event -> _), atom(Event)) -> throw(err))
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retract(menu:add(_, _))
+		retract(user:menucmd(_)),
+		retract(user:add(_, _))
 	))
 ]) :-
 	assertion(menu:change_setting_prompt(hooks, true))
@@ -644,13 +644,13 @@ test("change_setting_prompt + (add)", [
 test("change_setting_prompt - (add)", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "foo"])),
+		assertz(user:menucmd(["sh", "-c", "echo $0", "foo"])),
 		% change_setting_prompt ignores result of add, so simulate issue with throw
-		assertz(menu:add(hooks, H) :- \+ (H = (Event -> _), atom(Event)) -> throw(err))
+		assertz(user:add(hooks, H) :- \+ (H = (Event -> _), atom(Event)) -> throw(err))
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retract(menu:add(_, _))
+		retract(user:menucmd(_)),
+		retract(user:add(_, _))
 	)),
 	throws(err)
 ]) :-
@@ -660,12 +660,12 @@ test("change_setting_prompt - (add)", [
 test("dump_settings_prompt", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "somefile"])),
-		assertz(menu:dump_settings(FilePath, false) :- string(FilePath))
+		assertz(user:menucmd(["sh", "-c", "echo $0", "somefile"])),
+		assertz(user:dump_settings(FilePath, false) :- string(FilePath))
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retract(menu:dump_settings(_, _))
+		retract(user:menucmd(_)),
+		retract(user:dump_settings(_, _))
 	))
 ]) :-
 	assertion(menu:dump_settings_prompt)
@@ -674,18 +674,18 @@ test("dump_settings_prompt", [
 test("dump_changed_settings_prompt", [
 	setup((
 		% we omit from the output the prompt read_from_prompt/0 appends
-		assertz(menu:menucmd(["sh", "-c", "echo $0", "somefile"])),
-		assertz(menu:dump_settings(FilePath, true) :- string(FilePath))
+		assertz(user:menucmd(["sh", "-c", "echo $0", "somefile"])),
+		assertz(user:dump_settings(FilePath, true) :- string(FilePath))
 	)),
 	cleanup((
-		retract(menu:menucmd(_)),
-		retract(menu:dump_settings(_, _))
+		retract(user:menucmd(_)),
+		retract(user:dump_settings(_, _))
 	))
 ]) :-
 	assertion(menu:dump_changed_settings_prompt)
 .
 
-test("run_cmd +") :-
+test("run_cmd +") :- 
 	assertion(menu:run_cmd([false-"foo", true-"selected", false-"bar"], ["selected"])),
 	assertion(menu:run_cmd([false-"foo", false-"bar"], ["selected"]))
 .
@@ -697,60 +697,59 @@ test("run_cmd -") :-
 
 test("list_keymaps", [
 	setup((
-		assertz(menu:keymaps([
+		assertz(user:keymaps([
 			super +         j -> shellcmd("echo super + j         > /tmp/test-output-1"),
 			super + shift + j -> shellcmd("echo super + shift + j > /tmp/test-output-2")
 		]))
 	)),
 	cleanup((
-		retractall(menu:keymaps(_)),
+		retractall(user:keymaps(_)),
 		delete_file("/tmp/test-output-1"),
 		delete_file("/tmp/test-output-2")
 	))
-]) :-
-	assertz(menu:menucmd(["sh", "-c", "sed -n 1p"])),
+]) :- 
+	assertz(user:menucmd(["sh", "-c", "sed -n 1p"])),
 	assertion(menu:list_keymaps),
 	sleep(0.1), % wait for file creation to complete (shellcmd runs in bg)
 	open("/tmp/test-output-1", read, S),
 	assertion(read_string(S, _, "super + j\n")),
-	retract(menu:menucmd(_)),
+	retract(user:menucmd(_)),
 
-	assertz(menu:menucmd(["sh", "-c", "sed -n 2p"])),
+	assertz(user:menucmd(["sh", "-c", "sed -n 2p"])),
 	assertion(menu:list_keymaps),
 	sleep(0.1),
 	open("/tmp/test-output-2", read, S2),
 	assertion(read_string(S2, _, "super + shift + j\n")),
-	retract(menu:menucmd(_))
+	retract(user:menucmd(_))
 .
 
 test("list_cmds", [
 	setup((
-		assertz(menu:shift_focus(down) :- dump_to_file("focus down called")),
-		assertz(menu:shift_focus(up) :- dump_to_file("focus up called")),
-		assertz(menu:monitors([])),
+		assertz(user:shift_focus(down) :- dump_to_file("focus down called")),
+		assertz(user:shift_focus(up) :- dump_to_file("focus up called")),
+		assertz(user:monitors([])),
 		nb_setval(workspaces, [])
 	)),
 	cleanup((
-		retractall(menu:shift_focus(_)),
-		retract(menu:monitors(_)),
+		retractall(user:shift_focus(_)),
+		retract(user:monitors(_)),
 		nb_delete(workspaces),
 		delete_file("/tmp/test-output")
 	))
-]) :-
-	assertz(menu:menucmd(["sh", "-c", "sed -n 1p"])),
+]) :- 
+	assertz(user:menucmd(["sh", "-c", "sed -n 1p"])),
 	assertion(menu:list_cmds),
 	sleep(0.1), % wait for file creation to complete (shellcmd runs in bg)
 	open("/tmp/test-output", read, S),
 	assertion(read_string(S, _, "focus down called\n")),
-	retract(menu:menucmd(_)),
+	retract(user:menucmd(_)),
 
-	assertz(menu:menucmd(["sh", "-c", "sed -n 2p"])),
+	assertz(user:menucmd(["sh", "-c", "sed -n 2p"])),
 	assertion(menu:list_cmds),
 	sleep(0.1),
 	open("/tmp/test-output", read, S2),
 	assertion(read_string(S2, _, "focus up called\n")),
-	retract(menu:menucmd(_))
+	retract(user:menucmd(_))
 .
 
 :- end_tests(menu_tests).
-
