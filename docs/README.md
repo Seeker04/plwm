@@ -60,6 +60,8 @@ Porting to [Scryer Prolog](https://www.scryer.pl/), a Rust-powered ISO Prolog im
 
 Download the latest version from the [releases](https://github.com/Seeker04/plwm/releases), extract and run `sudo ./install.sh`.
 
+[plwm nightly](https://github.com/Seeker04/plwm/releases/tag/nightly) is auto-generated each time `main` gets updated.
+
 **From source**
 
 Run `make && sudo make install`

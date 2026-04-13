@@ -141,7 +141,7 @@ DOCKER_BUILDKIT=1 sudo docker build -t plwm:latest .
 sudo docker run plwm:latest
 ```
 
-The same will run in the CI on a ubuntu-latest GitHub Action server after every push/pull request creation.
+The same will run [in the CI](../.github/workflows/ci.yml) on a ubuntu-latest GitHub Action server after every push/pull request creation.
 
 **Note:** it's recommended to periodically clean up old Docker volumes, containers, etc. to reclaim disk space. Easiest method is with this command:
 
@@ -173,6 +173,8 @@ We don't immediately delete branches when merging PRs. Old branches are removed 
 New contributors will be asked if they wish to be included in [AUTHORS](../AUTHORS).
 
 # Versioning and releases
+
+Whenever commit(s) get pushed to `main`, [the workflow](../.github/workflows/build-nightly.yml) auto generates a build, updates the `nightly` tag and uploads the files to the [plwm nightly release](https://github.com/Seeker04/plwm/releases/tag/nightly).
 
 plwm is currently in a pre-release stage.
 
