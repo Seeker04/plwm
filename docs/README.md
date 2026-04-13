@@ -58,7 +58,7 @@ Porting to [Scryer Prolog](https://www.scryer.pl/), a Rust-powered ISO Prolog im
 
 **From release**
 
-Download the latest version from the [releases](https://github.com/Seeker04/plwm/releases), extract and run `./install.sh`.
+Download the latest version from the [releases](https://github.com/Seeker04/plwm/releases), extract and run `sudo ./install.sh`.
 
 **From source**
 
