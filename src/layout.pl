@@ -80,6 +80,8 @@ relayout() :- global_value(layout, Layout), set_layout(Layout).
 %! relayout(++Mon-Ws:string-atom) is det
 %
 %  Recalculates and redraws the layout on the specified monitor-workspace.
+%
+%  @arg Mon-Ws monitor and workspace name to recalculate the layout for
 relayout(Mon-Ws) :- global_key_value(layout, Mon-Ws, Layout), set_layout(Mon-Ws, Layout).
 
 %! calculate_layout(++Layout:term, ++Mon:string, ++WinCnt:integer, ++Bounds:[integer], --Geoms:[[integer]]) is det
