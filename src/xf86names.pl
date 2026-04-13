@@ -1,4 +1,4 @@
-% MIT License, Copyright (c) 2023-2025 Barnabás Zahorán, see LICENSE
+% MIT License, Copyright (c) 2023-2026 Barnabás Zahorán, see LICENSE
 
 % Created from <X11/XF86keysym.h> on 2023-01-25 (commented out keymaps were not kept)
 % For additional notes, see the original file

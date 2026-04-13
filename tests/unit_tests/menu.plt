@@ -1,4 +1,4 @@
-% MIT License, Copyright (c) 2023-2025 Barnabás Zahorán, see LICENSE
+% MIT License, Copyright (c) 2023-2026 Barnabás Zahorán, see LICENSE
 
 % helpers
 dump_to_file(Selection) :- open("/tmp/test-output", write, S), writeln(S, Selection), close(S).

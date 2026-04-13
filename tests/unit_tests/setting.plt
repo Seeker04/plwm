@@ -1,4 +1,4 @@
-% MIT License, Copyright (c) 2023-2025 Barnabás Zahorán, see LICENSE
+% MIT License, Copyright (c) 2023-2026 Barnabás Zahorán, see LICENSE
 
 % mocks (and some essential definitions)
 is_float(X) :- float(X), ! ; (X = N/D, integer(N), integer(D)).

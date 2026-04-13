@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# MIT License, Copyright (c) 2023-2025 Barnabás Zahorán, see LICENSE
+# MIT License, Copyright (c) 2023-2026 Barnabás Zahorán, see LICENSE
 
 set -e # stop immediately if any command fails
 
